@@ -2,14 +2,14 @@ import dash_bootstrap_components as dbc
 from dash import html, dcc
 
 # Sidebar components
-def sidebar(df):
-    company_dropdown = html.Div(
+def sidebar(data):
+    sector_dropdown = html.Div(
         [
-            dbc.Label("Select a Company", html_for="company-dropdown"),
+            dbc.Label("Select Sector", html_for="sector-dropdown"),
             dcc.Dropdown(
-                id="company-dropdown",
-                options=[{'label': company, 'value': company} for company in sorted(df["Company Name"].unique())],
-                value='Ryanair',
+                id="sector-dropdown",
+                options=[{'label': sector, 'value': sector} for sector in data["Sector"].dropna().unique()],
+                value='Agriculture',
                 clearable=False,
                 maxHeight=600,
                 optionHeight=50
@@ -17,24 +17,57 @@ def sidebar(df):
         ],  className="mb-4",
     )
 
-    year_radio = html.Div(
+    subsector_1_dropdown = html.Div(
         [
-            dbc.Label("Select Year", html_for="date-checklist"),
-            dbc.RadioItems(
-                options=[{'label': str(year), 'value': year} for year in [2023, 2022]],
-                value=2023,
-                id="year-radio",
+            dbc.Label("Select Sub-Sector (1)", html_for="subsector-1-dropdown"),
+            dcc.Dropdown(
+                id="subsector-1-dropdown",
+                options=[{'label': subsector_1, 'value': subsector_1} for subsector_1 in data["Sub-Sector (1)"].dropna().unique()],
+                value='Production',
+                clearable=False,
+                maxHeight=600,
+                optionHeight=50
             ),
-        ],
-        className="mb-4",
+        ],  className="mb-4",
+    )
+
+    subsector_2_dropdown = html.Div(
+        [
+            dbc.Label("Select Sub-Sector (2)", html_for="subsector-2-dropdown"),
+            dcc.Dropdown(
+                id="subsector-2-dropdown",
+                options=[{'label': subsector_2, 'value': subsector_2} for subsector_2 in data["Sub-Sector (2)"].dropna().unique()],
+                value='Rice',
+                clearable=False,
+                maxHeight=600,
+                optionHeight=50
+            ),
+        ],  className="mb-4",
+    )
+
+    province_dropdown = html.Div(
+        [
+            dbc.Label("Select Province", html_for="province-dropdown"),
+            dcc.Dropdown(
+                id="province-dropdown",
+                options=[
+                    {'label': 'All Provinces', 'value': 'All'},
+                    *[{'label': province, 'value': province} for province in data["Province"].dropna().unique()]
+                ],
+                value='All',  # Default value to "All Provinces"
+                clearable=False,
+                maxHeight=600,
+                optionHeight=50
+            ),
+        ], className="mb-4",
     )
 
     control_panel = dbc.Card(
         dbc.CardBody(
-            [year_radio, company_dropdown],
+            [sector_dropdown, subsector_1_dropdown, subsector_2_dropdown, province_dropdown],
             className="bg-light",
         ),
-        className="mb-4 mt-4"
+        className="mb-4 mt-2"
     )
 
     metadata_card = dcc.Markdown(

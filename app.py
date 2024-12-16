@@ -13,6 +13,7 @@ import dash_bootstrap_components as dbc
 
 from src.components.banner import banner
 from src.components.footer import footer
+from src.components.breadcrumb import breadcrumb
 from src.pages.home import home_page
 from src.pages.about import about_page
 from src.pages.agriculture_and_rural_development import agriculture_and_rural_development
@@ -43,6 +44,7 @@ app.layout = dbc.Container(
     children=[
         dcc.Location(id="url", refresh=False),
         banner(),
+        breadcrumb(),
         html.Div(id="page-content"),
         footer(),
     ],

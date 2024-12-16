@@ -1,26 +1,30 @@
 import dash_bootstrap_components as dbc
-from dash import html, dcc, Input, Output, callback, State, Patch
+from dash import html, dcc, Input, Output, callback
 from ..components.sidebar import sidebar
+from ..utils.load_data import load_data
 import pandas as pd
 import dash_ag_grid as dag
 import plotly.graph_objects as go
+import plotly.express as px
 
 # Import your data
-df = pd.read_csv('https://raw.githubusercontent.com/plotly/Figure-Friday/main/2024/week-32/irish-pay-gap.csv')
-df['Report Link'] = df['Report Link'].apply(lambda x: f'[Report]({x})')
-df['Company'] = df.apply(lambda row: f'[{row["Company Name"]}]({row["Company Site"]})', axis=1)
-df.rename(columns={'Q1 Men': 'Q1 Male'}, inplace=True)
+data = load_data(file_path="src/data/Datahub_Agri_Latest.xlsx", sheet_name="Database")
 
 # Page layout
 agriculture_and_rural_development = dbc.Container(
     [
-        dcc.Store(id="store-selected", data={}),
-        dbc.Row([
-            sidebar(df),
+        dbc.Row([ 
+            sidebar(data), 
             dbc.Col(
                 [
-                    # Other components
-                    html.Div(id="bar-chart-card", className="mt-4"),
+                    # Visualization Tab
+                    dcc.Tabs(
+                        [
+                            dcc.Tab(dcc.Graph(id='graph-id'), label="Visualization"),
+                            dcc.Tab(dcc.Graph(id='map-id'), label="Map View"),
+                            dcc.Tab(id='dataview-id', label="Data Hub", children=html.Div(id='dataview-container')),
+                        ]
+                    ),
                 ], md=9
             ),
         ]),
@@ -28,170 +32,60 @@ agriculture_and_rural_development = dbc.Container(
     fluid=True,
 )
 
-def make_bar_chart(data):
-    if not data or not data[0]:
-        return html.Div("No data available for the selected company and year.")
+def create_map(dff):
+    fig = px.scatter_map(dff, lat='Latitude', lon='Longitude', hover_name='Province',
+                         color_continuous_scale=px.colors.cyclical.IceFire)
+    
+    # Remove map padding by setting margins to 0
+    fig.update_layout(margin=dict(l=0, r=0, t=0, b=0))
+    
+    return fig
 
-    data = data[0]
+def create_graph(dff):
+    return go.Figure(data=[go.Line(x=dff['Year'], y=dff['Area Planted'])])
 
-    # Separate the data for male and female
-    quarters = ['Q1', 'Q2', 'Q3', 'Q4']
-    male_percentages = [data[f'{q} Male'] for q in quarters]
-    female_percentages = [data[f'{q} Female'] for q in quarters]
-
-    quarter_labels = {
-        'Q1': 'Lower (Q1)',
-        'Q2': 'Lower Middle (Q2)',
-        'Q3': 'Upper Middle (Q3)',
-        'Q4': 'Upper (Q4)'
-    }
-    custom_labels = [quarter_labels[q] for q in quarters]
-
-    fig = go.Figure()
-    fig.add_trace(go.Bar(
-        y=custom_labels,
-        x=male_percentages,
-        name='Male',
-        orientation='h',
-        marker=dict(color='#19A0AA'),
-        text=male_percentages,
-        textfont_size=14,
-        textposition='inside',
-    ))
-
-    fig.add_trace(go.Bar(
-        y=custom_labels,
-        x=female_percentages,
-        name='Female',
-        orientation='h',
-        marker=dict(color='#F15F36'),
-        text=female_percentages,
-        textfont_size=14,
-        textposition='inside',
-    ))
-
-    fig.update_layout(
-        xaxis=dict(ticksuffix='%'),
-        yaxis=dict(title='Quartile', categoryorder='array', categoryarray=quarters),
-        barmode='stack',
-        template='plotly_white',
-        legend=dict(
-            orientation='h',
-            yanchor='bottom',
-            y=-0.25,
-            xanchor='center',
-            x=0.5,
-            traceorder='normal'
-        ),
-        margin=dict(l=10, r=10, t=10, b=10),
+# Create Dataview table
+def create_dataview(dff):
+    column_defs = [{"headerName": col, "field": col} for col in dff.columns]
+    
+    table = dag.AgGrid(
+        id='ag-grid',
+        columnDefs=column_defs,
+        rowData=dff.to_dict('records'),
+        style={'height': '400px', 'width': '100%'}
     )
+    return table
 
-    return dbc.Card([
-        dbc.CardHeader(html.H2("Agriculture and Rural Development"), className="text-center"),
-        dcc.Graph(figure=fig, style={"height": 250}, config={'displayModeBar': False})
-    ])
-
+# Callback to update graph, map, and dataview
 @callback(
-    Output("bar-chart-card", "children"),
-    Input("store-selected", "data")
+    [Output('graph-id', 'figure'),
+     Output('map-id', 'figure'),
+     Output('dataview-id', 'children')],
+    Input("sector-dropdown", "value"),
+    Input("subsector-1-dropdown", "value"),
+    Input("subsector-2-dropdown", "value"),
+    Input("province-dropdown", "value"),
 )
-def update_bar_chart(data):
-    return make_bar_chart(data)
+def pin_selected_report(sector, subsector_1, subsector_2, province):
+    # Filter the data based on selected inputs
+    dff = data[
+        (data["Sector"] == sector) & 
+        (data["Sub-Sector (1)"] == subsector_1) & 
+        (data["Sub-Sector (2)"] == subsector_2)
+    ]
 
+    # If province is selected (not 'All'), filter by province too
+    if province != 'All':
+        dff = dff[dff["Province"] == province]
 
-@callback(
-    Output("paygap-card", "children"),
-    Input("store-selected", "data")
-)
-def make_pay_gap_card(data):
-    if not data:
-        return ""
-
-    data = data[0]
-    data = {k: (f"{v}%" if v else '') for k, v in data.items()}
-    
-    paygap = dbc.Row([
-        dbc.Col([html.Div("Hourly Pay Gap", className="border-bottom border-3"),
-                 html.Div("ALL"), html.Div("Part Time"), html.Div("Temporary")], style={"minWidth": 250}),
-        dbc.Col([html.Div("Mean", className="border-bottom border-3"),
-                 html.Div(f"{data['Mean Hourly Gap']}"), html.Div(f"{data['Mean Hourly Gap Part Time']}"),
-                 html.Div(f"{data['Mean Hourly Gap Part Temp']}")]),
-        dbc.Col([html.Div("Median", className="border-bottom border-3"),
-                 html.Div(f"{data['Median Hourly Gap']}"), html.Div(f"{data['Median Hourly Gap Part Time']}"),
-                 html.Div(f"{data['Median Hourly Gap Part Temp']}")])
-    ], style={"minWidth": 400})
-
-    mean = dbc.Alert(dcc.Markdown(f"** Mean Pay **\n### {data['Mean Hourly Gap']}  Higher for men"), color="dark")
-    median = dbc.Alert(dcc.Markdown(f"** Median Pay **\n### {data['Median Hourly Gap']}  Higher for men"), color="dark")
-
-    card = dbc.Card([
-        dbc.CardHeader(html.H2("Hourly Pay Gap"), className="text-center"),
-        dbc.CardBody([dbc.Row([dbc.Col(mean), dbc.Col(median)], className="text-center"), paygap])
-    ])
-    return card
-
-
-@callback(
-    Output("bonusgap-card", "children"),
-    Input("store-selected", "data")
-)
-def make_bonus_gap_card(data):
-    if not data or 'Mean Bonus Gap' not in data[0] or data[0]['Mean Bonus Gap'] == '':
-        return ""
-
-    data = data[0]
-    data = {k: (f"{v}%" if v else '') for k, v in data.items()}
-    
-    bonusgap = dbc.Row([
-        html.Div("Proportion of employees by gender to receive a bonus:", className="mb-1"),
-        dbc.Col([html.Div("Bonus and BIK Pay Gap", className="border-bottom border-3"),
-                 html.Div("Bonus"), html.Div("Benefits In Kind")], style={"minWidth": 250}),
-        dbc.Col([html.Div("Men", className="border-bottom border-3"),
-                 html.Div(f"{data['Percentage Bonus Paid Male']}"), html.Div(f"{data['Percentage BIK Paid Male']}")]),
-        dbc.Col([html.Div("Women", className="border-bottom border-3"),
-                 html.Div(f"{data['Percentage Bonus Paid Female']}"), html.Div(f"{data['Percentage BIK Paid Female']}")])
-    ], style={"minWidth": 400})
-
-    mean = dbc.Alert(dcc.Markdown(f"** Mean Bonus Pay **\n### {data['Mean Bonus Gap']}  Higher for men"), color="dark")
-    median = dbc.Alert(dcc.Markdown(f"** Median Bonus Pay **\n### {data['Median Bonus Gap']}  Higher for men"), color="dark")
-
-    card = dbc.Card([
-        dbc.CardHeader(html.H2("Bonus Gap"), className="text-center"),
-        dbc.CardBody([dbc.Row([dbc.Col(mean), dbc.Col(median)], className="text-center"), bonusgap])
-    ])
-    return card
-
-
-@callback(
-    Output("store-selected", "data"),
-    Input("company-dropdown", "value"),
-    Input("year-radio", "value"),
-)
-def pin_selected_report(company, yr):
-    dff = df[(df["Company Name"] == company) & (df['Report Year'] == yr)]
     dff = dff.fillna('')
-    records = dff.to_dict("records")
-    return records
 
-# Import necessary callbacks
-def register_callbacks(app):
-    app.callback(
-        Output("bar-chart-card", "children"),
-        Input("store-selected", "data")
-    )(make_bar_chart)
+    # Rename 'Latiude' to 'Latitude' if necessary
+    dff = dff.rename(columns={'Latiude': 'Latitude'}) 
 
-    app.callback(
-        Output("paygap-card", "children"),
-        Input("store-selected", "data")
-    )(make_pay_gap_card)
+    # Create the table for Dataview
+    fig_dataview = create_dataview(dff)
+    fig_graph = create_graph(dff)
+    fig_map = create_map(dff)
 
-    app.callback(
-        Output("bonusgap-card", "children"),
-        Input("store-selected", "data")
-    )(make_bonus_gap_card)
-
-    app.callback(
-        Output("store-selected", "data"),
-        Input("company-dropdown", "value"),
-        Input("year-radio", "value"),
-    )(pin_selected_report)
+    return fig_graph, fig_map, fig_dataview
