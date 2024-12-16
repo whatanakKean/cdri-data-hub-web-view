@@ -1,74 +1,32 @@
 import dash_bootstrap_components as dbc
 from dash import html, dcc, Input, Output, callback, State, Patch
+from ..components.sidebar import sidebar
 import pandas as pd
 import dash_ag_grid as dag
 import plotly.graph_objects as go
 
+# Import your data
 df = pd.read_csv('https://raw.githubusercontent.com/plotly/Figure-Friday/main/2024/week-32/irish-pay-gap.csv')
 df['Report Link'] = df['Report Link'].apply(lambda x: f'[Report]({x})')
 df['Company'] = df.apply(lambda row: f'[{row["Company Name"]}]({row["Company Site"]})', axis=1)
 df.rename(columns={'Q1 Men': 'Q1 Male'}, inplace=True)
 
-numeric_columns = [
-   'Mean Hourly Gap', 'Median Hourly Gap', 'Mean Bonus Gap', 'Median Bonus Gap', 'Mean Hourly Gap Part Time',
-   'Median Hourly Gap Part Time', 'Mean Hourly Gap Part Temp', 'Median Hourly Gap Part Temp', 'Percentage Bonus Paid Female',
-   'Percentage Bonus Paid Male', 'Percentage BIK Paid Female', 'Percentage BIK Paid Male', 'Q1 Female', 'Q1 Male', 'Q2 Female',
-   'Q2 Male', 'Q3 Female', 'Q3 Male', 'Q4 Female', 'Q4 Male', 'Percentage Employees Female', 'Percentage Employees Male'
-]
-
-company_dropdown = html.Div(
+# Page layout
+agriculture_and_rural_development = dbc.Container(
     [
-        dbc.Label("Select a Company", html_for="company-dropdown"),
-        dcc.Dropdown(
-            id="company-dropdown",
-            options=[{'label': company, 'value': company} for company in sorted(df["Company Name"].unique())],
-            value='Ryanair',
-            clearable=False,
-            maxHeight=600,
-            optionHeight=50
-        ),
-    ],  className="mb-4",
-)
-
-year_radio = html.Div(
-    [
-        dbc.Label("Select Year", html_for="date-checklist"),
-        dbc.RadioItems(
-            options=[{'label': str(year), 'value': year} for year in [2023, 2022]],
-            value=2023,
-            id="year-radio",
-        ),
+        dcc.Store(id="store-selected", data={}),
+        dbc.Row([
+            sidebar(df),
+            dbc.Col(
+                [
+                    # Other components
+                    html.Div(id="bar-chart-card", className="mt-4"),
+                ], md=9
+            ),
+        ]),
     ],
-    className="mb-4",
+    fluid=True,
 )
-
-control_panel = dbc.Card(
-    dbc.CardBody(
-        [year_radio, company_dropdown ],
-        className="bg-light",
-    ),
-    className="mb-4"
-)
-
-
-metadata_card = dcc.Markdown(
-    """
-    Starting from 2022, Gender Pay Gap Reporting is a regulatory requirement that mandates employers in Ireland with
-     more than 250 employees to publish information on their gender pay gap.
-     
-     [Data source](https://paygap.ie/)
-     
-     [Data source GitHub](https://github.com/zenbuffy/irishGenderPayGap/tree/main)
-     
-     This site was created for Plotly's Figure Friday challenge. For additional data visualizations of this dataset and
-      to join the conversation, visit the [Plotly Community Forum](https://community.plotly.com/t/figure-friday-2024-week-32/86401)
-    """
-)
-
-info = dbc.Accordion([ 
-    dbc.AccordionItem(metadata_card, title="Metadata")
-],  start_collapsed=True)
-
 
 def make_bar_chart(data):
     if not data or not data[0]:
@@ -98,7 +56,7 @@ def make_bar_chart(data):
         marker=dict(color='#19A0AA'),
         text=male_percentages,
         textfont_size=14,
-        textposition='inside',  # Position the text inside the bars
+        textposition='inside',
     ))
 
     fig.add_trace(go.Bar(
@@ -118,21 +76,20 @@ def make_bar_chart(data):
         barmode='stack',
         template='plotly_white',
         legend=dict(
-            orientation='h',  # Horizontal legend
+            orientation='h',
             yanchor='bottom',
-            y=-0.25,  # Position below the chart
+            y=-0.25,
             xanchor='center',
-            x=0.5,  # Centered horizontally
+            x=0.5,
             traceorder='normal'
         ),
         margin=dict(l=10, r=10, t=10, b=10),
     )
 
     return dbc.Card([
-        dbc.CardHeader(html.H2("Proportion of men and women in each pay quartile"), className="text-center"),
+        dbc.CardHeader(html.H2("Agriculture and Rural Development"), className="text-center"),
         dcc.Graph(figure=fig, style={"height": 250}, config={'displayModeBar': False})
     ])
-
 
 @callback(
     Output("bar-chart-card", "children"),
@@ -216,19 +173,25 @@ def pin_selected_report(company, yr):
     records = dff.to_dict("records")
     return records
 
+# Import necessary callbacks
+def register_callbacks(app):
+    app.callback(
+        Output("bar-chart-card", "children"),
+        Input("store-selected", "data")
+    )(make_bar_chart)
 
-agriculture_and_rural_development = dbc.Container(
-    [
-        dcc.Store(id="store-selected", data={}),
-        dbc.Row([
-            dbc.Col([control_panel, info], md=3),
-            dbc.Col(
-                [
-                    # dbc.Row([dbc.Col(html.Div(id="paygap-card")), dbc.Col(html.Div(id="bonusgap-card"))]),
-                    html.Div(id="bar-chart-card", className="mt-4"),
-                ], md=9
-            ),
-        ]),
-    ],
-    fluid=True,
-)
+    app.callback(
+        Output("paygap-card", "children"),
+        Input("store-selected", "data")
+    )(make_pay_gap_card)
+
+    app.callback(
+        Output("bonusgap-card", "children"),
+        Input("store-selected", "data")
+    )(make_bonus_gap_card)
+
+    app.callback(
+        Output("store-selected", "data"),
+        Input("company-dropdown", "value"),
+        Input("year-radio", "value"),
+    )(pin_selected_report)
