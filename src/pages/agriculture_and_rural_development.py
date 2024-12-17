@@ -22,8 +22,8 @@ agriculture_and_rural_development = dbc.Container(
                     # Visualization Tab
                     dcc.Tabs(
                         [
-                            dcc.Tab(dcc.Graph(id='map-id'), label="Map View"),
-                            dcc.Tab(dcc.Graph(id='graph-id'), label="Visualization"),
+                            dcc.Tab(dcc.Graph(id='map-id', config= {'displaylogo': False}), label="Map View"),
+                            dcc.Tab(dcc.Graph(id='graph-id', config= {'displaylogo': False}), label="Visualization"),
                             dcc.Tab(id='dataview-id', label="Data Hub", children=html.Div(id='dataview-container')),
                         ]
                     ),
@@ -57,14 +57,26 @@ def create_map(dff):
     # Set map style and margins
     fig.update_layout(
         mapbox_style="open-street-map",
+        mapbox=dict(
+            zoom=6
+        ),
         margin=dict(l=0, r=0, t=0, b=0)
     )
     
     return fig
 
 def create_graph(dff):
-    return go.Figure(data=[go.Line(x=dff['Year'], y=dff['Area Planted'])])
-
+    # Ensure the correct bar mode and grouping
+    fig = px.histogram(dff, 
+                 x='Province', 
+                 y='Area Planted', 
+                 color='Year', 
+                 barmode='group', 
+                 height=400)
+    # Adjust layout to further ensure grouping behavior
+    fig.update_layout(barmode='group', xaxis_title='Province', yaxis_title='Area Planted')
+    return fig
+    
 def create_dataview(dff):
     # Define the table's column definitions
     column_defs = [{"headerName": col, "field": col} for col in dff.columns]
