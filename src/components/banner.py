@@ -47,7 +47,7 @@ def banner():
                                 dbc.NavItem(dbc.NavLink("Home", href="/")),
                                 dbc.DropdownMenu(
                                     children=[
-                                        dbc.DropdownMenuItem("Sector", header=True),
+                                        dbc.DropdownMenuItem("Centre", header=True),
                                         dbc.DropdownMenuItem("Agriculture and Rural Development", href="/agriculture-and-rural-development"),
                                         dbc.DropdownMenuItem("Development Economics and Trade", href="/development-economics-and-trade"),
                                         dbc.DropdownMenuItem("Educational Research and Innovation", href="/educational-research-and-innovation"),
@@ -56,7 +56,8 @@ def banner():
                                     ],
                                     nav=True,
                                     in_navbar=True,
-                                    label="Sector",
+                                    label="Centre",
+                                    align_end=True
                                 ),
                                 dbc.NavItem(dbc.NavLink("About", href="/about")),
                             ],
