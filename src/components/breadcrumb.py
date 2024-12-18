@@ -1,14 +1,15 @@
-import dash_bootstrap_components as dbc
+import dash_mantine_components as dmc
 from dash import callback, Input, Output
 
 def breadcrumb():
     """
     Renders the breadcrumb component.
     """
-    return dbc.Breadcrumb(id="breadcrumb", style={"padding": "1rem 0 0 1rem"})
+    # Initialize Breadcrumbs with empty children
+    return dmc.Breadcrumbs(id="breadcrumb", style={"padding": "1rem 0 0 1rem"}, children=[])
 
 @callback(
-    Output("breadcrumb", "items"),
+    Output("breadcrumb", "children"),
     [Input("url", "pathname")]
 )
 def update_breadcrumb_items(pathname):
@@ -23,5 +24,8 @@ def update_breadcrumb_items(pathname):
         "/natural-resource-and-environment": "Natural Resource & Environment",
         "/governance-and-inclusive-society": "Governance & Inclusive Society",
     }
-    active_item = {"label": page_labels.get(pathname, ""), "active": True}
-    return [{"label": "Home", "href": "/", "external_link": True}] + [active_item]
+    active_item = dmc.Anchor(page_labels.get(pathname, ""), href=pathname, style={"fontWeight": "bold"})
+    return [
+        dmc.Anchor("Home", href="/", style={"marginRight": "0.5rem"}),
+        active_item
+    ]

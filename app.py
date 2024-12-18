@@ -8,7 +8,10 @@
 from dash import html, dcc
 from dash.dependencies import Input, Output
 from dash_extensions.enrich import DashProxy, ServersideOutputTransform
-import dash_bootstrap_components as dbc
+
+import dash_mantine_components as dmc
+from dash import Dash, _dash_renderer
+_dash_renderer._set_react_version("18.2.0")
 
 
 from src.components.banner import banner
@@ -26,28 +29,27 @@ from src.pages.not_found import not_found_page
 # Initialize the Dash app with DashProxy for enhanced features
 app = DashProxy(
     __name__,
-    external_stylesheets=[dbc.themes.BOOTSTRAP],
+    external_stylesheets=dmc.styles.ALL,
     transforms=[ServersideOutputTransform()],
     suppress_callback_exceptions=True,
 )
 
-# Set the server for the app
-server = app.server
-
 # Define the app title
 app.title = "CDRI Data Hub"
 
-# Define the app layout
-app.layout = dbc.Container(
-    fluid=True,
-    style={"padding": "0", "minHeight": "100vh"},
-    children=[
-        dcc.Location(id="url", refresh=False),
-        banner(),
-        breadcrumb(),
-        html.Div(id="page-content"),
-        footer(),
-    ],
+
+app.layout = dmc.MantineProvider(
+    dmc.Container(
+        fluid=True,
+        style={"padding": "0", "minHeight": "100vh"},
+        children=[
+            dcc.Location(id="url", refresh=False),
+            banner(),
+            breadcrumb(),
+            html.Div(id="page-content"),
+            footer(),
+        ],
+    ),
 )
 
 # Callback to display the correct page based on the URL

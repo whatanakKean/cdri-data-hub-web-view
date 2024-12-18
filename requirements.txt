@@ -5,3 +5,5 @@ dash_bootstrap_components
 dash_extensions
 pandas
 openpyxl
+dash_iconify
+dash_mantine_components

@@ -1,83 +1,58 @@
-import dash_bootstrap_components as dbc
-from dash import dcc, html, Input, Output, callback
-
+from dash import dcc, html
 
 def banner():
-    """Build the banner at the top of the page with sector buttons inside."""
+    """Build the banner at the top of the page using HTML components."""
     return html.Div(
         id="banner",
         style={
-            "padding": "0.5rem",
+            "display": "flex",
+            "justify-content": "space-between",
+            "align-items": "center",
+            "padding": "0.5rem 1rem",
             "background-color": "#336666",
             "color": "white",
             "z-index": 1,
         },
         children=[
-            dbc.Navbar(
+            # Logo Section
+            html.A(
+                href="/",
+                children=html.Img(
+                    src="https://cdri.org.kh/storage/images/CDRI%20Logo_1704186788.png",
+                    style={"width": "150px", "height": "auto"},
+                ),
+            ),
+
+            # Navigation Links
+            html.Div(
+                style={"display": "flex", "gap": "1rem"},
                 children=[
-                    # Logo Section
-                    dbc.Row(
-                        align="center",
+                    html.A("Home", href="/", style={"color": "white", "text-decoration": "none"}),
+                    html.Div(
                         children=[
-                            dbc.Col(
-                                html.A(
-                                    href="/",
-                                    children=html.Img(
-                                        src="https://cdri.org.kh/storage/images/CDRI%20Logo_1704186788.png",
-                                        style={"width": "150px", "height": "auto"},
-                                    ),
-                                ),
-                                width="auto",
+                            html.A("Sector", href="#", style={"color": "white", "text-decoration": "none"}),
+                            html.Div(
+                                style={
+                                    "position": "absolute",
+                                    "background-color": "white",
+                                    "color": "black",
+                                    "box-shadow": "0px 4px 6px rgba(0, 0, 0, 0.1)",
+                                    "padding": "0.5rem",
+                                    "border-radius": "4px",
+                                    "display": "none",
+                                },
+                                children=[
+                                    html.A("Agriculture and Rural Development", href="/agriculture-and-rural-development", style={"display": "block", "margin": "0.5rem 0"}),
+                                    html.A("Development Economics and Trade", href="/development-economics-and-trade", style={"display": "block", "margin": "0.5rem 0"}),
+                                    html.A("Educational Research and Innovation", href="/educational-research-and-innovation", style={"display": "block", "margin": "0.5rem 0"}),
+                                    html.A("Natural Resource and Environment", href="/natural-resource-and-environment", style={"display": "block", "margin": "0.5rem 0"}),
+                                    html.A("Governance and Inclusive Society", href="/governance-and-inclusive-society", style={"display": "block", "margin": "0.5rem 0"}),
+                                ],
                             ),
                         ],
-                        className="g-0",
                     ),
-
-                    # Responsive Toggle Menu
-                    dbc.NavbarToggler(id="navbar-toggler", n_clicks=0),
-
-                    dbc.Collapse(
-                        id="navbar-collapse",
-                        is_open=False,
-                        navbar=True,
-                        children=dbc.Nav(
-                            className="ms-auto",
-                            navbar=True,
-                            children=[
-                                dbc.NavItem(dbc.NavLink("Home", href="/")),
-                                dbc.DropdownMenu(
-                                    children=[
-                                        dbc.DropdownMenuItem("Centre", header=True),
-                                        dbc.DropdownMenuItem("Agriculture and Rural Development", href="/agriculture-and-rural-development"),
-                                        dbc.DropdownMenuItem("Development Economics and Trade", href="/development-economics-and-trade"),
-                                        dbc.DropdownMenuItem("Educational Research and Innovation", href="/educational-research-and-innovation"),
-                                        dbc.DropdownMenuItem("Natural Resource and Environment", href="/natural-resource-and-environment"),
-                                        dbc.DropdownMenuItem("Governance and Inclusive Society", href="/governance-and-inclusive-society"),
-                                    ],
-                                    nav=True,
-                                    in_navbar=True,
-                                    label="Centre",
-                                    align_end=True
-                                ),
-                                dbc.NavItem(dbc.NavLink("About", href="/about")),
-                            ],
-                        ),
-                    ),
+                    html.A("About", href="/about", style={"color": "white", "text-decoration": "none"}),
                 ],
-                color="#336666",
-                dark=True,
-                sticky="top",
             ),
         ],
     )
-
-# Callback to handle toggle button functionality
-@callback(
-    Output("navbar-collapse", "is_open"),
-    Input("navbar-toggler", "n_clicks"),
-    [Input("navbar-collapse", "is_open")],
-)
-def toggle_navbar(n_clicks, is_open):
-    if n_clicks:
-        return not is_open
-    return is_open

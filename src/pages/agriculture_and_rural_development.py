@@ -1,6 +1,7 @@
 import dash_bootstrap_components as dbc
+import dash_mantine_components as dmc
 import dash
-from dash import html, dcc, Input, Output, State, callback, ctx
+from dash import html, dcc, Input, Output, State, callback, ctx, callback_context
 from ..components.sidebar import sidebar
 from ..utils.load_data import load_data
 import pandas as pd
@@ -12,39 +13,38 @@ import io
 # Import your data
 data = load_data(file_path="src/data/Datahub_Agri_Latest.xlsx", sheet_name="Database")
 
-# Page layout
-agriculture_and_rural_development = dbc.Container(
+agriculture_and_rural_development = dmc.Container(
     [
-        dbc.Row([ 
-            sidebar(data), 
-            dbc.Col(
+        dmc.Grid(children=[
+            dmc.GridCol(sidebar(data), span={"base": 12, "sm": 3}),
+            dmc.GridCol(
                 [
                     # Visualization Tab
                     dcc.Tabs(
                         [
-                            dcc.Tab(dcc.Graph(id='map-id', config= {'displaylogo': False}), label="Map View"),
-                            dcc.Tab(dcc.Graph(id='graph-id', config= {'displaylogo': False}), label="Visualization"),
+                            dcc.Tab(dcc.Graph(id='map-id', config={'displaylogo': False}), label="Map View"),
+                            dcc.Tab(dcc.Graph(id='graph-id', config={'displaylogo': False}), label="Visualization"),
                             dcc.Tab(id='dataview-id', label="Data Hub", children=html.Div(id='dataview-container')),
                         ]
                     ),
                     dcc.Store(id="selected-point-data"),
-                    dbc.Modal(
-                        [
-                            dbc.ModalHeader(dbc.ModalTitle("Detail Insight")),
-                            dbc.ModalBody(id="modal-body"),
-                            dbc.ModalFooter(
-                                dbc.Button("Close", id="close-modal", className="ms-auto", n_clicks=0)
-                            ),
-                        ],
+                    dmc.Modal(
                         id="info-modal",
-                        is_open=False,
-                        centered=True,
-                    ),
-                ], md=9
+                        title="Point Information",
+                        children=[
+                            dmc.Text(id="modal-content"),
+                            dmc.Button("Close", id="close-modal", variant="outline", color="red", className="mt-3")
+                        ],
+                        size="lg",
+                    )
+
+                ],
+                span={"base": 12, "sm": 9},
             ),
-        ], className="mb-4 mt-2"),
+        ]),
     ],
     fluid=True,
+    style={'paddingTop': '1rem'}
 )
 
 def create_map(dff):
@@ -60,7 +60,8 @@ def create_map(dff):
         mapbox=dict(
             zoom=6
         ),
-        margin=dict(l=0, r=0, t=0, b=0)
+        margin=dict(l=0, r=0, t=0, b=0),
+        clickmode="event+select"  # Enable click events on points
     )
     
     return fig
@@ -90,7 +91,7 @@ def create_dataview(dff):
     )
 
     # Create the download button
-    download_button = dbc.Button("Download Data", id="download-button", outline=True, color="success", className="mt-3")
+    download_button = dmc.Button("Download Data", id="download-button", variant="outline", color="green", className="mt-3")
     
     # Return the table and button in a layout
     return html.Div([
@@ -133,34 +134,7 @@ def pin_selected_report(sector, subsector_1, subsector_2, province):
 
     return fig_graph, fig_map, fig_dataview
 
-# Callback to handle map point click and show modal
-@callback(
-    [Output("selected-point-data", "data"),
-     Output("info-modal", "is_open"),
-     Output("modal-body", "children")],
-    [Input("map-id", "clickData"),
-     Input("close-modal", "n_clicks")],
-    [State("info-modal", "is_open")],
-)
-def show_modal_on_click(click_data, n_close, is_open):
-    triggered = ctx.triggered_id
-    if triggered == "map-id" and click_data:
-        # Extract point information
-        point_data = click_data["points"][0]
-        hover_text = point_data.get("hovertext", "No details available")
-        lat = point_data.get("lat", "N/A")
-        lon = point_data.get("lon", "N/A")
-        content = f"""
-        Hover Text: {hover_text}
-        Latitude: {lat}
-        Longitude: {lon}
-        """
-        return point_data, True, content
-    
-    if triggered == "close-modal":
-        return None, False, None
-    
-    return None, is_open, None
+
 
 # Callback to handle data download
 @callback(
@@ -192,3 +166,33 @@ def download_data(n_clicks, sector, subsector_1, subsector_2, province):
 
     # Return the content as plain CSV string
     return dict(content=csv_string, filename="data.csv", type="application/csv")
+
+
+# Callback to handle the map click and show modal with point data
+@callback(
+    Output('info-modal', 'opened'),
+    Output('modal-content', 'children'),
+    Input('map-id', 'clickData'),
+    Input('close-modal', 'n_clicks'),
+    prevent_initial_call=True
+)
+def manage_modal(click_data, n_clicks):
+    # Get the trigger that called the callback
+    triggered_id = callback_context.triggered[0]['prop_id'].split('.')[0]
+    
+    # If the trigger is the map click
+    if triggered_id == 'map-id' and click_data:
+        point_data = click_data['points'][0]
+        province = point_data['hovertext']
+        latitude = point_data['lat']
+        longitude = point_data['lon']
+        
+        modal_content = f"Province: {province}\nLatitude: {latitude}\nLongitude: {longitude}"
+        return True, modal_content  # Open the modal with the data
+
+    # If the trigger is the close button click
+    elif triggered_id == 'close-modal' and n_clicks:
+        return False, ""  # Close the modal
+    
+    # Default case if no trigger is pressed
+    return False, ""
