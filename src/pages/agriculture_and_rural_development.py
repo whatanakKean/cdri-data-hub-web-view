@@ -1,7 +1,6 @@
 import dash_mantine_components as dmc
 import dash
 from dash import html, dcc, Input, Output, State, callback, ctx, callback_context
-from ..components.sidebar import sidebar
 from ..utils.load_data import load_data
 import pandas as pd
 import dash_ag_grid as dag
@@ -12,6 +11,112 @@ from dash_iconify import DashIconify
 
 # Import your data
 data = load_data(file_path="src/data/Datahub_Agri_Latest.xlsx", sheet_name="Database")
+
+# Sidebar components
+def sidebar(data):
+    indicator_dropdown = dmc.Select(
+        label="Select Indicator",
+        id="indicator-dropdown",
+        data=[{'label': indicator, 'value': indicator} for indicator in data.columns.unique()],
+        value='Area Planted',
+        clearable=False,
+        searchable=True,
+        maxDropdownHeight=600,
+        style={"marginBottom": "16px"}
+    )
+    sector_dropdown = dmc.Select(
+        label="Select Sector",
+        id="sector-dropdown",
+        data=[{'label': sector, 'value': sector} for sector in data["Sector"].dropna().unique()],
+        value='Agriculture',
+        clearable=False,
+        searchable=True,
+        maxDropdownHeight=600,
+        style={"marginBottom": "16px"}
+    )
+
+    subsector_1_dropdown = dmc.Select(
+        label="Select Sub-Sector (1)",
+        id="subsector-1-dropdown",
+        data=[{'label': subsector_1, 'value': subsector_1} for subsector_1 in data["Sub-Sector (1)"].dropna().unique()],
+        value='Production',
+        clearable=False,
+        searchable=True,
+        maxDropdownHeight=600,
+        style={"marginBottom": "16px"}
+    )
+
+    subsector_2_dropdown = dmc.Select(
+        label="Select Sub-Sector (2)",
+        id="subsector-2-dropdown",
+        data=[{'label': subsector_2, 'value': subsector_2} for subsector_2 in data["Sub-Sector (2)"].dropna().unique()],
+        value='Rice',
+        clearable=False,
+        searchable=True,
+        maxDropdownHeight=600,
+        style={"marginBottom": "16px"}
+    )
+
+    province_dropdown = dmc.Select(
+        label="Select Province",
+        id="province-dropdown",
+        data=[
+            {'label': 'All Provinces', 'value': 'All'},
+            *[{'label': province, 'value': province} for province in data["Province"].dropna().unique()]
+        ],
+        value='All',  # Default value to "All Provinces"
+        clearable=False,
+        searchable=True,
+        maxDropdownHeight=600,
+        style={"marginBottom": "16px"}
+    )
+
+    control_panel = dmc.Paper(
+        [
+            sector_dropdown,
+            subsector_1_dropdown,
+            subsector_2_dropdown,
+            indicator_dropdown,
+            province_dropdown
+        ],
+        shadow="xs",
+        p="md",
+        radius="md",
+        withBorder=True,
+        style={"marginBottom": "16px"}
+    )
+
+    info = dmc.Accordion(
+        chevronPosition="right",
+        variant="contained",
+        radius="md",
+        children=[
+            dmc.AccordionItem(
+                value="bender",
+                children=[
+                    dmc.AccordionControl(
+                        dmc.Group(
+                            [
+                                html.Div(
+                                    [
+                                        dmc.Text("Metadata"),
+                                        dmc.Text("Fascinated with cooking, though has no sense of taste", size="sm", fw=400, c="dimmed"),
+                                    ]
+                                ),
+                            ]
+                        )
+                    ),
+                    dmc.AccordionPanel(dmc.Text("Bender Bending Rodríguez, (born September 4, 2996), designated Bending Unit 22, and commonly "
+                                            "known as Bender, is a bending unit created by a division of MomCorp in Tijuana, Mexico, "
+                                            "and his serial number is 2716057. His mugshot id number is 01473. He is Fry's best friend.", size="sm")),
+                ]
+            )
+        ]
+    )
+
+    return dmc.Stack([control_panel, info])
+
+
 
 agriculture_and_rural_development = dmc.Container(
     [
@@ -106,14 +211,30 @@ def create_map(dff):
 
 def create_graph(dff):
     # Ensure the correct bar mode and grouping
-    fig = px.histogram(dff, 
-                 x='Province', 
-                 y='Area Planted', 
-                 color='Year', 
-                 barmode='group', 
-                 height=400)
+    fig = px.histogram(
+        dff,
+        x='Province',
+        y='Area Planted',
+        color='Year',
+        barmode='group',
+        title='Title',
+        height=400
+    )
+    
     # Adjust layout to further ensure grouping behavior
-    fig.update_layout(barmode='group', xaxis_title='Province', yaxis_title='Area Planted', hovermode="x unified")
+    fig.update_layout(
+        barmode='group',
+        xaxis_title='Province',
+        yaxis_title='Area Planted',
+        hovermode="x unified",
+        title={
+            'text': "Title<br><sub>Subtitle describing the data or context</sub>",
+            'x': 0.05,
+            'xanchor': 'left',
+            'y': 0.9
+        }
+    )
+    
     return fig
     
 def create_dataview(dff):

@@ -34,6 +34,7 @@ app = DashProxy(
 
 # Define the app title
 app.title = "CDRI Data Hub"
+app._favicon = ("favicon.ico")
 
 app.layout = dmc.MantineProvider(
     dmc.AppShell(
