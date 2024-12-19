@@ -27,7 +27,7 @@ from src.pages.not_found import not_found_page
 # Initialize the Dash app
 app = DashProxy(
     __name__,
-    external_stylesheets=dmc.styles.ALL,
+    external_stylesheets=[dmc.styles.ALL],
     transforms=[ServersideOutputTransform()],
     suppress_callback_exceptions=True,
 )
@@ -35,23 +35,33 @@ app = DashProxy(
 # Define the app title
 app.title = "CDRI Data Hub"
 
-# App layout
 app.layout = dmc.MantineProvider(
-    dmc.Container(
-        fluid=True,
-        style={"padding": "0", "minHeight": "100vh"},
-        children=[
+    dmc.AppShell(
+        [
             dcc.Location(id="url", refresh=False),
-            banner(),
-            dcc.Loading(
+            *banner(),
+            dmc.AppShellMain(
+                # dcc.Loading(
+                #     [
+                #         breadcrumb(),
+                #         html.Div(id="page-content"),
+                #     ]
+                # ),
                 [
                     breadcrumb(),
                     html.Div(id="page-content"),
                 ]
             ),
-            footer(),
+            footer()
         ],
-    ),
+        header={"height": 60},
+        navbar={
+            "width": 300,
+            "breakpoint": "sm",
+            "collapsed": {"desktop": True, "mobile": True},
+        },
+        id="appshell",
+    )
 )
 
 
@@ -72,15 +82,6 @@ def display_page(pathname):
         "/governance-and-inclusive-society": governance_and_inclusive_society,
     }
     return page_routes.get(pathname, not_found_page)
-
-# Callback to toggle navbar visibility
-@app.callback(
-    Output("navbar", "collapsed"),
-    Input("burger", "opened"),
-    State("navbar", "collapsed"),
-)
-def toggle_navbar(opened, collapsed):
-    return not opened
 
 # Run the server
 if __name__ == "__main__":

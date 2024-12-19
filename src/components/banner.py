@@ -3,16 +3,15 @@ from dash import Input, Output, State, callback
 
 logo = "https://cdri.org.kh/storage/images/CDRI%20Logo_1704186788.png"
 buttons = [
-    dmc.Button("Home", variant="subtle", color="gray"),
-    dmc.Button("Blog", variant="subtle", color="gray"),
-    dmc.Button("Contacts", variant="subtle", color="gray"),
-    dmc.Button("Support", variant="subtle", color="gray"),
+    dmc.Button("Home", variant="subtle", color="white"),
+    dmc.Button("Blog", variant="subtle", color="white"),
+    dmc.Button("Contacts", variant="subtle", color="white"),
+    dmc.Button("Support", variant="subtle", color="white"),
 ]
 
 def banner():
-    return dmc.AppShell(
-        [
-            dmc.AppShellHeader(
+    return [
+        dmc.AppShellHeader(
                 dmc.Group(
                     [
                         dmc.Group(
@@ -31,6 +30,7 @@ def banner():
                             size="sm",
                             hiddenFrom="sm",
                             opened=False,
+                            color="white"
                         ),
                     ],
                     justify="space-between",
@@ -38,23 +38,16 @@ def banner():
                     h="100%",
                     px="md",
                 ),
+                style={"backgroundColor": "#336666"}
             ),
             dmc.AppShellNavbar(
                 id="navbar",
                 children=buttons,
                 py="md",
                 px=4,
-            )
-        ],
-        header={"height": 60},
-        navbar={
-            "width": 300,
-            "breakpoint": "sm",
-            "collapsed": {"desktop": True, "mobile": True},
-        },
-        padding="md",
-        id="appshell",
-    )
+                style={"backgroundColor": "#336666"}
+            ),
+        ]
 
 
 # Callback to toggle navbar visibility

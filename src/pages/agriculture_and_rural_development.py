@@ -41,22 +41,20 @@ agriculture_and_rural_development = dmc.Container(
                                             leftSection=DashIconify(icon="tabler:database"),
                                             value="dataview",
                                         ),
-                                        dmc.TabsPanel(
-                                            dcc.Graph(id='map-id', config={'displaylogo': False}),
-                                            value="map",
-                                            style={"height": "100%", "width": "100%"}
-                                        ),
-                                        dmc.TabsPanel(
-                                            dcc.Graph(id='graph-id', config={'displaylogo': False}),
-                                            value="graph",
-                                            style={"height": "100%", "width": "100%"}
-                                        ),
-                                        dmc.TabsPanel(
-                                            html.Div(id='dataview-container'),
-                                            value="dataview",
-                                            style={"height": "100%", "width": "100%"}
-                                        ),
+                                        
                                     ]
+                                ),
+                                dmc.TabsPanel(
+                                    dcc.Graph(id='map-id', config={'displaylogo': False}),
+                                    value="map",
+                                ),
+                                dmc.TabsPanel(
+                                    dcc.Graph(id='graph-id', config={'displaylogo': False}),
+                                    value="graph",
+                                ),
+                                dmc.TabsPanel(
+                                    html.Div(id='dataview-container'),
+                                    value="dataview",
                                 ),
                             ],
                             value="map",
@@ -115,7 +113,7 @@ def create_graph(dff):
                  barmode='group', 
                  height=400)
     # Adjust layout to further ensure grouping behavior
-    fig.update_layout(barmode='group', xaxis_title='Province', yaxis_title='Area Planted')
+    fig.update_layout(barmode='group', xaxis_title='Province', yaxis_title='Area Planted', hovermode="x unified")
     return fig
     
 def create_dataview(dff):

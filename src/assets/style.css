@@ -1,0 +1,11 @@
+/* Apply this to all TabsPanel */
+.dmc-tabs-panel {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Apply this to Tab panels when using Dash Graphs or Ag-Grid */
+.dmc-tabs-panel .dash-graph {
+    width: 100% !important;
+    height: 100% !important;
+}
