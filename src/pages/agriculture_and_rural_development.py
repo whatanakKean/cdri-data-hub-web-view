@@ -1,4 +1,3 @@
-import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 import dash
 from dash import html, dcc, Input, Output, State, callback, ctx, callback_context
@@ -9,6 +8,7 @@ import dash_ag_grid as dag
 import plotly.graph_objects as go
 import plotly.express as px
 import io
+from dash_iconify import DashIconify
 
 # Import your data
 data = load_data(file_path="src/data/Datahub_Agri_Latest.xlsx", sheet_name="Database")
@@ -19,13 +19,54 @@ agriculture_and_rural_development = dmc.Container(
             dmc.GridCol(sidebar(data), span={"base": 12, "sm": 3}),
             dmc.GridCol(
                 [
-                    # Visualization Tab
-                    dcc.Tabs(
+                    dmc.Paper(
                         [
-                            dcc.Tab(dcc.Graph(id='map-id', config={'displaylogo': False}), label="Map View"),
-                            dcc.Tab(dcc.Graph(id='graph-id', config={'displaylogo': False}), label="Visualization"),
-                            dcc.Tab(id='dataview-id', label="Data Hub", children=html.Div(id='dataview-container')),
-                        ]
+                            dmc.Tabs(
+                            [
+                                dmc.TabsList(
+                                    grow=True,
+                                    children=[
+                                        dmc.TabsTab(
+                                            "Map View",
+                                            leftSection=DashIconify(icon="tabler:map"),
+                                            value="map",
+                                        ),
+                                        dmc.TabsTab(
+                                            "Visalualization",
+                                            leftSection=DashIconify(icon="tabler:chart-bar"),
+                                            value="graph",
+                                        ),
+                                        dmc.TabsTab(
+                                            "Data Hub",
+                                            leftSection=DashIconify(icon="tabler:database"),
+                                            value="dataview",
+                                        ),
+                                        dmc.TabsPanel(
+                                            dcc.Graph(id='map-id', config={'displaylogo': False}),
+                                            value="map",
+                                            style={"height": "100%", "width": "100%"}
+                                        ),
+                                        dmc.TabsPanel(
+                                            dcc.Graph(id='graph-id', config={'displaylogo': False}),
+                                            value="graph",
+                                            style={"height": "100%", "width": "100%"}
+                                        ),
+                                        dmc.TabsPanel(
+                                            html.Div(id='dataview-container'),
+                                            value="dataview",
+                                            style={"height": "100%", "width": "100%"}
+                                        ),
+                                    ]
+                                ),
+                            ],
+                            value="map",
+                            ),
+                        ],
+                        shadow="xs",
+                        p="md",
+                        radius="md",
+                        withBorder=True,
+                        style={"marginBottom": "16px"}
                     ),
                     dcc.Store(id="selected-point-data"),
                     dmc.Modal(
@@ -37,7 +78,6 @@ agriculture_and_rural_development = dmc.Container(
                         ],
                         size="lg",
                     )
-
                 ],
                 span={"base": 12, "sm": 9},
             ),
@@ -61,7 +101,7 @@ def create_map(dff):
             zoom=6
         ),
         margin=dict(l=0, r=0, t=0, b=0),
-        clickmode="event+select"  # Enable click events on points
+        clickmode="event+select"
     )
     
     return fig
@@ -104,7 +144,7 @@ def create_dataview(dff):
 @callback(
     [Output('graph-id', 'figure'),
      Output('map-id', 'figure'),
-     Output('dataview-id', 'children')],
+     Output('dataview-container', 'children')],
     Input("sector-dropdown", "value"),
     Input("subsector-1-dropdown", "value"),
     Input("subsector-2-dropdown", "value"),

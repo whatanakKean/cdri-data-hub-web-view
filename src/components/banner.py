@@ -1,58 +1,68 @@
-from dash import dcc, html
+import dash_mantine_components as dmc
+from dash import Input, Output, State, callback
+
+logo = "https://cdri.org.kh/storage/images/CDRI%20Logo_1704186788.png"
+buttons = [
+    dmc.Button("Home", variant="subtle", color="gray"),
+    dmc.Button("Blog", variant="subtle", color="gray"),
+    dmc.Button("Contacts", variant="subtle", color="gray"),
+    dmc.Button("Support", variant="subtle", color="gray"),
+]
 
 def banner():
-    """Build the banner at the top of the page using HTML components."""
-    return html.Div(
-        id="banner",
-        style={
-            "display": "flex",
-            "justify-content": "space-between",
-            "align-items": "center",
-            "padding": "0.5rem 1rem",
-            "background-color": "#336666",
-            "color": "white",
-            "z-index": 1,
-        },
-        children=[
-            # Logo Section
-            html.A(
-                href="/",
-                children=html.Img(
-                    src="https://cdri.org.kh/storage/images/CDRI%20Logo_1704186788.png",
-                    style={"width": "150px", "height": "auto"},
+    return dmc.AppShell(
+        [
+            dmc.AppShellHeader(
+                dmc.Group(
+                    [
+                        dmc.Group(
+                            [
+                                dmc.Image(src=logo, h=40)
+                            ],
+                        ),
+                        dmc.Group(
+                            children=buttons,
+                            ml="xl",
+                            gap=0,
+                            visibleFrom="sm",
+                        ),
+                        dmc.Burger(
+                            id="burger",
+                            size="sm",
+                            hiddenFrom="sm",
+                            opened=False,
+                        ),
+                    ],
+                    justify="space-between",
+                    style={"flex": 1},
+                    h="100%",
+                    px="md",
                 ),
             ),
-
-            # Navigation Links
-            html.Div(
-                style={"display": "flex", "gap": "1rem"},
-                children=[
-                    html.A("Home", href="/", style={"color": "white", "text-decoration": "none"}),
-                    html.Div(
-                        children=[
-                            html.A("Sector", href="#", style={"color": "white", "text-decoration": "none"}),
-                            html.Div(
-                                style={
-                                    "position": "absolute",
-                                    "background-color": "white",
-                                    "color": "black",
-                                    "box-shadow": "0px 4px 6px rgba(0, 0, 0, 0.1)",
-                                    "padding": "0.5rem",
-                                    "border-radius": "4px",
-                                    "display": "none",
-                                },
-                                children=[
-                                    html.A("Agriculture and Rural Development", href="/agriculture-and-rural-development", style={"display": "block", "margin": "0.5rem 0"}),
-                                    html.A("Development Economics and Trade", href="/development-economics-and-trade", style={"display": "block", "margin": "0.5rem 0"}),
-                                    html.A("Educational Research and Innovation", href="/educational-research-and-innovation", style={"display": "block", "margin": "0.5rem 0"}),
-                                    html.A("Natural Resource and Environment", href="/natural-resource-and-environment", style={"display": "block", "margin": "0.5rem 0"}),
-                                    html.A("Governance and Inclusive Society", href="/governance-and-inclusive-society", style={"display": "block", "margin": "0.5rem 0"}),
-                                ],
-                            ),
-                        ],
-                    ),
-                    html.A("About", href="/about", style={"color": "white", "text-decoration": "none"}),
-                ],
-            ),
+            dmc.AppShellNavbar(
+                id="navbar",
+                children=buttons,
+                py="md",
+                px=4,
+            )
         ],
+        header={"height": 60},
+        navbar={
+            "width": 300,
+            "breakpoint": "sm",
+            "collapsed": {"desktop": True, "mobile": True},
+        },
+        padding="md",
+        id="appshell",
     )
+
+
+# Callback to toggle navbar visibility
+@callback(
+    Output("appshell", "navbar"),
+    Input("burger", "opened"),
+    State("appshell", "navbar"),
+)
+def toggle_navbar(opened, navbar):
+    navbar["collapsed"] = {"mobile": not opened, "desktop": True}
+    return navbar

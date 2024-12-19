@@ -5,12 +5,10 @@
 # ********************** #
 
 
-from dash import html, dcc
-from dash.dependencies import Input, Output
+from dash import html, dcc, Dash, _dash_renderer
+from dash.dependencies import Input, Output, State
 from dash_extensions.enrich import DashProxy, ServersideOutputTransform
-
 import dash_mantine_components as dmc
-from dash import Dash, _dash_renderer
 _dash_renderer._set_react_version("18.2.0")
 
 
@@ -26,7 +24,7 @@ from src.pages.natural_resource_and_environment import natural_resource_and_envi
 from src.pages.governance_and_inclusive_society import governance_and_inclusive_society
 from src.pages.not_found import not_found_page
 
-# Initialize the Dash app with DashProxy for enhanced features
+# Initialize the Dash app
 app = DashProxy(
     __name__,
     external_stylesheets=dmc.styles.ALL,
@@ -37,7 +35,7 @@ app = DashProxy(
 # Define the app title
 app.title = "CDRI Data Hub"
 
-
+# App layout
 app.layout = dmc.MantineProvider(
     dmc.Container(
         fluid=True,
@@ -45,45 +43,45 @@ app.layout = dmc.MantineProvider(
         children=[
             dcc.Location(id="url", refresh=False),
             banner(),
-            breadcrumb(),
-            html.Div(id="page-content"),
+            dcc.Loading(
+                [
+                    breadcrumb(),
+                    html.Div(id="page-content"),
+                ]
+            ),
             footer(),
         ],
     ),
 )
+
 
 # Callback to display the correct page based on the URL
 @app.callback(
     Output("page-content", "children"),
     [Input("url", "pathname")],
 )
-
-# Routes to page
 def display_page(pathname):
-    if pathname == "/":
-        return home_page
-    elif pathname == "/about":
-        return about_page
-    elif pathname == "/agriculture-and-rural-development":
-        return agriculture_and_rural_development
-    elif pathname == "/development-economics-and-trade":
-        return development_economics_and_trade
-    elif pathname == "/educational-research-and-innovation":
-        return educational_research_and_innovation
-    elif pathname == "/natural-resource-and-environment":
-        return natural_resource_and_environment
-    elif pathname == "/governance-and-inclusive-society":
-        return governance_and_inclusive_society
-    else:
-        return not_found_page
+    # Return the corresponding page or the 404 page if not found
+    page_routes = {
+        "/": home_page,
+        "/about": about_page,
+        "/agriculture-and-rural-development": agriculture_and_rural_development,
+        "/development-economics-and-trade": development_economics_and_trade,
+        "/educational-research-and-innovation": educational_research_and_innovation,
+        "/natural-resource-and-environment": natural_resource_and_environment,
+        "/governance-and-inclusive-society": governance_and_inclusive_society,
+    }
+    return page_routes.get(pathname, not_found_page)
 
+# Callback to toggle navbar visibility
+@app.callback(
+    Output("navbar", "collapsed"),
+    Input("burger", "opened"),
+    State("navbar", "collapsed"),
+)
+def toggle_navbar(opened, collapsed):
+    return not opened
 
 # Run the server
 if __name__ == "__main__":
-    app.run_server(
-        debug=True,
-        # host="0.0.0.0",
-        port=8050,
-        processes=1,
-        threaded=True,
-    )
+    app.run_server(debug=True, port=8050, processes=1, threaded=True)

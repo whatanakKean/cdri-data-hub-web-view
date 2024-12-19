@@ -67,6 +67,7 @@ def sidebar(data):
     info = dmc.Accordion(
         chevronPosition="right",
         variant="contained",
+        radius="md",
         children=[
             dmc.AccordionItem(
                 value="bender",
