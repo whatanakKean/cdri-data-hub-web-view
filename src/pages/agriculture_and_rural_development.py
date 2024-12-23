@@ -20,8 +20,8 @@ def sidebar(data):
                 value='Agriculture', 
                 searchable=True,
                 data=[{'label': option, 'value': option} for option in data["Sector"].dropna().str.strip().unique()],
-                maxDropdownHeight=600, 
-                style={"marginBottom": "16px"}, 
+                withScrollArea=False,
+                styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
                 checkIconPosition="right"
             ),
             dmc.Select(
@@ -30,8 +30,9 @@ def sidebar(data):
                 value='Production', 
                 searchable=True,
                 data=[{'label': option, 'value': option} for option in data["Sub-Sector (1)"].dropna().str.strip().unique()],
-                maxDropdownHeight=600, 
-                style={"marginBottom": "16px"}, 
+                withScrollArea=False,
+                styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
+                mt="md",
                 checkIconPosition="right"
             ),
             dmc.Select(
@@ -40,8 +41,9 @@ def sidebar(data):
                 value='Rice', 
                 searchable=True,
                 data=[{'label': option, 'value': option} for option in data["Sub-Sector (2)"].dropna().str.strip().unique()],
-                maxDropdownHeight=600, 
-                style={"marginBottom": "16px"}, 
+                withScrollArea=False,
+                styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
+                mt="md",
                 checkIconPosition="right"
             ),
             dmc.Select(
@@ -50,8 +52,9 @@ def sidebar(data):
                 value='All', 
                 searchable=True,
                 data=[{'label': option, 'value': option} for option in ['All'] + list(data["Province"].dropna().str.strip().unique())],
-                maxDropdownHeight=600, 
-                style={"marginBottom": "16px"}, 
+                withScrollArea=False,
+                styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
+                mt="md",
                 checkIconPosition="right"
             ),
             dmc.MultiSelect(
@@ -61,8 +64,10 @@ def sidebar(data):
                 data=[{'label': option, 'value': option} for option in list(data.columns.unique())],  # Populate options dynamically
                 clearable=True,
                 searchable=True,
-                maxDropdownHeight=600, 
-                style={"marginBottom": "16px"},
+                maxDropdownHeight=200,
+                withScrollArea=False,
+                styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
+                mt="md",
                 checkIconPosition="right",
                 placeholder="Select one or more indicators"
             )
