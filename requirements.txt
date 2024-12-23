@@ -6,3 +6,4 @@ pandas
 openpyxl
 dash_iconify
 dash_mantine_components
+python-dotenv
