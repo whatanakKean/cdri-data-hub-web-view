@@ -71,7 +71,7 @@ def sidebar(data):
                 checkIconPosition="right",
                 placeholder="Select one or more indicators"
             )
-        ], shadow="xs", p="md", radius="md", withBorder=True, style={"marginBottom": "16px"}),
+        ], shadow="xs", p="md", radius="md", withBorder=True),
         dmc.Accordion(chevronPosition="right", variant="contained", radius="md", children=[
             dmc.AccordionItem(value="bender", children=[
                 dmc.AccordionControl(dmc.Group([html.Div([dmc.Text("Metadata"), dmc.Text("Bender Bending Rodríguez", size="sm", fw=400, c="dimmed")])]),),
@@ -201,26 +201,26 @@ def create_graph(dff):
                 align='center'
             ),
         ],
-        margin=dict(t=100, b=100, l=50, r=50),
+        margin=dict(t=100, b=80, l=50, r=50),
     )
-    fig2 = go.Figure(layout=layout)
+    fig1 = go.Figure(layout=layout)
 
     # Add line plot for 'Area Harvested'
-    fig2.add_trace(go.Scatter(
+    fig1.add_trace(go.Scatter(
         x=dff['Year'],
         y=dff['Area Harvested'],
         mode='lines+markers',
         name='Area Harvested',
         line=dict(color='blue')
     ))
-    fig2.add_trace(go.Scatter(
+    fig1.add_trace(go.Scatter(
         x=dff['Year'],
         y=dff['Quantity Harvested'],
         mode='lines+markers',
         name='Quantity Harvested',
         line=dict(color='red')
     ))
-    fig2.add_trace(go.Scatter(
+    fig1.add_trace(go.Scatter(
         x=dff['Year'],
         y=dff['Yield'],
         mode='lines+markers',
@@ -229,7 +229,7 @@ def create_graph(dff):
     ))
 
     return html.Div([ 
-        dcc.Graph(id="figure-linechart", figure=fig2, config={
+        dcc.Graph(id="figure-linechart", figure=fig1, config={
             'displaylogo': False,
             'toImageButtonOptions': {
                     'format': 'png',
@@ -238,7 +238,20 @@ def create_graph(dff):
                     'width': 800,
                     'scale':6
                 }
-            })
+            }
+        ),
+        dmc.Divider(size="sm"),
+        dcc.Graph(id="figure-linechart", figure=fig1, config={
+            'displaylogo': False,
+            'toImageButtonOptions': {
+                    'format': 'png',
+                    'filename': 'custom_image',
+                    'height': 500,
+                    'width': 800,
+                    'scale':6
+                }
+            }
+        ),
     ])
 
 def create_dataview(dff): 

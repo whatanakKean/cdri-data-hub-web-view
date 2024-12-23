@@ -3,10 +3,41 @@ from dash import Input, Output, State, callback
 
 logo = "https://cdri.org.kh/storage/images/CDRI%20Logo_1704186788.png"
 buttons = [
-    dmc.Button("Home", variant="subtle", color="white"),
-    dmc.Button("Blog", variant="subtle", color="white"),
-    dmc.Button("Contacts", variant="subtle", color="white"),
-    dmc.Button("Support", variant="subtle", color="white"),
+    dmc.Anchor(dmc.Button("Home", variant="subtle", color="white"), href="/"),
+    dmc.Menu(
+        [
+            dmc.MenuTarget(dmc.Button("Sector", variant="subtle", color="white")),
+            dmc.MenuDropdown(
+                [
+                    dmc.MenuItem(
+                        "Agriculture and Rural Development",
+                        href="/agriculture-and-rural-development"
+                    ),
+                    dmc.MenuItem(
+                        "Development Economics and Trade",
+                        href="/development-economics-and-trade"
+                    ),
+                    dmc.MenuItem(
+                        "Educational Research and Innovation",
+                        href="/educational-research-and-innovation"
+                    ),
+                    dmc.MenuItem(
+                        "Natural Resource and Environment",
+                        href="/natural-resource-and-environment"
+                    ),
+                    dmc.MenuItem(
+                        "Governance and Inclusive Society",
+                        href="/governance-and-inclusive-society"
+                    ),
+                    dmc.MenuItem(
+                        "External Link",
+                        href="https://www.github.com/snehilvj"
+                    ),
+                ]
+            ),
+        ],
+    ),
+    dmc.Anchor(dmc.Button("About", variant="subtle", color="white"), href="/about")
 ]
 
 def banner():
