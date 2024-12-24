@@ -86,7 +86,10 @@ def filter_data(data, sector, subsector_1, subsector_2, province):
     filtered_data_test = filtered_data_test[(filtered_data_test["Sub-Sector (1)"] == subsector_1)]
 
     filtered_data = data[(data["Sector"] == sector) & (data["Sub-Sector (1)"] == subsector_1) & (data["Sub-Sector (2)"] == subsector_2)]
-    if province != 'All': filtered_data = filtered_data[filtered_data["Province"] == province]
+    if province != 'All': 
+        filtered_data = filtered_data[filtered_data["Province"] == province]
+    # else:
+    #     filtered_data = df.groupby('Year', as_index=False).sum()
 
     return filtered_data.dropna(axis=1, how='all')
 
@@ -96,15 +99,16 @@ agriculture_and_rural_development = dmc.Container([
         dmc.GridCol(sidebar(data), span={"base": 12, "sm": 3}),
         dmc.GridCol([
             dmc.Paper([
-                dmc.Tabs([
-                    dmc.TabsList([
-                        dmc.TabsTab("Map View", leftSection=DashIconify(icon="tabler:map"), value="map"),
-                        dmc.TabsTab("Visualization", leftSection=DashIconify(icon="tabler:chart-bar"), value="graph"),
-                        dmc.TabsTab("Data Hub", leftSection=DashIconify(icon="tabler:database"), value="dataview"),
-                    ], grow="True"),
-                    dmc.TabsPanel(html.Div(id='map-id'), value="map"),
-                    dmc.TabsPanel(html.Div(id='graph-id'), value="graph"),
-                    dmc.TabsPanel(html.Div(id='dataview-container'), value="dataview"),
+                dmc.Tabs(
+                    children=[
+                        dmc.TabsList([
+                            dmc.TabsTab("Map View", leftSection=DashIconify(icon="tabler:map"), value="map"),
+                            dmc.TabsTab("Visualization", leftSection=DashIconify(icon="tabler:chart-bar"), value="graph"),
+                            dmc.TabsTab("Data Hub", leftSection=DashIconify(icon="tabler:database"), value="dataview"),
+                        ], grow="True"),
+                        dmc.TabsPanel(html.Div(id='map-id'), value="map"),
+                        dmc.TabsPanel(html.Div(id='graph-id'), value="graph"),
+                        dmc.TabsPanel(html.Div(id='dataview-container'), value="dataview"),
                 ], value="map"),
             ], shadow="xs", p="md", radius="md", withBorder=True),
             dcc.Store(id="selected-point-data"),
@@ -145,7 +149,7 @@ def create_map(dff):
         )
     ])
 
-def create_graph(dff):
+def create_graph(dff, indicator):
     # Check if the DataFrame is empty or if required columns are missing
     if dff.empty or not all(col in dff.columns for col in ['Year', 'Area Harvested', 'Quantity Harvested', 'Yield']):
         return html.Div([
@@ -206,27 +210,14 @@ def create_graph(dff):
     fig1 = go.Figure(layout=layout)
 
     # Add line plot for 'Area Harvested'
-    fig1.add_trace(go.Scatter(
-        x=dff['Year'],
-        y=dff['Area Harvested'],
-        mode='lines+markers',
-        name='Area Harvested',
-        line=dict(color='blue')
-    ))
-    fig1.add_trace(go.Scatter(
-        x=dff['Year'],
-        y=dff['Quantity Harvested'],
-        mode='lines+markers',
-        name='Quantity Harvested',
-        line=dict(color='red')
-    ))
-    fig1.add_trace(go.Scatter(
-        x=dff['Year'],
-        y=dff['Yield'],
-        mode='lines+markers',
-        name='Yield',
-        line=dict(color='green')
-    ))
+    for idx, item in enumerate(indicator):
+        if item in dff.columns:
+            fig1.add_trace(go.Scatter(
+                x=dff['Year'],
+                y=dff[item],
+                mode='lines+markers',
+                name=item
+            ))
 
     return html.Div([ 
         dcc.Graph(id="figure-linechart", figure=fig1, config={
@@ -241,22 +232,11 @@ def create_graph(dff):
             }
         ),
         dmc.Divider(size="sm"),
-        dcc.Graph(id="figure-linechart", figure=fig1, config={
-            'displaylogo': False,
-            'toImageButtonOptions': {
-                    'format': 'png',
-                    'filename': 'custom_image',
-                    'height': 500,
-                    'width': 800,
-                    'scale':6
-                }
-            }
-        ),
     ])
 
 def create_dataview(dff): 
     return html.Div([
-        dag.AgGrid(id='ag-grid', columnDefs=[{"headerName": col, "field": col} for col in dff.columns], rowData=dff.to_dict('records'), style={'height': '400px', 'width': '100%'}),
+        dag.AgGrid(id='ag-grid', columnDefs=[{"headerName": col, "field": col} for col in dff.columns], rowData=dff.to_dict('records'), style={'height': '400px'}),
         dmc.Button("Download Data", id="download-button", variant="outline", color="green", className="mt-3"),
         dcc.Download(id="download-data")
     ])
@@ -264,11 +244,11 @@ def create_dataview(dff):
 # Callbacks
 @callback([Output('graph-id', 'children'), Output('map-id', 'children'), Output('dataview-container', 'children')],
           [Input("sector-dropdown", "value"), Input("subsector-1-dropdown", "value"), Input("subsector-2-dropdown", "value"),
-           Input("province-dropdown", "value")])
-def update_report(sector, subsector_1, subsector_2, province):
+           Input("province-dropdown", "value"), Input("indicator-dropdown", "value")])
+def update_report(sector, subsector_1, subsector_2, province, indicator):
     dff = filter_data(data, sector, subsector_1, subsector_2, province)
     dff = dff.rename(columns={'Latiude': 'Latitude'})
-    return create_graph(dff), create_map(dff), create_dataview(dff)
+    return create_graph(dff, indicator), create_map(dff), create_dataview(dff)
 
 @callback(Output("download-data", "data"), Input("download-button", "n_clicks"),
           State('sector-dropdown', 'value'), State('subsector-1-dropdown', 'value'), 
@@ -350,11 +330,11 @@ def update_province(sector, subsector_1, subsector_2):
 )
 def update_indicators(sector, subsector_1, subsector_2, province):
     # Filter data based on the selected filters
-    filtered_data = filter_data(data, sector, subsector_1, subsector_2, province)
+    dff = filter_data(data, sector, subsector_1, subsector_2, province)
     
     # Extract the available indicators based on the columns in the filtered data
     # We'll exclude 'Sector', 'Sub-Sector (1)', 'Sub-Sector (2)', and 'Province' from the columns
-    indicator_columns = [col for col in filtered_data.columns if col not in ['Sector', 'Sub-Sector (1)', 'Sub-Sector (2)', 'Province', 'Series Name', 'Area planted unit', 'Area Harvested Unit', 'Year','Yield Unit', 'Quantity Harvested Unit', 'Latiude', 'Longitude', 'Source', 'Quantity Unit', 'Value Unit', 'Pro code']]
+    indicator_columns = [col for col in dff.columns if col not in ['Sector', 'Sub-Sector (1)', 'Sub-Sector (2)', 'Province', 'Series Code','Series Name', 'Area planted unit', 'Area Harvested Unit', 'Year','Yield Unit', 'Quantity Harvested Unit', 'Latiude', 'Longitude', 'Source', 'Quantity Unit', 'Value Unit', 'Pro code']]
     
     # If no indicators are available, return an empty list
     if not indicator_columns:
