@@ -102,15 +102,20 @@ agriculture_and_rural_development = dmc.Container([
             dmc.Paper([
                 dmc.Tabs(
                     children=[
-                        dmc.TabsList([
-                            dmc.TabsTab("Map View", leftSection=DashIconify(icon="tabler:map"), value="map"),
-                            dmc.TabsTab("Visualization", leftSection=DashIconify(icon="tabler:chart-bar"), value="graph"),
-                            dmc.TabsTab("Data Hub", leftSection=DashIconify(icon="tabler:database"), value="dataview"),
-                        ], grow="True"),
+                        dmc.TabsList(
+                            [
+                                dmc.TabsTab("Map View", leftSection=DashIconify(icon="tabler:map"), value="map"),
+                                dmc.TabsTab("Visualization", leftSection=DashIconify(icon="tabler:chart-bar"), value="graph"),
+                                dmc.TabsTab("Data Hub", leftSection=DashIconify(icon="tabler:database"), value="dataview"),
+                            ], 
+                            grow="True",
+                        ),
                         dmc.TabsPanel(html.Div(id='map-id'), value="map"),
                         dmc.TabsPanel(html.Div(id='graph-id'), value="graph"),
                         dmc.TabsPanel(html.Div(id='dataview-container'), value="dataview"),
-                ], value="map"),
+                    ], 
+                    value="map",
+                ),
             ], shadow="xs", p="md", radius="md", withBorder=True),
             dcc.Store(id="selected-point-data"),
             dmc.Modal(id="info-modal", title="Point Information", children=[
@@ -160,9 +165,9 @@ def create_map(dff):
                 children=dl.Tooltip(f"{row['Province']}"),
                 icon=dict(
                     iconUrl=f"./assets/agricuture_icons/{sub_sector_2_to_image[row['Sub-Sector (2)']]}",  # URL of your custom icon
-                    iconSize=[30, 30],  # Icon size (width, height)
-                    iconAnchor=[15, 30],  # The anchor point of the icon (relative to iconSize)
-                    popupAnchor=[0, -30]  # Position of the popup relative to the icon
+                    iconSize=[30, 30],
+                    iconAnchor=[15, 30],
+                    popupAnchor=[0, -30]
                 )
             ) for index, row in dff.iterrows()
         ]
@@ -175,7 +180,7 @@ def create_map(dff):
                 center=[12.5657, 104.9910],
                 zoom=7,
                 children=[
-                    dl.TileLayer(url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                    dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
                     dl.LayerGroup(markers)
                 ],
                 attributionControl=False,

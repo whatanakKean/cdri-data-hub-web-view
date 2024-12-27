@@ -40,7 +40,7 @@ info = html.Div(children=get_info(), id="info", className="info",
                 style={"position": "absolute", "top": "10px", "right": "10px", "zIndex": "1000"})
 
 development_economics_and_trade = dl.Map(children=[
-    dl.TileLayer(), geojson, colorbar, info
+    dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"), geojson, colorbar, info
 ], style={'height': '50vh'}, center=[56, 10], zoom=6)
 
 @callback(Output("info", "children"), Input("geojson", "hoverData"))

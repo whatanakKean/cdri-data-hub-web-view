@@ -10,3 +10,8 @@
     margin: 0 0 5px;
     color: #777;
 }
+
+ /* Remove Gridline Behavior Of Leaflet */
+.leaflet-container img.leaflet-tile {
+    mix-blend-mode: normal;
+  }

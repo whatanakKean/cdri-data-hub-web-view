@@ -19,9 +19,9 @@ from src.pages.home import home_page
 from src.pages.about import about_page
 from src.pages.agriculture_and_rural_development import agriculture_and_rural_development
 from src.pages.development_economics_and_trade import development_economics_and_trade
-from src.pages.educational_research_and_innovation import educational_research_and_innovation
-from src.pages.natural_resource_and_environment import natural_resource_and_environment
-from src.pages.governance_and_inclusive_society import governance_and_inclusive_society
+# from src.pages.educational_research_and_innovation import educational_research_and_innovation
+# from src.pages.natural_resource_and_environment import natural_resource_and_environment
+# from src.pages.governance_and_inclusive_society import governance_and_inclusive_society
 from src.pages.not_found import not_found_page
 
 # Initialize the Dash app
