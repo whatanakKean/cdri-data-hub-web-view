@@ -6,6 +6,9 @@ import plotly.express as px
 from ..utils.load_data import load_data
 from dash_iconify import DashIconify
 import plotly.graph_objects as go
+import dash_leaflet as dl
+from dash.dependencies import ALL
+import os 
 
 # Load data
 data = load_data(file_path="src/data/Datahub_Agri_Latest.xlsx", sheet_name="Database")
@@ -82,18 +85,16 @@ def sidebar(data):
 
 # Data filter function
 def filter_data(data, sector, subsector_1, subsector_2, province):
-    filtered_data_test = data[(data["Sector"] == sector)]
-    filtered_data_test = filtered_data_test[(filtered_data_test["Sub-Sector (1)"] == subsector_1)]
-
     filtered_data = data[(data["Sector"] == sector) & (data["Sub-Sector (1)"] == subsector_1) & (data["Sub-Sector (2)"] == subsector_2)]
-    if province != 'All': 
+    filtered_data = filtered_data.dropna(axis=1, how='all')
+    
+    # Filter Province
+    if province != 'All':
         filtered_data = filtered_data[filtered_data["Province"] == province]
-    # else:
-    #     filtered_data = df.groupby('Year', as_index=False).sum()
 
-    return filtered_data.dropna(axis=1, how='all')
+    return filtered_data
 
-# Layout components
+# Page Layout
 agriculture_and_rural_development = dmc.Container([
     dmc.Grid([
         dmc.GridCol(sidebar(data), span={"base": 12, "sm": 3}),
@@ -113,48 +114,89 @@ agriculture_and_rural_development = dmc.Container([
             ], shadow="xs", p="md", radius="md", withBorder=True),
             dcc.Store(id="selected-point-data"),
             dmc.Modal(id="info-modal", title="Point Information", children=[
-                dmc.Text(id="modal-content"), dmc.Button("Close", id="close-modal", variant="outline", color="red", className="mt-3")
+                dmc.Text(id="modal-content")
             ], size="lg")
         ], span={"base": 12, "sm": 9}),
     ]),
 ], fluid=True, style={'paddingTop': '1rem'})
 
 def create_map(dff):
+    sub_sector_2_to_image = {
+        "Rice": "noto--sheaf-of-rice.png",
+        "Corn": "emojione--ear-of-corn.png",
+        "Cassava": "casava.png",
+        "Vegetable": "vegetable.png",
+        "Caffee": "openmoji--roasted-coffee-bean.png",
+        "Rubber": "rubber.png",
+        "Pepper": "chilli.png",
+        "Tea": "green-tea.png",
+        "Sugarcane": "sugar-cane.png",
+        "Longan": "longan.png",
+        "Lychee": "lychee.png",
+        "Banana": "bananas.png",
+        "Dragon Fruit": "dragon-fruit.png",
+        "Cashew Nut": "peanut.png",
+        "Chillies": "chilli.png",
+        "Mango": "mango.png",
+        "African Oil Palm": "palm-oil.png",
+        "Sweet Potato": "sweet-potato.png",
+        "Peanut": "peanut.png",
+        "Vigna Radiata": "peas.png",
+        "Buffalo": "fluent-emoji--water-buffalo.png",
+        "Cattle": "fluent-emoji-flat--cow.png",
+        "Pig": "fxemoji--pigside.png",
+        "Poultry": "chicken.png"
+    }
+    
     # Check if Latitude and Longitude columns are present
     if 'Latitude' not in dff.columns or 'Longitude' not in dff.columns:
-        # Create an empty map layout with no data points
-        fig = px.scatter_mapbox(
-            lat=[], lon=[],  # Empty data points
-            mapbox_style="open-street-map"
-        ).update_layout(
-            mapbox=dict(zoom=6, center=dict(lat=12.5657, lon=104.9910)),
-            margin=dict(l=0, r=0, t=0, b=0)
-        )
+        markers = []  # No markers if coordinates are missing
     else:
-        # Generate map with data points if Latitude and Longitude exist
-        fig = px.scatter_mapbox(
-            dff, lat='Latitude', lon='Longitude', hover_name='Province', 
-            color_continuous_scale=px.colors.cyclical.IceFire
-        ).update_layout(
-            mapbox_style="open-street-map", mapbox=dict(zoom=6), 
-            margin=dict(l=0, r=0, t=0, b=0)
-        )
+        # Create markers for each data point
+        markers = [
+            dl.Marker(
+                id={"type": "marker", "index": index},
+                position=[row['Latitude'], row['Longitude']],
+                children=dl.Tooltip(f"{row['Province']}"),
+                icon=dict(
+                    iconUrl=f"./assets/agricuture_icons/{sub_sector_2_to_image[row['Sub-Sector (2)']]}",  # URL of your custom icon
+                    iconSize=[30, 30],  # Icon size (width, height)
+                    iconAnchor=[15, 30],  # The anchor point of the icon (relative to iconSize)
+                    popupAnchor=[0, -30]  # Position of the popup relative to the icon
+                )
+            ) for index, row in dff.iterrows()
+        ]
 
-    # Return the map component
-    return html.Div([
-        dcc.Graph(
-            id='map-graph',
-            figure=fig,
-            config={"displaylogo": False,}
-        )
-    ])
+    # Return the map component along with the modal
+    return html.Div(
+        [
+            dl.Map(
+                style={'width': '100%', 'height': '450px'},
+                center=[12.5657, 104.9910],
+                zoom=7,
+                children=[
+                    dl.TileLayer(url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                    dl.LayerGroup(markers)
+                ],
+                attributionControl=False,
+            ),
+        ],
+        style={
+            'position': 'relative',
+            'zIndex': 0,
+        }
+    )
 
 def create_graph(dff, indicator):
     # Check if the DataFrame is empty or if required columns are missing
     if dff.empty or not all(col in dff.columns for col in ['Year', 'Area Harvested', 'Quantity Harvested', 'Yield']):
         return html.Div([
-            dmc.Text("No Visualization Available", size="lg")
+            dmc.Text("Visualization is Under Construction", size="lg")
         ], style={'height': '400px', 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center'})
+    
+    # Group by Year and calculate the sum for the relevant columns
+    dff_agg = dff.groupby('Year')[indicator].sum().reset_index()
+
     layout = go.Layout(
         images=[dict(
             source="./assets/CDRI Logo.png",
@@ -184,15 +226,15 @@ def create_graph(dff, indicator):
             x=1
         ),
         title=dict(
-            text="Area Harvested, Quantity Hravested, Yield",
+            text=", ".join(indicator),
             subtitle=dict(
-                text="Description For Area Harvested, Quantity Hravested, Yield",
+                text=f"Description For {', '.join(indicator)}",
                 font=dict(color="gray", size=13),
             ),
         ),
         xaxis=dict(
             tickmode='array',
-            tickvals=dff['Year'].unique()
+            tickvals=dff_agg['Year'].unique()
         ),
         annotations=[ 
             dict(
@@ -211,10 +253,10 @@ def create_graph(dff, indicator):
 
     # Add line plot for 'Area Harvested'
     for idx, item in enumerate(indicator):
-        if item in dff.columns:
+        if item in dff_agg.columns:
             fig1.add_trace(go.Scatter(
-                x=dff['Year'],
-                y=dff[item],
+                x=dff_agg['Year'],
+                y=dff_agg[item],
                 mode='lines+markers',
                 name=item
             ))
@@ -261,27 +303,22 @@ def download_data(n_clicks, sector, subsector_1, subsector_2, province):
 
 @callback(
     [Output("info-modal", "opened"), Output("modal-content", "children")],
-    [Input("map-graph", "clickData"), Input("close-modal", "n_clicks")],
+    Input({"type": "marker", "index": ALL}, "n_clicks"),
     prevent_initial_call=True
 )
-def manage_modal(clickData, close_click):
-    # Identify which input triggered the callback
+def manage_modal(n_clicks):
     ctx = callback_context
-    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
 
-    # Handle modal close
-    if trigger_id == "close-modal":
+    # Get the clicked marker ID and ensure it's valid
+    if not ctx.triggered_id or 'index' not in ctx.triggered_id:
         return False, ""
 
-    # Handle modal open and populate content
-    elif trigger_id == "map-graph":
-        if clickData:
-            lat = clickData['points'][0]['lat']
-            lon = clickData['points'][0]['lon']
-            return True, f"Latitude: {lat}, Longitude: {lon}"
+    # Check for clicks on markers
+    clicked_index = ctx.triggered_id['index']
+    if not any(n_clicks):
+        return False, ""
 
-    # Default return (shouldn't reach here)
-    return False, ""
+    return True, f"Marker {clicked_index} was clicked!"
 
 
 
@@ -332,8 +369,6 @@ def update_indicators(sector, subsector_1, subsector_2, province):
     # Filter data based on the selected filters
     dff = filter_data(data, sector, subsector_1, subsector_2, province)
     
-    # Extract the available indicators based on the columns in the filtered data
-    # We'll exclude 'Sector', 'Sub-Sector (1)', 'Sub-Sector (2)', and 'Province' from the columns
     indicator_columns = [col for col in dff.columns if col not in ['Sector', 'Sub-Sector (1)', 'Sub-Sector (2)', 'Province', 'Series Code','Series Name', 'Area planted unit', 'Area Harvested Unit', 'Year','Yield Unit', 'Quantity Harvested Unit', 'Latiude', 'Longitude', 'Source', 'Quantity Unit', 'Value Unit', 'Pro code']]
     
     # If no indicators are available, return an empty list

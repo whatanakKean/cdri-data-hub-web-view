@@ -78,9 +78,9 @@ def display_page(pathname):
         "/about": about_page,
         "/agriculture-and-rural-development": agriculture_and_rural_development,
         "/development-economics-and-trade": development_economics_and_trade,
-        "/educational-research-and-innovation": educational_research_and_innovation,
-        "/natural-resource-and-environment": natural_resource_and_environment,
-        "/governance-and-inclusive-society": governance_and_inclusive_society,
+        # "/educational-research-and-innovation": educational_research_and_innovation,
+        # "/natural-resource-and-environment": natural_resource_and_environment,
+        # "/governance-and-inclusive-society": governance_and_inclusive_society,
     }
     return page_routes.get(pathname, not_found_page)
 
