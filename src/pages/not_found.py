@@ -1,7 +1,7 @@
-import dash_bootstrap_components as dbc
+import dash_mantine_components as dmc
 from dash import html
 
-not_found_page = dbc.Container(
+not_found_page = dmc.Container(
     [
         html.H1("404: Page Not Found", className="display-3 text-danger text-center"),
         html.P(

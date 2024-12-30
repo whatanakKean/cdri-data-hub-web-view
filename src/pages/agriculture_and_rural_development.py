@@ -1,14 +1,16 @@
+import json
 import dash
 from dash import html, dcc, Input, Output, State, callback, callback_context
 import dash_mantine_components as dmc
 import dash_ag_grid as dag
 import plotly.express as px
-from ..utils.load_data import load_data
+from ..utils.utils import load_data, get_info, filter_data, style_handle
 from dash_iconify import DashIconify
 import plotly.graph_objects as go
 import dash_leaflet as dl
+import dash_leaflet.express as dlx
 from dash.dependencies import ALL
-import os 
+from dash_extensions.javascript import arrow_function, assign
 
 # Load data
 data = load_data(file_path="src/data/Datahub_Agri_Latest.xlsx", sheet_name="Database")
@@ -83,17 +85,6 @@ def sidebar(data):
         ])
     ])
 
-# Data filter function
-def filter_data(data, sector, subsector_1, subsector_2, province):
-    filtered_data = data[(data["Sector"] == sector) & (data["Sub-Sector (1)"] == subsector_1) & (data["Sub-Sector (2)"] == subsector_2)]
-    filtered_data = filtered_data.dropna(axis=1, how='all')
-    
-    # Filter Province
-    if province != 'All':
-        filtered_data = filtered_data[filtered_data["Province"] == province]
-
-    return filtered_data
-
 # Page Layout
 agriculture_and_rural_development = dmc.Container([
     dmc.Grid([
@@ -125,7 +116,9 @@ agriculture_and_rural_development = dmc.Container([
     ]),
 ], fluid=True, style={'paddingTop': '1rem'})
 
-def create_map(dff):
+
+    
+def create_map(dff, subsector_1, indicator):
     sub_sector_2_to_image = {
         "Rice": "noto--sheaf-of-rice.png",
         "Corn": "emojione--ear-of-corn.png",
@@ -153,133 +146,295 @@ def create_map(dff):
         "Poultry": "chicken.png"
     }
     
-    # Check if Latitude and Longitude columns are present
-    if 'Latitude' not in dff.columns or 'Longitude' not in dff.columns:
-        markers = []  # No markers if coordinates are missing
-    else:
-        # Create markers for each data point
-        markers = [
-            dl.Marker(
-                id={"type": "marker", "index": index},
-                position=[row['Latitude'], row['Longitude']],
-                children=dl.Tooltip(f"{row['Province']}"),
-                icon=dict(
-                    iconUrl=f"./assets/agricuture_icons/{sub_sector_2_to_image[row['Sub-Sector (2)']]}",  # URL of your custom icon
-                    iconSize=[30, 30],
-                    iconAnchor=[15, 30],
-                    popupAnchor=[0, -30]
-                )
-            ) for index, row in dff.iterrows()
-        ]
+    if subsector_1 == "Production":
+        # Check if Latitude and Longitude columns are present
+        if 'Latitude' not in dff.columns or 'Longitude' not in dff.columns:
+            markers = []  # No markers if coordinates are missing
+        else:
+            # Create markers for each data point
+            markers = [
+                dl.Marker(
+                    id={"type": "marker", "index": index},
+                    position=[row['Latitude'], row['Longitude']],
+                    children=dl.Tooltip(f"{row['Province']}"),
+                    icon=dict(
+                        iconUrl=f"./assets/agricuture_icons/{sub_sector_2_to_image[row['Sub-Sector (2)']]}",  # URL of your custom icon
+                        iconSize=[30, 30],
+                        iconAnchor=[15, 30],
+                        popupAnchor=[0, -30]
+                    )
+                ) for index, row in dff.iterrows()
+            ]
 
-    # Return the map component along with the modal
-    return html.Div(
-        [
-            dl.Map(
-                style={'width': '100%', 'height': '450px'},
-                center=[12.5657, 104.9910],
-                zoom=7,
-                children=[
-                    dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
-                    dl.LayerGroup(markers)
-                ],
-                attributionControl=False,
-            ),
-        ],
-        style={
-            'position': 'relative',
-            'zIndex': 0,
-        }
-    )
+        # Return the map component along with the modal
+        return html.Div(
+            [
+                dl.Map(
+                    style={'width': '100%', 'height': '450px'},
+                    center=[12.5657, 104.9910],
+                    zoom=7,
+                    children=[
+                        dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                        dl.LayerGroup(markers)
+                    ],
+                    attributionControl=False,
+                ),
+            ],
+            style={
+                'position': 'relative',
+                'zIndex': 0,
+            }
+        )
+    elif subsector_1 == "Export":   
+        classes = [0, 1000, 10000, 50000, 100000, 150000, 200000, 250000]
+        colorscale = ['#e5f5e0', '#a1d99b', '#31a354', '#2c8e34', '#1f7032', '#196d30', '#155d2c', '#104d27']
+        style = dict(weight=2, opacity=1, color='white', dashArray='3', fillOpacity=0.7)
+        # Create colorbar.
+        ctg = ["{}+".format(cls, classes[i + 1]) for i, cls in enumerate(classes[:-1])] + ["{}+".format(classes[-1])]
+        colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=500, height=30, position="bottomleft")
+        
+        # Merge the Quantity and Value data with the GeoJSON data by matching the country name
+        with open('./assets/countries.json') as f:
+            geojson_data = json.load(f)
 
-def create_graph(dff, indicator):
-    # Check if the DataFrame is empty or if required columns are missing
-    if dff.empty or not all(col in dff.columns for col in ['Year', 'Area Harvested', 'Quantity Harvested', 'Yield']):
+        for feature in geojson_data['features']:
+            country_name = feature['properties']['name']  # Ensure your GeoJSON has the country names
+            # Find matching row in the data
+            country_data = dff[dff['Markets'] == country_name]
+
+            if not country_data.empty:
+                # Assign data if available
+                feature['properties']['quantity'] = country_data['Quantity'].values[0]
+                feature['properties']['value'] = country_data['Value'].values[0]
+            else:
+                # Assign None for missing data
+                feature['properties']['quantity'] = None
+                feature['properties']['value'] = None
+        # Create geojson.
+        geojson = dl.GeoJSON(data=geojson_data,
+                            style=style_handle,
+                            zoomToBounds=True,
+                            zoomToBoundsOnClick=True,
+                            hoverStyle=arrow_function(dict(weight=5, color='#666', dashArray='')),
+                            hideout=dict(colorscale=colorscale, classes=classes, style=style, colorProp="quantity"),
+                            id="geojson")
         return html.Div([
-            dmc.Text("Visualization is Under Construction", size="lg")
-        ], style={'height': '400px', 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center'})
-    
-    # Group by Year and calculate the sum for the relevant columns
-    dff_agg = dff.groupby('Year')[indicator].sum().reset_index()
+            dl.Map(
+                    style={'width': '100%', 'height': '450px'},
+                    center=[0, 0],
+                    zoom=7,
+                    children=[
+                        dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                        geojson, 
+                        colorbar,
+                        dmc.Flex(
+                            children=[
+                                dmc.Select(
+                                    id="year-dropdown", 
+                                    placeholder="Year",
+                                    value='2023', 
+                                    searchable=True,
+                                    data=[{'label': str(int(option)), 'value': str(int(option))} for option in list(dff["Year"].unique())],
+                                    withScrollArea=False,
+                                    checkIconPosition="right",
+                                    w=100
+                                ),
+                                html.Div(children=get_info(), id="info", className="info"),
+                            ],
+                            direction={"base": "column", "sm": "row"},
+                            gap={"base": "sm", "sm": "lg"},
+                            style={"position": "absolute", "top": "10px", "right": "10px", "zIndex": "1000"}
+                        )
+                    ],
+                    attributionControl=False,
+            )],
+            style={
+                'position': 'relative',
+                'zIndex': 0,
+            }
+        )
 
-    layout = go.Layout(
-        images=[dict(
-            source="./assets/CDRI Logo.png",
-            xref="paper", yref="paper",
-            x=1, y=1.1,
-            sizex=0.2, sizey=0.2,
-            xanchor="right", yanchor="bottom"
-        )],
-        yaxis=dict(
-            gridcolor='rgba(169, 169, 169, 0.7)',
-            showgrid=True,
-            gridwidth=0.5,
-            griddash='dot',
-            tickformat=',',
-        ),
-        font=dict(
-            family='BlinkMacSystemFont',
-            color='rgba(0, 0, 0, 0.7)'
-        ),
-        hovermode="x unified",
-        plot_bgcolor='white',
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1,
-            xanchor="right",    
-            x=1
-        ),
-        title=dict(
-            text=", ".join(indicator),
-            subtitle=dict(
-                text=f"Description For {', '.join(indicator)}",
-                font=dict(color="gray", size=13),
-            ),
-        ),
-        xaxis=dict(
-            tickmode='array',
-            tickvals=dff_agg['Year'].unique()
-        ),
-        annotations=[ 
-            dict(
-                x=0.5,
-                y=-0.15, 
+
+def create_graph(dff,subsector_1, indicator):
+    if subsector_1 == "Production":
+        # Group by Year and calculate the sum for the relevant columns
+        dff_agg = dff.groupby('Year')[indicator].sum().reset_index()
+
+        layout = go.Layout(
+            images=[dict(
+                source="./assets/CDRI Logo.png",
                 xref="paper", yref="paper",
-                text="Source: CDRI Data Hub",
-                showarrow=False,
-                font=dict(size=12, color='rgba(0, 0, 0, 0.7)'),
-                align='center'
+                x=1, y=1.1,
+                sizex=0.2, sizey=0.2,
+                xanchor="right", yanchor="bottom"
+            )],
+            yaxis=dict(
+                gridcolor='rgba(169, 169, 169, 0.7)',
+                showgrid=True,
+                gridwidth=0.5,
+                griddash='dot',
+                tickformat=',',
+                rangemode='tozero'
             ),
-        ],
-        margin=dict(t=100, b=80, l=50, r=50),
-    )
-    fig1 = go.Figure(layout=layout)
+            font=dict(
+                family='BlinkMacSystemFont',
+                color='rgba(0, 0, 0, 0.7)'
+            ),
+            hovermode="x unified",
+            plot_bgcolor='white',
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1,
+                xanchor="right",    
+                x=1
+            ),
+            title=dict(
+                text=", ".join(indicator),
+                subtitle=dict(
+                    text=f"Description For {', '.join(indicator)}",
+                    font=dict(color="gray", size=13),
+                ),
+            ),
+            xaxis=dict(
+                tickmode='array',
+                tickvals=dff_agg['Year'].unique(),
+            ),
+            annotations=[ 
+                dict(
+                    x=0.5,
+                    y=-0.15, 
+                    xref="paper", yref="paper",
+                    text="Source: CDRI Data Hub",
+                    showarrow=False,
+                    font=dict(size=12, color='rgba(0, 0, 0, 0.7)'),
+                    align='center'
+                ),
+            ],
+            margin=dict(t=100, b=80, l=50, r=50),
+        )
+        
+        fig1 = go.Figure(layout=layout)
 
-    # Add line plot for 'Area Harvested'
-    for idx, item in enumerate(indicator):
-        if item in dff_agg.columns:
-            fig1.add_trace(go.Scatter(
-                x=dff_agg['Year'],
-                y=dff_agg[item],
-                mode='lines+markers',
-                name=item
-            ))
+        # Add line plot for Indicator
+        for idx, item in enumerate(indicator):
+            if item in dff_agg.columns:
+                fig1.add_trace(go.Scatter(
+                    x=dff_agg['Year'],
+                    y=dff_agg[item],
+                    mode='lines+markers',
+                    name=item
+                ))
 
-    return html.Div([ 
-        dcc.Graph(id="figure-linechart", figure=fig1, config={
-            'displaylogo': False,
-            'toImageButtonOptions': {
+        return html.Div([ 
+            dcc.Graph(id="figure-linechart", figure=fig1, config={
+                'displaylogo': False,
+                'toImageButtonOptions': {
+                        'format': 'png',
+                        'filename': 'custom_image',
+                        'height': 500,
+                        'width': 800,
+                        'scale':6
+                    }
+                }
+            ),
+            dmc.Divider(size="sm"),
+        ])
+    elif subsector_1 == "Export":
+        # Group by Year and calculate the sum for the relevant columns
+        dff_agg = dff
+
+        layout = go.Layout(
+            images=[dict(
+                source="./assets/CDRI Logo.png",
+                xref="paper", yref="paper",
+                x=1, y=1.1,
+                sizex=0.2, sizey=0.2,
+                xanchor="right", yanchor="bottom"
+            )],
+            yaxis=dict(
+                gridcolor='rgba(169, 169, 169, 0.7)',
+                showgrid=True,
+                gridwidth=0.5,
+                griddash='dot',
+                tickformat=',',
+                rangemode='tozero'
+            ),
+            font=dict(
+                family='BlinkMacSystemFont',
+                color='rgba(0, 0, 0, 0.7)'
+            ),
+            hovermode="x unified",
+            plot_bgcolor='white',
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1,
+                xanchor="right",    
+                x=1
+            ),
+            title=dict(
+                text=", ".join(indicator),
+                subtitle=dict(
+                    text=f"Description For {', '.join(indicator)}",
+                    font=dict(color="gray", size=13),
+                ),
+            ),
+            xaxis=dict(
+                tickmode='array',
+                tickvals=dff_agg['Year'].unique(),
+            ),
+            annotations=[ 
+                dict(
+                    x=0.5,
+                    y=-0.15, 
+                    xref="paper", yref="paper",
+                    text="Source: CDRI Data Hub",
+                    showarrow=False,
+                    font=dict(size=12, color='rgba(0, 0, 0, 0.7)'),
+                    align='center'
+                ),
+            ],
+            margin=dict(t=100, b=80, l=50, r=50),
+        )
+        
+        fig1 = go.Figure(layout=layout)
+
+        # Iterate over each indicator and create a line plot for each country
+        for idx, item in enumerate(indicator):
+            if item in dff_agg.columns:
+                countries = dff_agg['Markets'].unique()  # Assuming 'Markets' is the column with country names
+                
+                # Add a separate line for each country and each indicator
+                for country in countries:
+                    country_data = dff_agg[dff_agg['Markets'] == country]
+                    print(">> Yoo: ", country_data)
+                    print(">>> Item: ", item)
+                    fig1.add_trace(go.Scatter(
+                        x=country_data['Year'],
+                        y=country_data[item],
+                        mode='lines+markers',
+                        name=f"{country} - {item}",
+                        legendgroup=country,  # Ensures all lines for a country are grouped in the legend
+                    ))
+
+        return html.Div([ 
+            dcc.Graph(id="figure-linechart", figure=fig1, config={
+                'displaylogo': False,
+                'toImageButtonOptions': {
                     'format': 'png',
                     'filename': 'custom_image',
                     'height': 500,
                     'width': 800,
-                    'scale':6
+                    'scale': 6
                 }
-            }
-        ),
-        dmc.Divider(size="sm"),
-    ])
+            }),
+            dmc.Divider(size="sm"),
+        ])
+    else:
+        return html.Div([
+            dmc.Text("Visualization is Under Construction", size="lg")
+        ], style={'height': '400px', 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center'})
 
 def create_dataview(dff): 
     return html.Div([
@@ -288,6 +443,7 @@ def create_dataview(dff):
         dcc.Download(id="download-data")
     ])
 
+
 # Callbacks
 @callback([Output('graph-id', 'children'), Output('map-id', 'children'), Output('dataview-container', 'children')],
           [Input("sector-dropdown", "value"), Input("subsector-1-dropdown", "value"), Input("subsector-2-dropdown", "value"),
@@ -295,7 +451,7 @@ def create_dataview(dff):
 def update_report(sector, subsector_1, subsector_2, province, indicator):
     dff = filter_data(data, sector, subsector_1, subsector_2, province)
     dff = dff.rename(columns={'Latiude': 'Latitude'})
-    return create_graph(dff, indicator), create_map(dff), create_dataview(dff)
+    return create_graph(dff, subsector_1, indicator), create_map(dff, subsector_1, indicator), create_dataview(dff)
 
 @callback(Output("download-data", "data"), Input("download-button", "n_clicks"),
           State('sector-dropdown', 'value'), State('subsector-1-dropdown', 'value'), 
@@ -324,6 +480,11 @@ def manage_modal(n_clicks):
         return False, ""
 
     return True, f"Marker {clicked_index} was clicked!"
+
+# Calllback for info on map
+@callback(Output("info", "children"), Input("geojson", "hoverData"))
+def info_hover(feature):
+    return get_info(feature)
 
 
 
@@ -374,7 +535,7 @@ def update_indicators(sector, subsector_1, subsector_2, province):
     # Filter data based on the selected filters
     dff = filter_data(data, sector, subsector_1, subsector_2, province)
     
-    indicator_columns = [col for col in dff.columns if col not in ['Sector', 'Sub-Sector (1)', 'Sub-Sector (2)', 'Province', 'Series Code','Series Name', 'Area planted unit', 'Area Harvested Unit', 'Year','Yield Unit', 'Quantity Harvested Unit', 'Latiude', 'Longitude', 'Source', 'Quantity Unit', 'Value Unit', 'Pro code']]
+    indicator_columns = [col for col in dff.columns if col not in ['Sector', 'Sub-Sector (1)', 'Sub-Sector (2)', 'Province', 'Series Code','Series Name', 'Area planted unit', 'Area Harvested Unit', 'Year','Yield Unit', 'Quantity Harvested Unit', 'Latiude', 'Longitude', 'Source', 'Quantity Unit', 'Value Unit', 'Pro code', 'Markets']]
     
     # If no indicators are available, return an empty list
     if not indicator_columns:
