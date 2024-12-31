@@ -62,20 +62,28 @@ def sidebar(data):
                 mt="md",
                 checkIconPosition="right"
             ),
-            dmc.MultiSelect(
-                label="Select Indicators", 
+            dmc.Select(
+                label="Select Indicator", 
                 id="indicator-dropdown", 
-                value=["Area Planted"],
-                data=[{'label': option, 'value': option} for option in list(data.columns.unique())],  # Populate options dynamically
-                clearable=True,
+                value='Area Planted', 
                 searchable=True,
-                maxDropdownHeight=200,
+                data=[{'label': option, 'value': option} for option in ['All'] + list(data.columns.unique())],
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
                 mt="md",
-                checkIconPosition="right",
-                placeholder="Select one or more indicators"
-            )
+                checkIconPosition="right"
+            ),
+            dmc.Select(
+                label="Select Year", 
+                id="year-dropdown",
+                value='2023', 
+                searchable=True,
+                data=[{'label': str(int(option)), 'value': str(int(option))} for option in list(data["Year"].dropna().unique())],
+                withScrollArea=False,
+                styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
+                mt="md",
+                checkIconPosition="right"
+            ),
         ], shadow="xs", p="md", radius="md", withBorder=True),
         dmc.Accordion(chevronPosition="right", variant="contained", radius="md", children=[
             dmc.AccordionItem(value="bender", children=[
@@ -110,72 +118,60 @@ agriculture_and_rural_development = dmc.Container([
             ], shadow="xs", p="md", radius="md", withBorder=True),
             dcc.Store(id="selected-point-data"),
             dmc.Modal(id="info-modal", title="Point Information", children=[
-                dmc.Text(id="modal-content")
-            ], size="lg")
+                dmc.Container(id="modal-content")
+            ], size="70%")
         ], span={"base": 12, "sm": 9}),
     ]),
 ], fluid=True, style={'paddingTop': '1rem'})
 
 
     
-def create_map(dff, subsector_1, indicator):
-    sub_sector_2_to_image = {
-        "Rice": "noto--sheaf-of-rice.png",
-        "Corn": "emojione--ear-of-corn.png",
-        "Cassava": "casava.png",
-        "Vegetable": "vegetable.png",
-        "Caffee": "openmoji--roasted-coffee-bean.png",
-        "Rubber": "rubber.png",
-        "Pepper": "chilli.png",
-        "Tea": "green-tea.png",
-        "Sugarcane": "sugar-cane.png",
-        "Longan": "longan.png",
-        "Lychee": "lychee.png",
-        "Banana": "bananas.png",
-        "Dragon Fruit": "dragon-fruit.png",
-        "Cashew Nut": "peanut.png",
-        "Chillies": "chilli.png",
-        "Mango": "mango.png",
-        "African Oil Palm": "palm-oil.png",
-        "Sweet Potato": "sweet-potato.png",
-        "Peanut": "peanut.png",
-        "Vigna Radiata": "peas.png",
-        "Buffalo": "fluent-emoji--water-buffalo.png",
-        "Cattle": "fluent-emoji-flat--cow.png",
-        "Pig": "fxemoji--pigside.png",
-        "Poultry": "chicken.png"
-    }
+def create_map(dff, subsector_1, subsector_2, indicator, year):
+    dff = dff[dff["Year"] == int(year)]
+
+    classes = [0, 1000, 10000, 50000, 100000, 150000, 200000, 250000]
+    colorscale = ['#e5f5e0', '#a1d99b', '#31a354', '#2c8e34', '#1f7032', '#196d30', '#155d2c', '#104d27']
+    style = dict(weight=2, opacity=1, color='white', dashArray='3', fillOpacity=0.7)
+    ctg = ["{}+".format(cls, classes[i + 1]) for i, cls in enumerate(classes[:-1])] + ["{}+".format(classes[-1])]
+    colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=500, height=30, position="bottomleft")
     
     if subsector_1 == "Production":
-        # Check if Latitude and Longitude columns are present
-        if 'Latitude' not in dff.columns or 'Longitude' not in dff.columns:
-            markers = []  # No markers if coordinates are missing
-        else:
-            # Create markers for each data point
-            markers = [
-                dl.Marker(
-                    id={"type": "marker", "index": index},
-                    position=[row['Latitude'], row['Longitude']],
-                    children=dl.Tooltip(f"{row['Province']}"),
-                    icon=dict(
-                        iconUrl=f"./assets/agricuture_icons/{sub_sector_2_to_image[row['Sub-Sector (2)']]}",  # URL of your custom icon
-                        iconSize=[30, 30],
-                        iconAnchor=[15, 30],
-                        popupAnchor=[0, -30]
-                    )
-                ) for index, row in dff.iterrows()
-            ]
+        with open('./assets/geoBoundaries-KHM-ADM1_simplified.json') as f:
+            geojson_data = json.load(f)
+        
+        for feature in geojson_data['features']:
+            country_name = feature['properties']['shapeName']  # Ensure your GeoJSON has the country names
+            # Find matching row in the data
+            country_data = dff[dff['Province'] == country_name]
+            
+            if not country_data.empty:
+                feature['properties'][indicator] = country_data[indicator].values[0]
+            else:
+                # Assign None for missing data
+                feature['properties'][indicator] = None
+        
+        # Create geojson.
+        geojson = dl.GeoJSON(data=geojson_data,
+                            style=style_handle,
+                            zoomToBounds=True,
+                            zoomToBoundsOnClick=True,
+                            hoverStyle = dict(weight=5, color='#666', dashArray=''),
+                            hideout=dict(colorscale=colorscale, classes=classes, style=style, colorProp=indicator),
+                            id="geojson")
 
         # Return the map component along with the modal
         return html.Div(
             [
                 dl.Map(
                     style={'width': '100%', 'height': '450px'},
-                    center=[12.5657, 104.9910],
+                    center=[0, 0],
                     zoom=7,
                     children=[
                         dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
-                        dl.LayerGroup(markers)
+                        geojson,
+                        colorbar,
+                        html.Div(children=get_info(subsector_1, subsector_2, indicator), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
+                    
                     ],
                     attributionControl=False,
                 ),
@@ -185,15 +181,8 @@ def create_map(dff, subsector_1, indicator):
                 'zIndex': 0,
             }
         )
-    elif subsector_1 == "Export":   
-        classes = [0, 1000, 10000, 50000, 100000, 150000, 200000, 250000]
-        colorscale = ['#e5f5e0', '#a1d99b', '#31a354', '#2c8e34', '#1f7032', '#196d30', '#155d2c', '#104d27']
-        style = dict(weight=2, opacity=1, color='white', dashArray='3', fillOpacity=0.7)
-        # Create colorbar.
-        ctg = ["{}+".format(cls, classes[i + 1]) for i, cls in enumerate(classes[:-1])] + ["{}+".format(classes[-1])]
-        colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=500, height=30, position="bottomleft")
-        
-        # Merge the Quantity and Value data with the GeoJSON data by matching the country name
+    
+    elif subsector_1 == "Export":
         with open('./assets/countries.json') as f:
             geojson_data = json.load(f)
 
@@ -204,47 +193,28 @@ def create_map(dff, subsector_1, indicator):
 
             if not country_data.empty:
                 # Assign data if available
-                feature['properties']['quantity'] = country_data['Quantity'].values[0]
-                feature['properties']['value'] = country_data['Value'].values[0]
+                feature['properties'][indicator] = country_data[indicator].values[0]
             else:
                 # Assign None for missing data
-                feature['properties']['quantity'] = None
-                feature['properties']['value'] = None
+                feature['properties'][indicator] = None
         # Create geojson.
         geojson = dl.GeoJSON(data=geojson_data,
                             style=style_handle,
                             zoomToBounds=True,
                             zoomToBoundsOnClick=True,
-                            hoverStyle=arrow_function(dict(weight=5, color='#666', dashArray='')),
-                            hideout=dict(colorscale=colorscale, classes=classes, style=style, colorProp="quantity"),
+                            hoverStyle = dict(weight=5, color='#666', dashArray=''),
+                            hideout=dict(colorscale=colorscale, classes=classes, style=style, colorProp=indicator),
                             id="geojson")
         return html.Div([
             dl.Map(
                     style={'width': '100%', 'height': '450px'},
-                    center=[0, 0],
-                    zoom=7,
+                    center=[20, 0],  # Centered on the equator, near the Prime Meridian
+                    zoom=6,
                     children=[
                         dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
                         geojson, 
                         colorbar,
-                        dmc.Flex(
-                            children=[
-                                dmc.Select(
-                                    id="year-dropdown", 
-                                    placeholder="Year",
-                                    value='2023', 
-                                    searchable=True,
-                                    data=[{'label': str(int(option)), 'value': str(int(option))} for option in list(dff["Year"].unique())],
-                                    withScrollArea=False,
-                                    checkIconPosition="right",
-                                    w=100
-                                ),
-                                html.Div(children=get_info(), id="info", className="info"),
-                            ],
-                            direction={"base": "column", "sm": "row"},
-                            gap={"base": "sm", "sm": "lg"},
-                            style={"position": "absolute", "top": "10px", "right": "10px", "zIndex": "1000"}
-                        )
+                        html.Div(children=get_info(subsector_1, subsector_2, indicator), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
                     ],
                     attributionControl=False,
             )],
@@ -290,9 +260,9 @@ def create_graph(dff,subsector_1, indicator):
                 x=1
             ),
             title=dict(
-                text=", ".join(indicator),
+                text=indicator,
                 subtitle=dict(
-                    text=f"Description For {', '.join(indicator)}",
+                    text=f"Description For {indicator}",
                     font=dict(color="gray", size=13),
                 ),
             ),
@@ -316,14 +286,11 @@ def create_graph(dff,subsector_1, indicator):
         
         fig1 = go.Figure(layout=layout)
 
-        # Add line plot for Indicator
-        for idx, item in enumerate(indicator):
-            if item in dff_agg.columns:
-                fig1.add_trace(go.Scatter(
+        fig1.add_trace(go.Scatter(
                     x=dff_agg['Year'],
-                    y=dff_agg[item],
+                    y=dff_agg[indicator],
                     mode='lines+markers',
-                    name=item
+                    name=indicator
                 ))
 
         return html.Div([ 
@@ -374,9 +341,9 @@ def create_graph(dff,subsector_1, indicator):
                 x=1
             ),
             title=dict(
-                text=", ".join(indicator),
+                text=indicator,
                 subtitle=dict(
-                    text=f"Description For {', '.join(indicator)}",
+                    text=f"Description For {indicator}",
                     font=dict(color="gray", size=13),
                 ),
             ),
@@ -401,22 +368,7 @@ def create_graph(dff,subsector_1, indicator):
         fig1 = go.Figure(layout=layout)
 
         # Iterate over each indicator and create a line plot for each country
-        for idx, item in enumerate(indicator):
-            if item in dff_agg.columns:
-                countries = dff_agg['Markets'].unique()  # Assuming 'Markets' is the column with country names
-                
-                # Add a separate line for each country and each indicator
-                for country in countries:
-                    country_data = dff_agg[dff_agg['Markets'] == country]
-                    print(">> Yoo: ", country_data)
-                    print(">>> Item: ", item)
-                    fig1.add_trace(go.Scatter(
-                        x=country_data['Year'],
-                        y=country_data[item],
-                        mode='lines+markers',
-                        name=f"{country} - {item}",
-                        legendgroup=country,  # Ensures all lines for a country are grouped in the legend
-                    ))
+
 
         return html.Div([ 
             dcc.Graph(id="figure-linechart", figure=fig1, config={
@@ -436,6 +388,7 @@ def create_graph(dff,subsector_1, indicator):
             dmc.Text("Visualization is Under Construction", size="lg")
         ], style={'height': '400px', 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center'})
 
+
 def create_dataview(dff): 
     return html.Div([
         dag.AgGrid(id='ag-grid', columnDefs=[{"headerName": col, "field": col} for col in dff.columns], rowData=dff.to_dict('records'), style={'height': '400px'}),
@@ -447,11 +400,12 @@ def create_dataview(dff):
 # Callbacks
 @callback([Output('graph-id', 'children'), Output('map-id', 'children'), Output('dataview-container', 'children')],
           [Input("sector-dropdown", "value"), Input("subsector-1-dropdown", "value"), Input("subsector-2-dropdown", "value"),
-           Input("province-dropdown", "value"), Input("indicator-dropdown", "value")])
-def update_report(sector, subsector_1, subsector_2, province, indicator):
+           Input("province-dropdown", "value"), Input("indicator-dropdown", "value"), Input("year-dropdown", "value")])
+def update_report(sector, subsector_1, subsector_2, province, indicator, year):
     dff = filter_data(data, sector, subsector_1, subsector_2, province)
     dff = dff.rename(columns={'Latiude': 'Latitude'})
-    return create_graph(dff, subsector_1, indicator), create_map(dff, subsector_1, indicator), create_dataview(dff)
+    return create_graph(dff, subsector_1, indicator), create_map(dff, subsector_1, subsector_2, indicator, year), create_dataview(dff)
+
 
 @callback(Output("download-data", "data"), Input("download-button", "n_clicks"),
           State('sector-dropdown', 'value'), State('subsector-1-dropdown', 'value'), 
@@ -461,31 +415,41 @@ def download_data(n_clicks, sector, subsector_1, subsector_2, province):
     dff = filter_data(data, sector, subsector_1, subsector_2, province)
     return dict(content=dff.to_csv(index=False), filename="data.csv", type="application/csv")
 
-
 @callback(
-    [Output("info-modal", "opened"), Output("modal-content", "children")],
-    Input({"type": "marker", "index": ALL}, "n_clicks"),
-    prevent_initial_call=True
+    [Output("info-modal", "opened"), Output("info-modal", "title"), Output("modal-content", "children")],
+    [Input("geojson", "clickData")],State('sector-dropdown', 'value'), State('subsector-1-dropdown', 'value'), 
+          State('subsector-2-dropdown', 'value'), State('province-dropdown', 'value'),
+    prevent_initial_call=True  # Prevents callback execution on load
 )
-def manage_modal(n_clicks):
-    ctx = callback_context
+def display_modal(feature, sector, subsector_1, subsector_2, province):
+    dff = filter_data(data, sector, subsector_1, subsector_2, province)
+    
+    if feature is None:
+        raise dash.exceptions.PreventUpdate
+    
+    style = {
+        "border": f"1px solid {dmc.DEFAULT_THEME['colors']['indigo'][4]}",
+        "textAlign": "center",
+    }
+    # Modal content
+    content = [
+        dmc.Grid(
+            children=[
+                dmc.GridCol(html.Div("span=4", style=style), span="auto"),
+                dmc.GridCol(html.Div("span=4", style=style), span=4),
+                dmc.GridCol(html.Div("span=4", style=style), span="auto"),
+            ],
+            gutter="xl",
+        ),
+        create_dataview(dff)
+    ]
 
-    # Get the clicked marker ID and ensure it's valid
-    if not ctx.triggered_id or 'index' not in ctx.triggered_id:
-        return False, ""
-
-    # Check for clicks on markers
-    clicked_index = ctx.triggered_id['index']
-    if not any(n_clicks):
-        return False, ""
-
-    return True, f"Marker {clicked_index} was clicked!"
+    return True,f"{sector}: {subsector_2} {subsector_1} ", content 
 
 # Calllback for info on map
-@callback(Output("info", "children"), Input("geojson", "hoverData"))
-def info_hover(feature):
-    return get_info(feature)
-
+@callback(Output("info", "children"), Input('subsector-1-dropdown', 'value'), Input('subsector-2-dropdown', 'value'), Input('indicator-dropdown', 'value'), Input("geojson", "hoverData"))
+def info_hover(subsector_1, subsector_2, indicator, feature):
+    return get_info(subsector_1=subsector_1, subsector_2=subsector_2, indicator=indicator, feature=feature)
 
 
 # Callbacks for dynamic dropdown updates
@@ -535,16 +499,49 @@ def update_indicators(sector, subsector_1, subsector_2, province):
     # Filter data based on the selected filters
     dff = filter_data(data, sector, subsector_1, subsector_2, province)
     
-    indicator_columns = [col for col in dff.columns if col not in ['Sector', 'Sub-Sector (1)', 'Sub-Sector (2)', 'Province', 'Series Code','Series Name', 'Area planted unit', 'Area Harvested Unit', 'Year','Yield Unit', 'Quantity Harvested Unit', 'Latiude', 'Longitude', 'Source', 'Quantity Unit', 'Value Unit', 'Pro code', 'Markets']]
+    # Extract valid indicator columns
+    indicator_columns = [col for col in dff.columns if col not in [
+        'Sector', 'Sub-Sector (1)', 'Sub-Sector (2)', 'Province', 'Series Code', 
+        'Series Name', 'Area planted unit', 'Area Harvested Unit', 'Year',
+        'Yield Unit', 'Quantity Harvested Unit', 'Latiude', 'Longitude', 
+        'Source', 'Quantity Unit', 'Value Unit', 'Pro code', 'Markets'
+    ]]
     
-    # If no indicators are available, return an empty list
+    # If no indicators are available, return empty data and value
     if not indicator_columns:
-        return [], []
+        return [], None
     
-    # Prepare the options for the multi-select dropdown
+    # Prepare options for dropdown
     indicator_options = [{'label': col, 'value': col} for col in indicator_columns]
     
-    # Default value is the first indicator (if available)
-    default_value = indicator_columns[0] if indicator_columns else []
+    # Default value as first indicator
+    default_value = indicator_columns[0] if indicator_columns else None
     
-    return indicator_options, [default_value]
+    return indicator_options, default_value
+
+@callback(
+    Output('year-dropdown', 'data'),
+    Output('year-dropdown', 'value'),
+    Input('sector-dropdown', 'value'),
+    Input('subsector-1-dropdown', 'value'),
+    Input('subsector-2-dropdown', 'value'),
+    Input('province-dropdown', 'value')
+)
+def update_year(sector, subsector_1, subsector_2, province):
+    # Filter the data based on the selected filters
+    dff = filter_data(data, sector, subsector_1, subsector_2, province)
+    
+    # Get the unique years available after filtering
+    year_options = dff["Year"].dropna().unique()
+    
+    # If no years are available, return empty data and value
+    if not year_options.size:
+        return [], None
+    
+    # Prepare options for the year dropdown
+    year_options = [{'label': str(int(year)), 'value': str(int(year))} for year in year_options]
+    
+    # Default value as the first year if available
+    default_value = year_options[0]['value'] if year_options else None
+    
+    return year_options, default_value

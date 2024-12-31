@@ -27,7 +27,7 @@ from src.pages.not_found import not_found_page
 # Initialize the Dash app
 app = DashProxy(
     __name__,
-    external_stylesheets=[dmc.styles.ALL, dmc.styles.CHARTS],
+    external_stylesheets=[dmc.styles.ALL, dmc.styles.CHARTS, dmc.styles.CAROUSEL],
     transforms=[ServersideOutputTransform()],
     suppress_callback_exceptions=True,
 )
