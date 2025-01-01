@@ -14,4 +14,5 @@
  /* Remove Gridline Behavior Of Leaflet */
 .leaflet-container img.leaflet-tile {
     mix-blend-mode: normal;
-  }
+}
+

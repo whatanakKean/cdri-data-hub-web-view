@@ -33,7 +33,7 @@ buttons = [
             ),
         ],
     ),
-    dmc.Anchor(dmc.Button("About", variant="subtle", color="white"), href="/about")
+    dmc.Anchor(dmc.Button("About", variant="subtle", color="white"), href="https://cdri.org.kh/page/about-cdri")
 ]
 
 def banner():
@@ -43,7 +43,7 @@ def banner():
                     [
                         dmc.Group(
                             [
-                                dmc.Image(src=logo, h=40)
+                                dmc.Anchor(dmc.Image(src=logo, h=40), href="/")
                             ],
                         ),
                         dmc.Group(
