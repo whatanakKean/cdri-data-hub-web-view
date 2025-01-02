@@ -89,3 +89,10 @@ def banner():
 def toggle_navbar(opened, navbar):
     navbar["collapsed"] = {"mobile": not opened, "desktop": True}
     return navbar
+
+@callback(
+    Output("burger", "opened"),
+    Input('url', 'href')
+)
+def close_menu_on_navigation(href):
+    return False
