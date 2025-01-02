@@ -43,7 +43,10 @@ def banner():
                     [
                         dmc.Group(
                             [
-                                dmc.Anchor(dmc.Image(src=logo, h=40), href="/")
+                                dmc.Anchor(dmc.Image(
+                                    src="https://cdri.org.kh/storage/images/CDRI%20Logo_1704186788.png",
+                                    style={"width": "150px", "height": "auto"}
+                                ), href="/")
                             ],
                         ),
                         dmc.Group(
