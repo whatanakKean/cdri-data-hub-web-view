@@ -73,17 +73,6 @@ def sidebar(data):
                 mt="md",
                 checkIconPosition="right"
             ),
-            dmc.Select(
-                label="Select Year", 
-                id="year-dropdown",
-                value='2023', 
-                searchable=True,
-                data=[{'label': str(int(option)), 'value': str(int(option))} for option in list(data["Year"].dropna().unique())],
-                withScrollArea=False,
-                styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
-                mt="md",
-                checkIconPosition="right"
-            ),
         ], shadow="xs", p="md", radius="md", withBorder=True),
         dmc.Accordion(chevronPosition="right", variant="contained", radius="md", children=[
             dmc.AccordionItem(value="bender", children=[
@@ -91,35 +80,61 @@ def sidebar(data):
                 dmc.AccordionPanel(dmc.Text("Bender is a bending unit from the future...", size="sm"))
             ])
         ])
-    ])
+    ], gap="xs")
 
 # Page Layout
 agriculture_and_rural_development = dmc.Container([
     dmc.Grid([
         dmc.GridCol(sidebar(data), span={"base": 12, "sm": 3}),
         dmc.GridCol([
-            dmc.Paper([
-                dmc.Tabs(
-                    children=[
-                        dmc.TabsList(
-                            [
-                                dmc.TabsTab("Map View", leftSection=DashIconify(icon="tabler:map"), value="map"),
-                                dmc.TabsTab("Visualization", leftSection=DashIconify(icon="tabler:chart-bar"), value="graph"),
-                                dmc.TabsTab("Data Hub", leftSection=DashIconify(icon="tabler:database"), value="dataview"),
-                            ], 
-                            grow="True",
-                        ),
-                        dmc.TabsPanel(html.Div(id='map-id'), value="map"),
-                        dmc.TabsPanel(html.Div(id='graph-id'), value="graph"),
-                        dmc.TabsPanel(html.Div(id='dataview-container'), value="dataview"),
-                    ], 
-                    value="map",
-                ),
-            ], shadow="xs", p="md", radius="md", withBorder=True),
+            dmc.Stack([
+                dmc.Paper([
+                    dmc.Tabs(
+                        children=[
+                            dmc.TabsList(
+                                [
+                                    dmc.TabsTab("Map View", leftSection=DashIconify(icon="tabler:map"), value="map"),
+                                    dmc.TabsTab("Visualization", leftSection=DashIconify(icon="tabler:chart-bar"), value="graph"),
+                                    dmc.TabsTab("Data Hub", leftSection=DashIconify(icon="tabler:database"), value="dataview"),
+                                ], 
+                                grow="True",
+                            ),
+                            dmc.TabsPanel(
+                                children=[
+                                    html.Div(id='map-id'),
+                                    dmc.Box(
+                                        style={"paddingTop": "10px", "paddingBottom": "10px"},
+                                        children=[
+                                            dmc.Slider(
+                                                id="year-slider",
+                                                min=int(data["Year"].min()),
+                                                max=int(data["Year"].max()),
+                                                step=1,
+                                                marks=[{'value': year, 'label': str(year)} for year in range(int(data["Year"].min()), int(data["Year"].max()) + 1, 1)],
+                                                mt="md"
+                                            )
+                                        ]
+                                    )       
+                                ], 
+                                value="map"
+                            ),
+                            dmc.TabsPanel(                               
+                                children=[
+                                    html.Div(id='graph-id'),
+                                ], 
+                                value="graph"
+                            ),
+                            dmc.TabsPanel(html.Div(id='dataview-container'), value="dataview"),
+                        ], 
+                        value="map",
+                    ),
+                ], shadow="xs", p="md", radius="md", withBorder=True),
+            ], gap="xs"),
+            
             dcc.Store(id="selected-point-data"),
             dmc.Modal(id="info-modal", title="Point Information", children=[
                 dmc.Container(id="modal-content")
-            ], size="70%")
+            ], fullScreen=True)
         ], span={"base": 12, "sm": 9}),
     ]),
 ], fluid=True, style={'paddingTop': '1rem'})
@@ -304,12 +319,12 @@ def create_graph(dff,subsector_1, indicator):
                         'scale':6
                     }
                 }
-            ),
-            dmc.Divider(size="sm"),
+            )
         ])
     elif subsector_1 == "Export":
         # Group by Year and calculate the sum for the relevant columns
-        dff_agg = dff
+        # dff_agg = dff
+        dff_agg = dff.groupby('Year')[indicator].sum().reset_index()
 
         layout = go.Layout(
             images=[dict(
@@ -368,6 +383,12 @@ def create_graph(dff,subsector_1, indicator):
         fig1 = go.Figure(layout=layout)
 
         # Iterate over each indicator and create a line plot for each country
+        fig1.add_trace(go.Scatter(
+            x=dff_agg['Year'],
+            y=dff_agg[indicator],
+            mode='lines+markers',
+            name=indicator
+        ))
 
 
         return html.Div([ 
@@ -400,7 +421,7 @@ def create_dataview(dff):
 # Callbacks
 @callback([Output('graph-id', 'children'), Output('map-id', 'children'), Output('dataview-container', 'children')],
           [Input("sector-dropdown", "value"), Input("subsector-1-dropdown", "value"), Input("subsector-2-dropdown", "value"),
-           Input("province-dropdown", "value"), Input("indicator-dropdown", "value"), Input("year-dropdown", "value")])
+           Input("province-dropdown", "value"), Input("indicator-dropdown", "value"), Input("year-slider", "value")])
 def update_report(sector, subsector_1, subsector_2, province, indicator, year):
     dff = filter_data(data, sector, subsector_1, subsector_2, province)
     dff = dff.rename(columns={'Latiude': 'Latitude'})
@@ -415,36 +436,37 @@ def download_data(n_clicks, sector, subsector_1, subsector_2, province):
     dff = filter_data(data, sector, subsector_1, subsector_2, province)
     return dict(content=dff.to_csv(index=False), filename="data.csv", type="application/csv")
 
-@callback(
-    [Output("info-modal", "opened"), Output("info-modal", "title"), Output("modal-content", "children")],
-    [Input("geojson", "clickData")],State('sector-dropdown', 'value'), State('subsector-1-dropdown', 'value'), 
-          State('subsector-2-dropdown', 'value'), State('province-dropdown', 'value'),
-    prevent_initial_call=True  # Prevents callback execution on load
-)
-def display_modal(feature, sector, subsector_1, subsector_2, province):
-    dff = filter_data(data, sector, subsector_1, subsector_2, province)
+## Display Modal
+# @callback(
+#     [Output("info-modal", "opened"), Output("info-modal", "title"), Output("modal-content", "children")],
+#     [Input("geojson", "clickData")],State('sector-dropdown', 'value'), State('subsector-1-dropdown', 'value'), 
+#           State('subsector-2-dropdown', 'value'), State('province-dropdown', 'value'),
+#     prevent_initial_call=True  # Prevents callback execution on load
+# )
+# def display_modal(feature, sector, subsector_1, subsector_2, province):
+#     dff = filter_data(data, sector, subsector_1, subsector_2, province)
     
-    if feature is None:
-        raise dash.exceptions.PreventUpdate
+#     if feature is None:
+#         raise dash.exceptions.PreventUpdate
     
-    style = {
-        "border": f"1px solid {dmc.DEFAULT_THEME['colors']['indigo'][4]}",
-        "textAlign": "center",
-    }
-    # Modal content
-    content = [
-        dmc.Grid(
-            children=[
-                dmc.GridCol(html.Div("span=4", style=style), span="auto"),
-                dmc.GridCol(html.Div("span=4", style=style), span=4),
-                dmc.GridCol(html.Div("span=4", style=style), span="auto"),
-            ],
-            gutter="xl",
-        ),
-        create_dataview(dff)
-    ]
+#     style = {
+#         "border": f"1px solid {dmc.DEFAULT_THEME['colors']['indigo'][4]}",
+#         "textAlign": "center",
+#     }
+#     # Modal content
+#     content = [
+#         dmc.Grid(
+#             children=[
+#                 dmc.GridCol(html.Div("span=4", style=style), span="auto"),
+#                 dmc.GridCol(html.Div("span=4", style=style), span=4),
+#                 dmc.GridCol(html.Div("span=4", style=style), span="auto"),
+#             ],
+#             gutter="xl",
+#         ),
+#         create_dataview(dff)
+#     ]
 
-    return True,f"{sector}: {subsector_2} {subsector_1} ", content 
+#     return True,f"{sector}: {subsector_2} {subsector_1} ", content 
 
 # Calllback for info on map
 @callback(Output("info", "children"), Input('subsector-1-dropdown', 'value'), Input('subsector-2-dropdown', 'value'), Input('indicator-dropdown', 'value'), Input("geojson", "hoverData"))
@@ -520,28 +542,36 @@ def update_indicators(sector, subsector_1, subsector_2, province):
     return indicator_options, default_value
 
 @callback(
-    Output('year-dropdown', 'data'),
-    Output('year-dropdown', 'value'),
+    Output('year-slider', 'min'),
+    Output('year-slider', 'max'),
+    Output('year-slider', 'value'),
+    Output('year-slider', 'marks'),
     Input('sector-dropdown', 'value'),
     Input('subsector-1-dropdown', 'value'),
     Input('subsector-2-dropdown', 'value'),
     Input('province-dropdown', 'value')
 )
-def update_year(sector, subsector_1, subsector_2, province):
+def update_year_slider(sector, subsector_1, subsector_2, province):
     # Filter the data based on the selected filters
     dff = filter_data(data, sector, subsector_1, subsector_2, province)
     
     # Get the unique years available after filtering
     year_options = dff["Year"].dropna().unique()
     
-    # If no years are available, return empty data and value
+    # If no years are available, return default values
     if not year_options.size:
-        return [], None
+        return 0, 0, 0, []
     
-    # Prepare options for the year dropdown
-    year_options = [{'label': str(int(year)), 'value': str(int(year))} for year in year_options]
+    # Get the minimum and maximum years
+    min_year = int(year_options.min())
+    max_year = int(year_options.max())
     
-    # Default value as the first year if available
-    default_value = year_options[0]['value'] if year_options else None
+    # Prepare the marks for the slider based on the available years
+    marks = [{'value': year, 'label': str(year)} for year in range(min_year, max_year + 1)]
     
-    return year_options, default_value
+    # Default value for the `year-slider` (min value)
+    year_slider_value = min_year
+    
+    # Return the updated properties for the year-slider
+    return min_year, max_year, year_slider_value, marks
+
