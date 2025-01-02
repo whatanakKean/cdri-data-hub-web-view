@@ -567,7 +567,7 @@ def update_year_slider(sector, subsector_1, subsector_2, province):
     marks = [{'value': year, 'label': str(year)} for year in range(min_year, max_year + 1)]
     
     # Default value for the `year-slider` (min value)
-    year_slider_value = min_year
+    year_slider_value = max_year
     
     # Return the updated properties for the year-slider
     return min_year, max_year, year_slider_value, marks
