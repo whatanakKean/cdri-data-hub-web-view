@@ -29,7 +29,7 @@ home_page = html.Main([
     # Home Section
     html.Div(
         style={
-            "height": "70vh",  # Adjusted height for better consistency
+            "height": "600px",
             "backgroundImage": "url('./assets/background.jpg')",
             "backgroundSize": "cover",
             "backgroundPosition": "center",
@@ -53,7 +53,7 @@ home_page = html.Main([
     dmc.Container(
         id='about',
         style={
-            "height": "30vh",
+            "height": "100%",
             "padding": "50px",  
             "textAlign": "center",  
         },
@@ -71,23 +71,24 @@ home_page = html.Main([
         ],
     ),
 
-    # Objectives Section
+    # Mission Section
     dmc.Container(
         style={
-            "height": "50vh",
+            "height": "100%",
             "padding": "50px",  
             "textAlign": "center",  
         },
         children=[            
             dmc.Title(
-                'Objectives',
+                'Mission',
                 order=2,
                 style={
                     "position": "relative",
                     "fontSize": "2.5rem",  
-                    "color": "#2c3e50",    
+                    "color": "#336666",    # Update the color
                     "marginBottom": "2rem",  
-                    "textAlign": "center"
+                    "textAlign": "center",
+                    "textDecoration": "underline"  # Add underline
                 },
             ),
             dmc.SimpleGrid(
@@ -100,7 +101,7 @@ home_page = html.Main([
                             "boxShadow": "0px 4px 8px rgba(0, 0, 0, 0.1)",
                         },
                         children=[
-                            DashIconify(icon="fa-solid:file-alt", width=40),
+                            DashIconify(icon="icon-park:data-all", width=50),
                             dmc.Text(
                                 "Provide accessible, high-quality data on various sectors in Cambodia.",
                                 size="md",
@@ -118,7 +119,7 @@ home_page = html.Main([
                             "boxShadow": "0px 4px 8px rgba(0, 0, 0, 0.1)",
                         },
                         children=[
-                            DashIconify(icon="fa6-solid:chart-line", width=50),
+                            DashIconify(icon="icon-park:data-file", width=50),
                             dmc.Text(
                                 "Support decision-making through easy-to-use data visualization tools.",
                                 size="md",
@@ -136,7 +137,7 @@ home_page = html.Main([
                             "boxShadow": "0px 4px 8px rgba(0, 0, 0, 0.1)",
                         },
                         children=[
-                            DashIconify(icon="bi:people", width=50),
+                            DashIconify(icon="fluent-color:building-people-16", width=50),
                             dmc.Text(
                                 "Foster collaboration among researchers, policymakers, and practitioners.",
                                 size="md",
@@ -159,7 +160,7 @@ home_page = html.Main([
     # Sector Section
     dmc.Container(
         style={
-            "height": "50vh",
+            "height": "100%",
             "padding": "50px",  
             "textAlign": "center",  
         },
@@ -170,9 +171,10 @@ home_page = html.Main([
                 style={
                     "position": "relative",
                     "fontSize": "2.5rem",  
-                    "color": "#2c3e50",    
+                    "color": "#336666",    # Update the color
                     "marginBottom": "2rem",  
-                    "textAlign": "center"
+                    "textAlign": "center",
+                    "textDecoration": "underline"  # Add underline
                 },
             ),
             dmc.SimpleGrid(
@@ -185,6 +187,7 @@ home_page = html.Main([
                                     src=sector_data["image"],
                                     h=160,
                                     alt=sector_data["name"],
+                                    className="image-hover-zoom",
                                 )
                             ),
                             dmc.Group(

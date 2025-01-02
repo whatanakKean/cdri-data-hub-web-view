@@ -2,15 +2,13 @@ from dash import dcc, html
 import dash_mantine_components as dmc
 
 def footer():
-    return dmc.Container(
-        fluid=True,
+    return html.Div(
         style={
-            "position": "absolute",
-            "bottom": 0,
-            "margin": "0",
+            "position": "relative",  # Set position to relative
+            "bottom": "0",  # Pin the footer to the bottom of the page
+            "width": "100%",  # Ensure the footer spans the full width of the page
             "backgroundColor": "#336666",
             "color": "white",
-            "position": "relative",
             "padding": "5px"
         },
         children=[

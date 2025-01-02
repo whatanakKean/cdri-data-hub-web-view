@@ -1,3 +1,4 @@
+/* Style Info on Map */
 .info {
     padding: 6px 8px;
     font: 14px/16px Arial, Helvetica, sans-serif;
@@ -14,4 +15,14 @@
  /* Remove Gridline Behavior Of Leaflet */
 .leaflet-container img.leaflet-tile {
     mix-blend-mode: normal;
+}
+
+/* Home Page Image Zoom */
+.image-hover-zoom {
+    transition: transform 0.3s ease;  /* Smooth transition effect */
+    transform: scale(1);  /* Default scale */
+}
+
+.image-hover-zoom:hover {
+    transform: scale(1.1);  /* Zoom in when hovered */
 }
