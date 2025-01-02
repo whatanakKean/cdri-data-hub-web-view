@@ -49,14 +49,8 @@ app.layout = dmc.MantineProvider(
             dcc.Location(id="url", refresh=False),
             *banner(),
             dmc.AppShellMain(
-                # dcc.Loading(
-                #     [
-                #         breadcrumb(),
-                #         html.Div(id="page-content"),
-                #     ]
-                # ),
                 [
-                    breadcrumb(),
+                    # breadcrumb(),
                     html.Div(id="page-content"),
                 ]
             ),

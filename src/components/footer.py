@@ -5,6 +5,8 @@ def footer():
     return dmc.Container(
         fluid=True,
         style={
+            "position": "absolute",
+            "bottom": 0,
             "margin": "0",
             "backgroundColor": "#336666",
             "color": "white",
