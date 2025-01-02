@@ -107,10 +107,7 @@ agriculture_and_rural_development = dmc.Container([
                                         children=[
                                             dmc.Slider(
                                                 id="year-slider",
-                                                min=int(data["Year"].min()),
-                                                max=int(data["Year"].max()),
                                                 step=1,
-                                                marks=[{'value': year, 'label': str(year)} for year in range(int(data["Year"].min()), int(data["Year"].max()) + 1, 1)],
                                                 mt="md"
                                             )
                                         ]

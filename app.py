@@ -28,13 +28,9 @@ from src.pages.not_found import not_found_page
 app = DashProxy(
     __name__,
     external_stylesheets=[
-        dmc.styles.ALL, 
-        dmc.styles.CHARTS, 
-        dmc.styles.CAROUSEL,
-        "https://cdnjs.cloudflare.com/ajax/libs/fullPage.js/3.1.2/fullpage.min.css",  # Fullpage.js CSS
+        dmc.styles.ALL,
         "https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css",  # Animation CSS
     ],
-    external_scripts=["https://cdnjs.cloudflare.com/ajax/libs/fullPage.js/3.1.2/fullpage.min.js"],  # Fullpage.js JS
     transforms=[ServersideOutputTransform()],
     suppress_callback_exceptions=True,
 )

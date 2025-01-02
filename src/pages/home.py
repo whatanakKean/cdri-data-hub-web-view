@@ -45,6 +45,7 @@ home_page = html.Main([
                     dmc.Title('CDRI Data Hub', order=1, style={'color': 'white', 'fontSize': '3rem'}),
                     dmc.Text("Empowering Evidence-Based Decision-Making", size="xl", style={'color': 'white', 'fontSize': '1.5rem'}),
                 ],
+                className="animate__animated animate__fadeInUp animate__fast"
             )
         ],
     ),
