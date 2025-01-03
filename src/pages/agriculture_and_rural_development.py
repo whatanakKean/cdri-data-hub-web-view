@@ -76,8 +76,11 @@ def sidebar(data):
         ], shadow="xs", p="md", radius="md", withBorder=True),
         dmc.Accordion(chevronPosition="right", variant="contained", radius="md", children=[
             dmc.AccordionItem(value="bender", children=[
-                dmc.AccordionControl(dmc.Group([html.Div([dmc.Text("Metadata"), dmc.Text("Bender Bending Rodríguez", size="sm", fw=400, c="dimmed")])]),),
-                dmc.AccordionPanel(dmc.Text("Bender is a bending unit from the future...", size="sm"))
+                dmc.AccordionControl(dmc.Group([html.Div([dmc.Text("Metadata"), dmc.Text("Additional information about the data", size="sm", fw=400, c="dimmed")])]),),
+                dmc.AccordionPanel(
+                    id="metadata-panel",
+                    children=dmc.Text("Bender is a bending unit from the future...", size="sm")
+                )
             ])
         ])
     ], gap="xs")
@@ -139,7 +142,7 @@ agriculture_and_rural_development = dmc.Container([
 
     
 def create_map(dff, subsector_1, subsector_2, indicator, year):
-    dff = dff[dff["Year"] == int(year)]
+    
 
     classes = [0, 1000, 10000, 50000, 100000, 150000, 200000, 250000]
     colorscale = ['#e5f5e0', '#a1d99b', '#31a354', '#2c8e34', '#1f7032', '#196d30', '#155d2c', '#104d27']
@@ -148,6 +151,7 @@ def create_map(dff, subsector_1, subsector_2, indicator, year):
     colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=500, height=30, position="bottomleft")
     
     if subsector_1 == "Production":
+        dff = dff[dff["Year"] == int(year)]
         with open('./assets/geoBoundaries-KHM-ADM1_simplified.json') as f:
             geojson_data = json.load(f)
         
@@ -195,6 +199,7 @@ def create_map(dff, subsector_1, subsector_2, indicator, year):
         )
     
     elif subsector_1 == "Export":
+        dff = dff[dff["Year"] == int(year)]
         with open('./assets/countries.json') as f:
             geojson_data = json.load(f)
 
@@ -235,6 +240,23 @@ def create_map(dff, subsector_1, subsector_2, indicator, year):
                 'zIndex': 0,
             }
         )
+    else:
+        return html.Div([
+            dl.Map(
+                    style={'width': '100%', 'height': '450px'},
+                    center=[20, 0],  # Centered on the equator, near the Prime Meridian
+                    zoom=6,
+                    children=[
+                        dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                    ],
+                    attributionControl=False,
+            )],
+            style={
+                'position': 'relative',
+                'zIndex': 0,
+            }
+        )
+        
 
 
 def create_graph(dff,subsector_1, indicator):
@@ -410,19 +432,26 @@ def create_graph(dff,subsector_1, indicator):
 def create_dataview(dff): 
     return html.Div([
         dag.AgGrid(id='ag-grid', columnDefs=[{"headerName": col, "field": col} for col in dff.columns], rowData=dff.to_dict('records'), style={'height': '400px'}),
-        dmc.Button("Download Data", id="download-button", variant="outline", color="green", className="mt-3"),
+        dmc.Button("Download Data", id="download-button", variant="outline", color="#336666", mt="md", style={'marginLeft': 'auto', 'display': 'flex', 'justifyContent': 'flex-end'}),
         dcc.Download(id="download-data")
     ])
 
 
+def create_metadata(dff):
+    return dmc.Text(
+        f"Sources: {', '.join(dff['Source'].dropna().unique())}", size="sm"
+    )
+
+
 # Callbacks
-@callback([Output('graph-id', 'children'), Output('map-id', 'children'), Output('dataview-container', 'children')],
+@callback([Output('graph-id', 'children'), Output('map-id', 'children'), Output('dataview-container', 'children'), Output('metadata-panel', 'children')],
           [Input("sector-dropdown", "value"), Input("subsector-1-dropdown", "value"), Input("subsector-2-dropdown", "value"),
            Input("province-dropdown", "value"), Input("indicator-dropdown", "value"), Input("year-slider", "value")])
 def update_report(sector, subsector_1, subsector_2, province, indicator, year):
     dff = filter_data(data, sector, subsector_1, subsector_2, province)
     dff = dff.rename(columns={'Latiude': 'Latitude'})
-    return create_graph(dff, subsector_1, indicator), create_map(dff, subsector_1, subsector_2, indicator, year), create_dataview(dff)
+    
+    return create_graph(dff, subsector_1, indicator), create_map(dff, subsector_1, subsector_2, indicator, year), create_dataview(dff), create_metadata(dff)
 
 
 @callback(Output("download-data", "data"), Input("download-button", "n_clicks"),
