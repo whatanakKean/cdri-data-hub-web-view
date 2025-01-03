@@ -1,16 +1,13 @@
 import json
 import dash
-from dash import html, dcc, Input, Output, State, callback, callback_context
+from dash import html, dcc, Input, Output, State, callback
 import dash_mantine_components as dmc
 import dash_ag_grid as dag
-import plotly.express as px
 from ..utils.utils import load_data, get_info, filter_data, style_handle
 from dash_iconify import DashIconify
 import plotly.graph_objects as go
 import dash_leaflet as dl
 import dash_leaflet.express as dlx
-from dash.dependencies import ALL
-from dash_extensions.javascript import arrow_function, assign
 
 # Load data
 data = load_data(file_path="src/data/Datahub_Agri_Latest.xlsx", sheet_name="Database")
@@ -101,12 +98,11 @@ agriculture_and_rural_development = dmc.Container([
                                 children=[
                                     html.Div(id='map-id'),
                                     dmc.Box(
-                                        style={"paddingTop": "10px", "paddingBottom": "10px"},
+                                        style={"paddingTop": "2px", "paddingBottom": "10px"},
                                         children=[
                                             dmc.Slider(
                                                 id="year-slider",
-                                                step=1,
-                                                mt="md"
+                                                step=1
                                             )
                                         ]
                                     )       
@@ -137,8 +133,6 @@ agriculture_and_rural_development = dmc.Container([
 
     
 def create_map(dff, subsector_1, subsector_2, indicator, year):
-    
-
     classes = [0, 1000, 10000, 50000, 100000, 150000, 200000, 250000]
     colorscale = ['#e5f5e0', '#a1d99b', '#31a354', '#2c8e34', '#1f7032', '#196d30', '#155d2c', '#104d27']
     style = dict(weight=2, opacity=1, color='white', dashArray='3', fillOpacity=0.7)
@@ -252,176 +246,93 @@ def create_map(dff, subsector_1, subsector_2, indicator, year):
             }
         )
         
-
-
-def create_graph(dff,subsector_1, indicator):
-    if subsector_1 == "Production":
-        # Group by Year and calculate the sum for the relevant columns
-        dff_agg = dff.groupby('Year')[indicator].sum().reset_index()
-
-        layout = go.Layout(
-            images=[dict(
-                source="./assets/CDRI Logo.png",
-                xref="paper", yref="paper",
-                x=1, y=1.1,
-                sizex=0.2, sizey=0.2,
-                xanchor="right", yanchor="bottom"
-            )],
-            yaxis=dict(
-                gridcolor='rgba(169, 169, 169, 0.7)',
-                showgrid=True,
-                gridwidth=0.5,
-                griddash='dot',
-                tickformat=',',
-                rangemode='tozero'
-            ),
-            font=dict(
-                family='BlinkMacSystemFont',
-                color='rgba(0, 0, 0, 0.7)'
-            ),
-            hovermode="x unified",
-            plot_bgcolor='white',
-            legend=dict(
-                orientation="h",
-                yanchor="bottom",
-                y=1,
-                xanchor="right",    
-                x=1
-            ),
-            title=dict(
-                text=indicator,
-                subtitle=dict(
-                    text=f"Description For {indicator}",
-                    font=dict(color="gray", size=13),
-                ),
-            ),
-            xaxis=dict(
-                tickmode='array',
-                tickvals=dff_agg['Year'].unique(),
-            ),
-            annotations=[ 
-                dict(
-                    x=0.5,
-                    y=-0.15, 
-                    xref="paper", yref="paper",
-                    text="Source: CDRI Data Hub",
-                    showarrow=False,
-                    font=dict(size=12, color='rgba(0, 0, 0, 0.7)'),
-                    align='center'
-                ),
-            ],
-            margin=dict(t=100, b=80, l=50, r=50),
-        )
-        
-        fig1 = go.Figure(layout=layout)
-
-        fig1.add_trace(go.Scatter(
-                    x=dff_agg['Year'],
-                    y=dff_agg[indicator],
-                    mode='lines+markers',
-                    name=indicator
-                ))
-
-        return html.Div([ 
-            dcc.Graph(id="figure-linechart", figure=fig1, config={
-                'displaylogo': False,
-                'toImageButtonOptions': {
-                        'format': 'png',
-                        'filename': 'custom_image',
-                        'height': 500,
-                        'width': 800,
-                        'scale':6
-                    }
-                }
-            )
-        ])
-    elif subsector_1 == "Export":
-        # Group by Year and calculate the sum for the relevant columns
-        # dff_agg = dff
-        dff_agg = dff.groupby('Year')[indicator].sum().reset_index()
-
-        layout = go.Layout(
-            images=[dict(
-                source="./assets/CDRI Logo.png",
-                xref="paper", yref="paper",
-                x=1, y=1.1,
-                sizex=0.2, sizey=0.2,
-                xanchor="right", yanchor="bottom"
-            )],
-            yaxis=dict(
-                gridcolor='rgba(169, 169, 169, 0.7)',
-                showgrid=True,
-                gridwidth=0.5,
-                griddash='dot',
-                tickformat=',',
-                rangemode='tozero'
-            ),
-            font=dict(
-                family='BlinkMacSystemFont',
-                color='rgba(0, 0, 0, 0.7)'
-            ),
-            hovermode="x unified",
-            plot_bgcolor='white',
-            legend=dict(
-                orientation="h",
-                yanchor="bottom",
-                y=1,
-                xanchor="right",    
-                x=1
-            ),
-            title=dict(
-                text=indicator,
-                subtitle=dict(
-                    text=f"Description For {indicator}",
-                    font=dict(color="gray", size=13),
-                ),
-            ),
-            xaxis=dict(
-                tickmode='array',
-                tickvals=dff_agg['Year'].unique(),
-            ),
-            annotations=[ 
-                dict(
-                    x=0.5,
-                    y=-0.15, 
-                    xref="paper", yref="paper",
-                    text="Source: CDRI Data Hub",
-                    showarrow=False,
-                    font=dict(size=12, color='rgba(0, 0, 0, 0.7)'),
-                    align='center'
-                ),
-            ],
-            margin=dict(t=100, b=80, l=50, r=50),
-        )
-        
-        fig1 = go.Figure(layout=layout)
-
-        # Iterate over each indicator and create a line plot for each country
-        fig1.add_trace(go.Scatter(
-            x=dff_agg['Year'],
-            y=dff_agg[indicator],
-            mode='lines+markers',
-            name=indicator
-        ))
-
-
-        return html.Div([ 
-            dcc.Graph(id="figure-linechart", figure=fig1, config={
-                'displaylogo': False,
-                'toImageButtonOptions': {
-                    'format': 'png',
-                    'filename': 'custom_image',
-                    'height': 500,
-                    'width': 800,
-                    'scale': 6
-                }
-            }),
-            dmc.Divider(size="sm"),
-        ])
-    else:
+def create_graph(dff, subsector_1, indicator):
+    if subsector_1 not in ["Production", "Export"]:
         return html.Div([
             dmc.Text("Visualization is Under Construction", size="lg")
         ], style={'height': '400px', 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center'})
+
+    # Aggregate data
+    dff_agg = dff.groupby('Year')[indicator].sum().reset_index()
+
+    # Define layout
+    layout = go.Layout(
+        images=[dict(
+            source="./assets/CDRI Logo.png",
+            xref="paper", yref="paper",
+            x=1, y=1.1,
+            sizex=0.2, sizey=0.2,
+            xanchor="right", yanchor="bottom"
+        )],
+        yaxis=dict(
+            gridcolor='rgba(169, 169, 169, 0.7)',
+            showgrid=True,
+            gridwidth=0.5,
+            griddash='dot',
+            tickformat=',',
+            rangemode='tozero'
+        ),
+        font=dict(
+            family='BlinkMacSystemFont',
+            color='rgba(0, 0, 0, 0.7)'
+        ),
+        hovermode="x unified",
+        plot_bgcolor='white',
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1,
+            xanchor="right",    
+            x=1
+        ),
+        title=dict(
+            text=indicator,
+            subtitle=dict(
+                text=f"Description For {indicator}",
+                font=dict(color="gray", size=13),
+            ),
+        ),
+        xaxis=dict(
+            tickmode='array',
+            tickvals=dff_agg['Year'].unique(),
+        ),
+        annotations=[ 
+            dict(
+                x=0.5,
+                y=-0.15, 
+                xref="paper", yref="paper",
+                text="Source: CDRI Data Hub",
+                showarrow=False,
+                font=dict(size=12, color='rgba(0, 0, 0, 0.7)'),
+                align='center'
+            ),
+        ],
+        margin=dict(t=100, b=80, l=50, r=50),
+    )
+
+    # Create figure
+    fig1 = go.Figure(layout=layout)
+    fig1.add_trace(go.Scatter(
+        x=dff_agg['Year'],
+        y=dff_agg[indicator],
+        mode='lines+markers',
+        name=indicator
+    ))
+
+    # Return graph
+    return html.Div([ 
+        dcc.Graph(id="figure-linechart", figure=fig1, config={
+            'displaylogo': False,
+            'toImageButtonOptions': {
+                'format': 'png',
+                'filename': 'cdri_datahub_viz',
+                'height': 500,
+                'width': 800,
+                'scale': 6
+            }
+        }),
+        dmc.Divider(size="sm")
+    ])
 
 
 def create_dataview(dff): 
@@ -433,9 +344,11 @@ def create_dataview(dff):
 
 
 def create_metadata(dff):
-    return dmc.Text(
-        f"Sources: {', '.join(dff['Source'].dropna().unique())}", size="sm"
-    )
+    if 'Source' in dff and dff['Source'].dropna().any():  # Check if 'Source' exists and has non-NA values
+        return dmc.Text(
+            f"Sources: {', '.join(dff['Source'].dropna().unique())}", size="sm"
+        )
+    return ""
 
 
 # Callbacks

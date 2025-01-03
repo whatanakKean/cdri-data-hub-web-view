@@ -29,7 +29,7 @@ home_page = html.Main([
     # Home Section
     html.Div(
         style={
-            "height": "600px",
+            "height": "500px",
             "backgroundImage": "url('./assets/background.jpg')",
             "backgroundSize": "cover",
             "backgroundPosition": "center",
@@ -143,8 +143,8 @@ home_page = html.Main([
                                 "Foster collaboration among researchers, policymakers, and practitioners.",
                                 size="md",
                                 style={
-                                    "fontSize": "14px",  # Adjusted for smaller screens
-                                    "lineHeight": "1.5",  # Adjust line height for better readability
+                                    "fontSize": "14px",
+                                    "lineHeight": "1.5",
                                 },
                             ),
                         ],
@@ -203,7 +203,7 @@ home_page = html.Main([
                             dmc.Anchor(
                                 children=dmc.Button(
                                     "Explore Data" if sector_data["isEnabled"] else "Coming Soon",
-                                    color="blue" if sector_data["isEnabled"] else "gray",
+                                    color="#336666" if sector_data["isEnabled"] else "gray",
                                     mt="md",
                                     radius="md",
                                     fullWidth=True,
