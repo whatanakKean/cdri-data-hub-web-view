@@ -17,6 +17,15 @@ data = load_data(file_path="src/data/Unpivoted_Datahub_Agri_Latest.xlsx", sheet_
 def sidebar(data):
     return dmc.Stack([
         dmc.Paper([
+            # dmc.Select(
+            #     label="Select Series Name", 
+            #     id="series-name-dropdown", 
+            #     value='', 
+            #     data=[{'label': option, 'value': option} for option in data["Series Name"].dropna().str.strip().unique() if option],
+            #     withScrollArea=False,
+            #     styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
+            #     checkIconPosition="right"
+            # ),
             dmc.Select(
                 label="Select Sector", 
                 id="sector-dropdown", 
@@ -163,7 +172,7 @@ def create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit):
     colorscale = ['#a1d99b', '#31a354', '#2c8e34', '#196d30', '#155d2c', '#104d27']
     style = dict(weight=2, opacity=1, color='white', dashArray='3', fillOpacity=0.7)
     ctg = ["{}+".format(int(cls)) for cls in classes[:-1]] + ["{}+".format(int(classes[-1]))]
-    colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=500, height=30, position="bottomleft")
+    colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=30, height=300, position="bottomright")
     
     if subsector_1 == "Production":
         with open('./assets/geoBoundaries-KHM-ADM1_simplified.json') as f:

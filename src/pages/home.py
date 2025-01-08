@@ -9,7 +9,7 @@ sector = [
      "href": "/agriculture-and-rural-development"},
     {"name": "Development Economics and Trade", 
      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Phnompenhview.jpg/450px-Phnompenhview.jpg", 
-     "isEnabled": False, 
+     "isEnabled": True, 
      "href": "/development-economics-and-trade"},
     {"name": "Educational Research and Innovation", 
      "image": "https://opendevelopmentcambodia.net/wp-content/uploads/2021/05/8385981409_704990f061_o-1536x1025.jpg", 

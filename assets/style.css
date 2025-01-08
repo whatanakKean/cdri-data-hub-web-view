@@ -50,3 +50,17 @@
   animation: spinner-border 0.75s linear infinite;
   margin-top: 2rem;
 }
+
+
+/* Leaflet Color Bar */
+.leaflet-control-colorbar {
+    display: flex;
+    flex-direction: row-reverse; /* Reverse order to move numbers to the left */
+    align-items: center;
+    gap: 5px; /* Adds spacing between the colorbar and labels */
+}
+
+.leaflet-control-colorbar span {
+    text-align: right; /* Align numbers to the right for proper positioning */
+    margin-right: 5px;
+}
