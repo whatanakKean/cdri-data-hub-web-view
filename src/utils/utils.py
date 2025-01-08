@@ -21,7 +21,7 @@ style_handle = assign("""function(feature, context){
     return style;
 }""")
 
-def get_info(subsector_1, subsector_2, indicator, feature=None):
+def get_info(subsector_1, subsector_2, indicator, indicator_unit, feature=None):
     header = [html.H4(f"Cambodia {subsector_2} {subsector_1}")]
     
     if not feature:
@@ -40,7 +40,7 @@ def get_info(subsector_1, subsector_2, indicator, feature=None):
         
         # Return the information with the indicator value
         return header + [html.B(feature_name), html.Br(),
-                    f"{indicator}: {feature['properties'][indicator]}", html.Br()]
+                    f"{indicator}: {feature['properties'][indicator]} {indicator_unit[0]}", html.Br()]
 
 
 def load_data(file_path="src/data/Datahub_Agri_Latest.xlsx", sheet_name="Database"):

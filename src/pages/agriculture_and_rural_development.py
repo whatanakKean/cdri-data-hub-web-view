@@ -8,6 +8,7 @@ from dash_iconify import DashIconify
 import plotly.graph_objects as go
 import dash_leaflet as dl
 import dash_leaflet.express as dlx
+import numpy as np
 
 # Load data
 data = load_data(file_path="src/data/Unpivoted_Datahub_Agri_Latest.xlsx", sheet_name="Sheet1")
@@ -123,6 +124,7 @@ agriculture_and_rural_development = dmc.Container([
             ], gap="xs"),
             
             dcc.Store(id="selected-point-data"),
+            dcc.Store(id="indicator-unit"),
             dmc.Modal(id="info-modal", title="Point Information", children=[
                 dmc.Container(id="modal-content")
             ], fullScreen=True)
@@ -146,15 +148,24 @@ def create_metadata(dff):
     return ""
 
 
-def create_map(dff, subsector_1, subsector_2, indicator, year):
-    classes = [0, 1000, 10000, 50000, 100000, 150000, 200000, 250000]
-    colorscale = ['#e5f5e0', '#a1d99b', '#31a354', '#2c8e34', '#1f7032', '#196d30', '#155d2c', '#104d27']
+def create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit):
+    # Filter data for the selected year
+    dff = dff[dff["Year"] == int(year)]
+
+    min_value, max_value = dff['Indicator Value'].min(), dff['Indicator Value'].max()
+    num_classes = 5
+
+    # Calculate the step size and dynamically create class intervals
+    classes = np.linspace(min_value, max_value, num_classes)
+    classes = np.round(classes, -4)
+
+    # Create a dynamic color scale based on the classes
+    colorscale = ['#a1d99b', '#31a354', '#2c8e34', '#196d30', '#155d2c', '#104d27']
     style = dict(weight=2, opacity=1, color='white', dashArray='3', fillOpacity=0.7)
-    ctg = ["{}+".format(cls, classes[i + 1]) for i, cls in enumerate(classes[:-1])] + ["{}+".format(classes[-1])]
+    ctg = ["{}+".format(int(cls)) for cls in classes[:-1]] + ["{}+".format(int(classes[-1]))]
     colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=500, height=30, position="bottomleft")
     
     if subsector_1 == "Production":
-        dff = dff[dff["Year"] == int(year)]
         with open('./assets/geoBoundaries-KHM-ADM1_simplified.json') as f:
             geojson_data = json.load(f)
         
@@ -192,7 +203,7 @@ def create_map(dff, subsector_1, subsector_2, indicator, year):
                         dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
                         geojson,
                         colorbar,
-                        html.Div(children=get_info(subsector_1, subsector_2, indicator), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
+                        html.Div(children=get_info(subsector_1, subsector_2, indicator, indicator_unit), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
                     
                     ],
                     attributionControl=False,
@@ -205,7 +216,6 @@ def create_map(dff, subsector_1, subsector_2, indicator, year):
         )
     
     elif subsector_1 == "Export":
-        dff = dff[dff["Year"] == int(year)]
         with open('./assets/countries.json') as f:
             geojson_data = json.load(f)
                 
@@ -231,6 +241,7 @@ def create_map(dff, subsector_1, subsector_2, indicator, year):
                             hoverStyle = dict(weight=5, color='#666', dashArray=''),
                             hideout=dict(colorscale=colorscale, classes=classes, style=style, colorProp=indicator),
                             id="geojson")
+        
         return html.Div([
             dl.Map(
                     style={'width': '100%', 'height': '450px'},
@@ -240,7 +251,7 @@ def create_map(dff, subsector_1, subsector_2, indicator, year):
                         dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
                         geojson, 
                         colorbar,
-                        html.Div(children=get_info(subsector_1, subsector_2, indicator), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
+                        html.Div(children=get_info(subsector_1, subsector_2, indicator, indicator_unit), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
                     ],
                     attributionControl=False,
             )],
@@ -358,14 +369,15 @@ def create_graph(dff, subsector_1, indicator):
 
 
 # Callbacks
-@callback([Output('graph-id', 'children'), Output('map-id', 'children'), Output('dataview-container', 'children'), Output('metadata-panel', 'children')],
+@callback([Output('graph-id', 'children'), Output('map-id', 'children'), Output('dataview-container', 'children'), Output('metadata-panel', 'children'), Output('indicator-unit', 'data')],
           [Input("sector-dropdown", "value"), Input("subsector-1-dropdown", "value"), Input("subsector-2-dropdown", "value"),
            Input("province-dropdown", "value"), Input("indicator-dropdown", "value"), Input("year-slider", "value")])
 def update_report(sector, subsector_1, subsector_2, province, indicator, year):
     dff = filter_data(data, sector, subsector_1, subsector_2, province, indicator)
     dff = dff.rename(columns={'Latiude': 'Latitude'})
+    indicator_unit = dff['Indicator Unit'].unique()
     
-    return create_graph(dff, subsector_1, indicator), create_map(dff, subsector_1, subsector_2, indicator, year), create_dataview(dff), create_metadata(dff)
+    return create_graph(dff, subsector_1, indicator), create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit), create_dataview(dff), create_metadata(dff), indicator_unit.tolist()
 
 
 @callback(Output("download-data", "data"), Input("download-button", "n_clicks"),
@@ -409,9 +421,9 @@ def download_data(n_clicks, sector, subsector_1, subsector_2, province, indicato
 #     return True,f"{sector}: {subsector_2} {subsector_1} ", content 
 
 # Calllback for info on map
-@callback(Output("info", "children"), Input('subsector-1-dropdown', 'value'), Input('subsector-2-dropdown', 'value'), Input('indicator-dropdown', 'value'), Input("geojson", "hoverData"))
-def info_hover(subsector_1, subsector_2, indicator, feature):
-    return get_info(subsector_1=subsector_1, subsector_2=subsector_2, indicator=indicator, feature=feature)
+@callback(Output("info", "children"), Input('subsector-1-dropdown', 'value'), Input('subsector-2-dropdown', 'value'), Input('indicator-dropdown', 'value'), Input('indicator-unit', 'data'), Input("geojson", "hoverData"))
+def info_hover(subsector_1, subsector_2, indicator, indicator_unit, feature):
+    return get_info(subsector_1=subsector_1, subsector_2=subsector_2, indicator=indicator, feature=feature, indicator_unit=indicator_unit)
 
 
 # Callbacks for dynamic dropdown updates
