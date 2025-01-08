@@ -459,6 +459,7 @@ def update_subsector_2(sector, subsector_1):
 @callback(
     Output('province-dropdown', 'data'),
     Output('province-dropdown', 'value'),
+    Output('province-dropdown', 'style'),
     Input('sector-dropdown', 'value'),
     Input('subsector-1-dropdown', 'value'),
     Input('subsector-2-dropdown', 'value')
@@ -468,7 +469,8 @@ def update_province(sector, subsector_1, subsector_2):
     province_options = data[(data["Sector"] == sector) & 
                              (data["Sub-Sector (1)"] == subsector_1) & 
                              (data["Sub-Sector (2)"] == subsector_2)]["Province"].dropna().str.strip().unique()
-    return [{'label': option, 'value': option} for option in ['All'] + list(province_options)], 'All'
+    style = {'display': 'block'} if province_options.size > 0 else {'display': 'none'}
+    return [{'label': option, 'value': option} for option in ['All'] + list(province_options)], 'All', style
 
 @callback(
     Output('indicator-dropdown', 'data'),
