@@ -151,11 +151,70 @@ def create_metadata(dff):
 def create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit):
     # Filter data for the selected year
     dff = dff[dff["Year"] == int(year)]
+    
+    min_value, max_value = dff['Indicator Value'].min(), dff['Indicator Value'].max()
+    num_classes = 5
+
+    # Calculate the step size and dynamically create class intervals
+    classes = np.linspace(min_value, max_value, num_classes)
+    classes = np.round(classes, -4)
+
+    # Create a dynamic color scale based on the classes
+    colorscale = ['#a1d99b', '#31a354', '#2c8e34', '#196d30', '#155d2c', '#104d27']
+    style = dict(weight=2, opacity=1, color='white', dashArray='3', fillOpacity=0.7)
+    ctg = ["{}+".format(int(cls)) for cls in classes[:-1]] + ["{}+".format(int(classes[-1]))]
+    colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=30, height=300, position="bottomright")
+    
+    if 'Markets' in dff.columns:
+        with open('./assets/countries.json') as f:
+            geojson_data = json.load(f)
+                
+        # Map indicator values to geojson features
+        for feature in geojson_data['features']:
+            province_name = feature['properties']['name']  # Ensure correct property for province name
+            
+            # Find matching row in the filtered data
+            province_data = dff[dff['Markets'] == province_name]
+            
+            if not province_data.empty:
+                # Assign the indicator value
+                feature['properties'][indicator] = province_data['Indicator Value'].values[0]
+            else:
+                # Assign None for missing data
+                feature['properties'][indicator] = None
+                
+        # Create geojson.
+        geojson = dl.GeoJSON(data=geojson_data,
+                            style=style_handle,
+                            zoomToBounds=True,
+                            zoomToBoundsOnClick=True,
+                            hoverStyle = dict(weight=5, color='#666', dashArray=''),
+                            hideout=dict(colorscale=colorscale, classes=classes, style=style, colorProp=indicator),
+                            id="geojson")
+        
+        return html.Div([
+            dl.Map(
+                    style={'width': '100%', 'height': '450px'},
+                    center=[20, 0],  # Centered on the equator, near the Prime Meridian
+                    zoom=6,
+                    children=[
+                        dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                        geojson, 
+                        colorbar,
+                        html.Div(children=get_info(subsector_1=subsector_1, indicator=indicator, indicator_unit=indicator_unit), id="info-economic", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
+                    ],
+                    attributionControl=False,
+            )],
+            style={
+                'position': 'relative',
+                'zIndex': 0,
+            }
+        )
 
     return html.Div([
         dl.Map(
                 style={'width': '100%', 'height': '450px'},
-                center=[20, 0],  # Centered on the equator, near the Prime Meridian
+                center=[20, 0],
                 zoom=6,
                 children=[
                     dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
@@ -257,6 +316,10 @@ def create_graph(dff, subsector_1, products, indicator):
         dmc.Divider(size="sm")
     ])
 
+# Calllback for info on map
+@callback(Output("info-economic", "children"), Input('subsector-1-dropdown-economic', 'value'), Input('indicator-dropdown-economic', 'value'), Input('indicator-unit-economic', 'data'), Input("geojson", "hoverData"))
+def info_hover(subsector_1, indicator, indicator_unit, feature):
+    return get_info(subsector_1=subsector_1, indicator=indicator, feature=feature, indicator_unit=indicator_unit)
 
 
 # Callbacks

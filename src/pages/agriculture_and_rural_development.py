@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 import dash_leaflet as dl
 import dash_leaflet.express as dlx
 import numpy as np
+import plotly.express as px 
 
 # Load data
 data = load_data(file_path="src/data/Unpivoted_Datahub_Agri_Latest.xlsx", sheet_name="Sheet1")
@@ -212,7 +213,7 @@ def create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit):
                         dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
                         geojson,
                         colorbar,
-                        html.Div(children=get_info(subsector_1, subsector_2, indicator, indicator_unit), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
+                        html.Div(children=get_info(subsector_1=subsector_1, subsector_2=subsector_2, indicator=indicator, indicator_unit=indicator_unit), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
                     
                     ],
                     attributionControl=False,
@@ -260,7 +261,7 @@ def create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit):
                         dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
                         geojson, 
                         colorbar,
-                        html.Div(children=get_info(subsector_1, subsector_2, indicator, indicator_unit), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
+                        html.Div(children=get_info(subsector_1=subsector_1, subsector_2=subsector_2, indicator=indicator, indicator_unit=indicator_unit), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
                     ],
                     attributionControl=False,
             )],
@@ -359,21 +360,98 @@ def create_graph(dff, subsector_1, indicator):
         mode='lines+markers',
         name=indicator
     ))
+    
+    if subsector_1 == "Production":
+        fig2 = go.Figure(layout=layout)
+        for year in dff['Year'].unique():
+            year_data = dff[dff['Year'] == year]
+            fig2.add_trace(go.Bar(
+                x=year_data['Province'],
+                y=year_data['Indicator Value'],
+                name=str(year),
+                marker=dict(color=px.colors.qualitative.Set1[list(dff['Year'].unique()).index(year)]),
+                hoverinfo='x+y+name'
+            ))
+        # Set barmode to stack
+        fig2.update_layout(
+            barmode='stack',
+            xaxis=dict(
+                tickmode='array',  # Explicitly set ticks (labels)
+                tickvals=list(dff['Province'].unique()),  # List of all unique provinces
+                ticktext=list(dff['Province'].unique())  # Same as tickvals to display province names
+            ),
+            annotations=[ 
+                dict(
+                    x=0.5,
+                    y=-0.3, 
+                    xref="paper", yref="paper",
+                    text="Source: CDRI Data Hub",
+                    showarrow=False,
+                    font=dict(size=12, color='rgba(0, 0, 0, 0.7)'),
+                    align='center'
+                ),
+            ],
+        )
+    elif subsector_1 == "Export":
+        fig2 = go.Figure(layout=layout)
+        for year in dff['Year'].unique():
+            year_data = dff[dff['Year'] == year]
+            fig2.add_trace(go.Bar(
+                x=year_data['Markets'],
+                y=year_data['Indicator Value'],
+                name=str(year),
+                marker=dict(color=px.colors.qualitative.Set1[list(dff['Year'].unique()).index(year)]),
+                hoverinfo='x+y+name'
+            ))
+        # Set barmode to stack
+        fig2.update_layout(
+            barmode='stack',
+            xaxis=dict(
+                tickmode='array',  # Explicitly set ticks (labels)
+                tickvals=list(dff['Markets'].unique()),  # List of all unique provinces
+                ticktext=list(dff['Markets'].unique())  # Same as tickvals to display province names
+            ),
+            annotations=[ 
+                dict(
+                    x=0.5,
+                    y=-0.3, 
+                    xref="paper", yref="paper",
+                    text="Source: CDRI Data Hub",
+                    showarrow=False,
+                    font=dict(size=12, color='rgba(0, 0, 0, 0.7)'),
+                    align='center'
+                ),
+            ],
+        )
+
+
 
     # Return graph
     return html.Div([ 
-        dcc.Graph(id="figure-linechart", figure=fig1, config={
-            'displaylogo': False,
-            'toImageButtonOptions': {
-                'format': 'png',
-                'filename': 'cdri_datahub_viz',
-                'height': 500,
-                'width': 800,
-                'scale': 6
-            }
-        }),
-        dmc.Divider(size="sm")
-    ])
+            dcc.Graph(id="figure-linechart", figure=fig1, config={
+                'displaylogo': False,
+                'toImageButtonOptions': {
+                    'format': 'png',
+                    'filename': 'cdri_datahub_viz',
+                    'height': 500,
+                    'width': 800,
+                    'scale': 6
+                }
+            }),
+            dmc.Divider(size="sm"),
+            dcc.Graph(id="figure-linechart", figure=fig2, config={
+                'displaylogo': False,
+                'toImageButtonOptions': {
+                    'format': 'png',
+                    'filename': 'cdri_datahub_viz',
+                    'height': 500,
+                    'width': 800,
+                    'scale': 6
+                }
+            }),
+        ])
+
+
 
 
 

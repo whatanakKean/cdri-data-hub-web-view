@@ -21,8 +21,11 @@ style_handle = assign("""function(feature, context){
     return style;
 }""")
 
-def get_info(subsector_1, subsector_2, indicator, indicator_unit, feature=None):
-    header = [html.H4(f"Cambodia {subsector_2} {subsector_1}")]
+def get_info(subsector_1,  indicator, indicator_unit, subsector_2=None, feature=None):
+    if subsector_2 is not None:
+        header = [html.H4(f"Cambodia {subsector_2} {subsector_1}")]
+    else:
+        header = [html.H4(f"Cambodia {subsector_1}")]
     
     if not feature:
         return header + [html.P("Hover over a country")]
