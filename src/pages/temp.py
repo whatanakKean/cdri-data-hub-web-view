@@ -10,7 +10,7 @@ import dash_leaflet as dl
 import dash_leaflet.express as dlx
 
 # Load data
-data = load_data(file_path="src/data/Unpivoted_Datahub_Agri_Latest.xlsx", sheet_name="Sheet1")
+data = load_data(file_path="src/data/Datahub_Agri_Latest.xlsx", sheet_name="Database")
 
 # Sidebar components
 def sidebar(data):
@@ -20,7 +20,7 @@ def sidebar(data):
                 label="Select Sector", 
                 id="sector-dropdown", 
                 value='Agriculture', 
-                data=[{'label': option, 'value': option} for option in data["Sector"].dropna().str.strip().unique() if option],
+                data=[{'label': option, 'value': option} for option in data["Sector"].dropna().str.strip().unique()],
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
                 checkIconPosition="right"
@@ -59,7 +59,7 @@ def sidebar(data):
                 label="Select Indicator", 
                 id="indicator-dropdown", 
                 value='Area Planted', 
-                data=[{'label': option, 'value': option} for option in list(data["Indicator"].dropna().str.strip().unique())],
+                data=[{'label': option, 'value': option} for option in ['All'] + list(data.columns.unique())],
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
                 mt="md",
@@ -130,22 +130,8 @@ agriculture_and_rural_development = dmc.Container([
     ]),
 ], fluid=True, style={'paddingTop': '1rem'})
 
-def create_dataview(dff): 
-    return html.Div([
-        dag.AgGrid(id='ag-grid', columnDefs=[{"headerName": col, "field": col} for col in dff.columns], rowData=dff.to_dict('records'), style={'height': '400px'}),
-        dmc.Button("Download Data", id="download-button", variant="outline", color="#336666", mt="md", style={'marginLeft': 'auto', 'display': 'flex', 'justifyContent': 'flex-end'}),
-        dcc.Download(id="download-data")
-    ])
-    
-    
-def create_metadata(dff):
-    if 'Source' in dff and dff['Source'].dropna().any():  # Check if 'Source' exists and has non-NA values
-        return dmc.Text(
-            f"Sources: {', '.join(dff['Source'].dropna().unique())}", size="sm"
-        )
-    return ""
 
-
+    
 def create_map(dff, subsector_1, subsector_2, indicator, year):
     classes = [0, 1000, 10000, 50000, 100000, 150000, 200000, 250000]
     colorscale = ['#e5f5e0', '#a1d99b', '#31a354', '#2c8e34', '#1f7032', '#196d30', '#155d2c', '#104d27']
@@ -158,16 +144,13 @@ def create_map(dff, subsector_1, subsector_2, indicator, year):
         with open('./assets/geoBoundaries-KHM-ADM1_simplified.json') as f:
             geojson_data = json.load(f)
         
-        # Map indicator values to geojson features
         for feature in geojson_data['features']:
-            province_name = feature['properties']['shapeName']  # Ensure correct property for province name
+            country_name = feature['properties']['shapeName']  # Ensure your GeoJSON has the country names
+            # Find matching row in the data
+            country_data = dff[dff['Province'] == country_name]
             
-            # Find matching row in the filtered data
-            province_data = dff[dff['Province'] == province_name]
-            
-            if not province_data.empty:
-                # Assign the indicator value
-                feature['properties'][indicator] = province_data['Indicator Value'].values[0]
+            if not country_data.empty:
+                feature['properties'][indicator] = country_data[indicator].values[0]
             else:
                 # Assign None for missing data
                 feature['properties'][indicator] = None
@@ -208,21 +191,18 @@ def create_map(dff, subsector_1, subsector_2, indicator, year):
         dff = dff[dff["Year"] == int(year)]
         with open('./assets/countries.json') as f:
             geojson_data = json.load(f)
-                
-        # Map indicator values to geojson features
+
         for feature in geojson_data['features']:
-            province_name = feature['properties']['name']  # Ensure correct property for province name
-            
-            # Find matching row in the filtered data
-            province_data = dff[dff['Markets'] == province_name]
-            
-            if not province_data.empty:
-                # Assign the indicator value
-                feature['properties'][indicator] = province_data['Indicator Value'].values[0]
+            country_name = feature['properties']['name']  # Ensure your GeoJSON has the country names
+            # Find matching row in the data
+            country_data = dff[dff['Markets'] == country_name]
+
+            if not country_data.empty:
+                # Assign data if available
+                feature['properties'][indicator] = country_data[indicator].values[0]
             else:
                 # Assign None for missing data
                 feature['properties'][indicator] = None
-                
         # Create geojson.
         geojson = dl.GeoJSON(data=geojson_data,
                             style=style_handle,
@@ -273,8 +253,7 @@ def create_graph(dff, subsector_1, indicator):
         ], style={'height': '400px', 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center'})
 
     # Aggregate data
-    dff_filtered = dff.groupby('Year')['Indicator Value'].sum().reset_index()
-
+    dff_agg = dff.groupby('Year')[indicator].sum().reset_index()
 
     # Define layout
     layout = go.Layout(
@@ -315,7 +294,7 @@ def create_graph(dff, subsector_1, indicator):
         ),
         xaxis=dict(
             tickmode='array',
-            tickvals=dff_filtered['Year'].unique(),
+            tickvals=dff_agg['Year'].unique(),
         ),
         annotations=[ 
             dict(
@@ -334,8 +313,8 @@ def create_graph(dff, subsector_1, indicator):
     # Create figure
     fig1 = go.Figure(layout=layout)
     fig1.add_trace(go.Scatter(
-        x=dff_filtered['Year'],
-        y=dff_filtered['Indicator Value'],
+        x=dff_agg['Year'],
+        y=dff_agg[indicator],
         mode='lines+markers',
         name=indicator
     ))
@@ -356,13 +335,28 @@ def create_graph(dff, subsector_1, indicator):
     ])
 
 
+def create_dataview(dff): 
+    return html.Div([
+        dag.AgGrid(id='ag-grid', columnDefs=[{"headerName": col, "field": col} for col in dff.columns], rowData=dff.to_dict('records'), style={'height': '400px'}),
+        dmc.Button("Download Data", id="download-button", variant="outline", color="#336666", mt="md", style={'marginLeft': 'auto', 'display': 'flex', 'justifyContent': 'flex-end'}),
+        dcc.Download(id="download-data")
+    ])
+
+
+def create_metadata(dff):
+    if 'Source' in dff and dff['Source'].dropna().any():  # Check if 'Source' exists and has non-NA values
+        return dmc.Text(
+            f"Sources: {', '.join(dff['Source'].dropna().unique())}", size="sm"
+        )
+    return ""
+
 
 # Callbacks
 @callback([Output('graph-id', 'children'), Output('map-id', 'children'), Output('dataview-container', 'children'), Output('metadata-panel', 'children')],
           [Input("sector-dropdown", "value"), Input("subsector-1-dropdown", "value"), Input("subsector-2-dropdown", "value"),
            Input("province-dropdown", "value"), Input("indicator-dropdown", "value"), Input("year-slider", "value")])
 def update_report(sector, subsector_1, subsector_2, province, indicator, year):
-    dff = filter_data(data, sector, subsector_1, subsector_2, province, indicator)
+    dff = filter_data(data, sector, subsector_1, subsector_2, province)
     dff = dff.rename(columns={'Latiude': 'Latitude'})
     
     return create_graph(dff, subsector_1, indicator), create_map(dff, subsector_1, subsector_2, indicator, year), create_dataview(dff), create_metadata(dff)
@@ -370,10 +364,10 @@ def update_report(sector, subsector_1, subsector_2, province, indicator, year):
 
 @callback(Output("download-data", "data"), Input("download-button", "n_clicks"),
           State('sector-dropdown', 'value'), State('subsector-1-dropdown', 'value'), 
-          State('subsector-2-dropdown', 'value'), State('province-dropdown', 'value'), State('indicator-dropdown', 'value'))
-def download_data(n_clicks, sector, subsector_1, subsector_2, province, indicator):
+          State('subsector-2-dropdown', 'value'), State('province-dropdown', 'value'))
+def download_data(n_clicks, sector, subsector_1, subsector_2, province):
     if n_clicks is None: return dash.no_update
-    dff = filter_data(data, sector, subsector_1, subsector_2, province, indicator)
+    dff = filter_data(data, sector, subsector_1, subsector_2, province)
     return dict(content=dff.to_csv(index=False), filename="data.csv", type="application/csv")
 
 ## Display Modal
@@ -455,29 +449,31 @@ def update_province(sector, subsector_1, subsector_2):
     Input('sector-dropdown', 'value'),
     Input('subsector-1-dropdown', 'value'),
     Input('subsector-2-dropdown', 'value'),
-    Input('province-dropdown', 'value'),
-    prevent_initial_call=False
+    Input('province-dropdown', 'value')
 )
 def update_indicators(sector, subsector_1, subsector_2, province):
     # Filter data based on the selected filters
     dff = filter_data(data, sector, subsector_1, subsector_2, province)
     
-    # Extract unique indicator values
-    indicator_values = dff['Indicator'].unique().tolist()
+    # Extract valid indicator columns
+    indicator_columns = [col for col in dff.columns if col not in [
+        'Sector', 'Sub-Sector (1)', 'Sub-Sector (2)', 'Province', 'Series Code', 
+        'Series Name', 'Area planted unit', 'Area Harvested Unit', 'Year',
+        'Yield Unit', 'Quantity Harvested Unit', 'Latiude', 'Longitude', 
+        'Source', 'Quantity Unit', 'Value Unit', 'Pro code', 'Markets'
+    ]]
     
-    # If no indicators are available, return empty options and value
-    if not indicator_values:
+    # If no indicators are available, return empty data and value
+    if not indicator_columns:
         return [], None
     
-    # Prepare dropdown options
-    indicator_options = [{'label': indicator, 'value': indicator} for indicator in indicator_values]
+    # Prepare options for dropdown
+    indicator_options = [{'label': col, 'value': col} for col in indicator_columns]
     
-    # Set default value to the first indicator
-    default_value = indicator_values[0] if indicator_values else None
+    # Default value as first indicator
+    default_value = indicator_columns[0] if indicator_columns else None
     
     return indicator_options, default_value
-
-
 
 @callback(
     Output('year-slider', 'min'),
@@ -487,12 +483,11 @@ def update_indicators(sector, subsector_1, subsector_2, province):
     Input('sector-dropdown', 'value'),
     Input('subsector-1-dropdown', 'value'),
     Input('subsector-2-dropdown', 'value'),
-    Input('province-dropdown', 'value'),
-    Input('indicator-dropdown', 'value'),
+    Input('province-dropdown', 'value')
 )
-def update_year_slider(sector, subsector_1, subsector_2, province, indicator):
+def update_year_slider(sector, subsector_1, subsector_2, province):
     # Filter the data based on the selected filters
-    dff = filter_data(data, sector, subsector_1, subsector_2, province, indicator)
+    dff = filter_data(data, sector, subsector_1, subsector_2, province)
     
     # Get the unique years available after filtering
     year_options = dff["Year"].dropna().unique()

@@ -66,11 +66,20 @@ def load_data(file_path="src/data/Datahub_Agri_Latest.xlsx", sheet_name="Databas
 
 
 # Data filter function
-def filter_data(data, sector, subsector_1, subsector_2, province):
-    filtered_data = data[(data["Sector"] == sector) & (data["Sub-Sector (1)"] == subsector_1) & (data["Sub-Sector (2)"] == subsector_2)]
+def filter_data(data, sector, subsector_1, subsector_2, province, indicator=None):
+    # Filter by Sector, Sub-Sector (1), and Sub-Sector (2)
+    filtered_data = data[(data["Sector"] == sector) & 
+                         (data["Sub-Sector (1)"] == subsector_1) & 
+                         (data["Sub-Sector (2)"] == subsector_2)]
+    
+    # Filter by Indicator if provided
+    if indicator is not None:
+        filtered_data = filtered_data[filtered_data["Indicator"] == indicator]
+
+    # Drop columns that are entirely NaN
     filtered_data = filtered_data.dropna(axis=1, how='all')
     
-    # Filter Province
+    # Filter by Province if not 'All'
     if province != 'All':
         filtered_data = filtered_data[filtered_data["Province"] == province]
 
