@@ -296,7 +296,7 @@ def create_graph(dff, subsector_1, indicator):
     # Aggregate data
     dff_filtered = dff.groupby('Year')['Indicator Value'].sum().reset_index()
 
-
+    print("hello", dff)
     # Define layout
     layout = go.Layout(
         images=[dict(
@@ -328,11 +328,11 @@ def create_graph(dff, subsector_1, indicator):
             x=1
         ),
         title=dict(
-            text=indicator,
-            subtitle=dict(
-                text=f"Description For {indicator}",
-                font=dict(color="gray", size=13),
-            ),
+            text=f"{indicator}",
+            # subtitle=dict(
+            #     text=f"Description For {indicator}",
+            #     font=dict(color="gray", size=13),
+            # ),
         ),
         xaxis=dict(
             tickmode='array',
@@ -394,35 +394,53 @@ def create_graph(dff, subsector_1, indicator):
         )
     elif subsector_1 == "Export":
         fig2 = go.Figure(layout=layout)
+        print(">> Hello", dff.columns)
+        
+        # Filter data for the latest year
+        latest_year = dff['Year'].max()
+        latest_data = dff[dff['Year'] == latest_year]
+        
+        # Add a Treemap trace for the latest year
+        fig2.add_trace(go.Treemap(
+            labels=latest_data['Markets'],
+            parents=[""] * len(latest_data),
+            values=latest_data['Indicator Value'],
+            textinfo="label+value"
+        ))
+
+        # Create the year selector dropdown (without the "All Years" option)
+        dropdown_buttons = []
+
+        # Add a button for each year in the data
         for year in dff['Year'].unique():
-            year_data = dff[dff['Year'] == year]
-            fig2.add_trace(go.Bar(
-                x=year_data['Markets'],
-                y=year_data['Indicator Value'],
-                name=str(year),
-                marker=dict(color=px.colors.qualitative.Set1[list(dff['Year'].unique()).index(year)]),
-                hoverinfo='x+y+name'
-            ))
-        # Set barmode to stack
+            filtered_data = dff[dff['Year'] == year]
+            dropdown_buttons.append({
+                "label": f"{year}", "method": "update",
+                "args": [{"labels": [filtered_data['Markets']], "values": [filtered_data['Indicator Value']]},
+                        {"title": f"Treemap for Year {year}"}]
+            })
+        
+        # Find the index of the latest year to make it the default selection
+        default_year_index = list(dff['Year'].unique()).index(latest_year)
+
+        # Add dropdown menu
         fig2.update_layout(
-            barmode='stack',
-            xaxis=dict(
-                tickmode='array',  # Explicitly set ticks (labels)
-                tickvals=list(dff['Markets'].unique()),  # List of all unique provinces
-                ticktext=list(dff['Markets'].unique())  # Same as tickvals to display province names
-            ),
-            annotations=[ 
-                dict(
-                    x=0.5,
-                    y=-0.3, 
-                    xref="paper", yref="paper",
-                    text="Source: CDRI Data Hub",
-                    showarrow=False,
-                    font=dict(size=12, color='rgba(0, 0, 0, 0.7)'),
-                    align='center'
-                ),
-            ],
+            updatemenus=[{
+                "buttons": dropdown_buttons,
+                "direction": "down",
+                "x": 1,  # Position the dropdown to the right
+                "xanchor": "right",  # Align the dropdown to the right
+                "y": 1.1, "yanchor": "top",
+                "active": default_year_index  # Set the dropdown to start with the latest year
+            }],
+            annotations=[{
+                "x": 0.5, "y": -0.3, "xref": "paper", "yref": "paper",
+                "text": "Source: CDRI Data Hub",
+                "showarrow": False, "font": {"size": 12, "color": 'rgba(0, 0, 0, 0.7)'},
+                "align": "center"
+            }]
         )
+
 
 
 

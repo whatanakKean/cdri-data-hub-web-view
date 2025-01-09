@@ -269,10 +269,10 @@ def create_graph(dff, subsector_1, products, indicator):
         ),
         title=dict(
             text=indicator,
-            subtitle=dict(
-                text=f"Description For {indicator}",
-                font=dict(color="gray", size=13),
-            ),
+            # subtitle=dict(
+            #     text=f"Description For {indicator}",
+            #     font=dict(color="gray", size=13),
+            # ),
         ),
         xaxis=dict(
             tickmode='array',
