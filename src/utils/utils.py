@@ -21,12 +21,14 @@ style_handle = assign("""function(feature, context){
     return style;
 }""")
 
-def get_info(subsector_1,  indicator, indicator_unit, subsector_2=None, feature=None):
+def get_info(subsector_1, indicator, indicator_unit, subsector_2=None, feature=None, year=None):
+    year_text = f" in {year}" if year else ""
+    
     if subsector_2 is not None:
-        header = [html.H4(f"Cambodia {subsector_2} {subsector_1}")]
+        header = [html.H4(f"Cambodia {subsector_2} {subsector_1} {year_text}")]
     else:
         header = [html.H4(f"Cambodia {subsector_1}")]
-    
+
     if not feature:
         return header + [html.P("Hover over a country")]
     else:
@@ -36,14 +38,16 @@ def get_info(subsector_1,  indicator, indicator_unit, subsector_2=None, feature=
         # If neither 'name' nor 'shapeName' exists, handle it gracefully
         if not feature_name:
             return header + [html.P("No valid name available for this feature")]
-        
+
         # Handle missing indicator data
         if feature["properties"].get(indicator) is None:
             return header + [html.B(feature_name), html.Br(), "No data available"]
+
+
         
-        # Return the information with the indicator value
+        # Return the information with the indicator value and year (if given)
         return header + [html.B(feature_name), html.Br(),
-                    f"{indicator}: {feature['properties'][indicator]} {indicator_unit[0]}", html.Br()]
+                         f"{indicator}: {feature['properties'][indicator]} {indicator_unit[0]}", html.Br()]
 
 
 def load_data(file_path="src/data/Datahub_Agri_Latest.xlsx", sheet_name="Database"):

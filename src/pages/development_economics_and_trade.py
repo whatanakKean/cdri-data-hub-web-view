@@ -283,7 +283,7 @@ def create_graph(dff, subsector_1, products, indicator):
                 x=0.5,
                 y=-0.15, 
                 xref="paper", yref="paper",
-                text="Source: CDRI Data Hub",
+                text="Produced By: CDRI Data Hub",
                 showarrow=False,
                 font=dict(size=12, color='rgba(0, 0, 0, 0.7)'),
                 align='center'

@@ -142,7 +142,7 @@ agriculture_and_rural_development = dmc.Container([
     ]),
 ], fluid=True, style={'paddingTop': '1rem'})
 
-def create_dataview(dff): 
+def create_dataview(dff):
     return html.Div([
         dag.AgGrid(id='ag-grid', columnDefs=[{"headerName": col, "field": col} for col in dff.columns], rowData=dff.to_dict('records'), style={'height': '400px'}),
         dmc.Button("Download Data", id="download-button", variant="outline", color="#336666", mt="md", style={'marginLeft': 'auto', 'display': 'flex', 'justifyContent': 'flex-end'}),
@@ -213,7 +213,7 @@ def create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit):
                         dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
                         geojson,
                         colorbar,
-                        html.Div(children=get_info(subsector_1=subsector_1, subsector_2=subsector_2, indicator=indicator, indicator_unit=indicator_unit), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
+                        html.Div(children=get_info(subsector_1=subsector_1, subsector_2=subsector_2, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
                     
                     ],
                     attributionControl=False,
@@ -261,7 +261,7 @@ def create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit):
                         dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
                         geojson, 
                         colorbar,
-                        html.Div(children=get_info(subsector_1=subsector_1, subsector_2=subsector_2, indicator=indicator, indicator_unit=indicator_unit), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
+                        html.Div(children=get_info(subsector_1=subsector_1, subsector_2=subsector_2, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
                     ],
                     attributionControl=False,
             )],
@@ -287,7 +287,7 @@ def create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit):
             }
         )
         
-def create_graph(dff, subsector_1, indicator):
+def create_graph(dff, subsector_1, indicator, province):
     if subsector_1 not in ["Production", "Export"]:
         return html.Div([
             dmc.Text("Visualization is Under Construction", size="lg")
@@ -296,7 +296,6 @@ def create_graph(dff, subsector_1, indicator):
     # Aggregate data
     dff_filtered = dff.groupby('Year')['Indicator Value'].sum().reset_index()
 
-    print("hello", dff)
     # Define layout
     layout = go.Layout(
         images=[dict(
@@ -312,7 +311,8 @@ def create_graph(dff, subsector_1, indicator):
             gridwidth=0.5,
             griddash='dot',
             tickformat=',',
-            rangemode='tozero'
+            rangemode='tozero',
+            title=f"{indicator} ({dff['Indicator Unit'].unique()[0]})",
         ),
         font=dict(
             family='BlinkMacSystemFont',
@@ -327,13 +327,6 @@ def create_graph(dff, subsector_1, indicator):
             xanchor="right",    
             x=1
         ),
-        title=dict(
-            text=f"{indicator}",
-            # subtitle=dict(
-            #     text=f"Description For {indicator}",
-            #     font=dict(color="gray", size=13),
-            # ),
-        ),
         xaxis=dict(
             tickmode='array',
             tickvals=dff_filtered['Year'].unique(),
@@ -343,7 +336,7 @@ def create_graph(dff, subsector_1, indicator):
                 x=0.5,
                 y=-0.15, 
                 xref="paper", yref="paper",
-                text="Source: CDRI Data Hub",
+                text="Produced By: CDRI Data Hub",
                 showarrow=False,
                 font=dict(size=12, color='rgba(0, 0, 0, 0.7)'),
                 align='center'
@@ -362,6 +355,7 @@ def create_graph(dff, subsector_1, indicator):
     ))
     
     if subsector_1 == "Production":
+        dff = dff.sort_values(by='Indicator Value', ascending=False)
         fig2 = go.Figure(layout=layout)
         for year in dff['Year'].unique():
             year_data = dff[dff['Year'] == year]
@@ -385,63 +379,134 @@ def create_graph(dff, subsector_1, indicator):
                     x=0.5,
                     y=-0.3, 
                     xref="paper", yref="paper",
-                    text="Source: CDRI Data Hub",
+                    text="Produced By: CDRI Data Hub",
                     showarrow=False,
                     font=dict(size=12, color='rgba(0, 0, 0, 0.7)'),
                     align='center'
                 ),
             ],
         )
-    elif subsector_1 == "Export":
-        fig2 = go.Figure(layout=layout)
-        print(">> Hello", dff.columns)
+        title_text = f"{dff['Sub-Sector (2)'].unique()[0]} {dff['Sub-Sector (1)'].unique()[0]}: {dff['Indicator'].unique()[0]} in {'All Provinces in Cambodia' if province == 'All' else province}"
+        fig1.update_layout(
+            title=dict(
+                text=title_text,
+            ),
+        )
+        fig2.update_layout(
+            title=dict(
+                text=title_text,
+            ),
+        )
+    
+    # elif subsector_1 == "Export":
+    #     fig2 = go.Figure(layout=layout)
         
-        # Filter data for the latest year
+    #     # Filter data for the latest year
+    #     latest_year = dff['Year'].max()
+    #     latest_data = dff[dff['Year'] == latest_year]
+        
+    #     # Add a Treemap trace for the latest year
+    #     fig2.add_trace(go.Treemap(
+    #         labels=latest_data['Markets'],
+    #         parents=[""] * len(latest_data),
+    #         values=latest_data['Indicator Value'],
+    #         textinfo="label+value"
+    #     ))
+
+    #     # Create the year selector dropdown (without the "All Years" option)
+    #     dropdown_buttons = []
+
+    #     # Add a button for each year in the data
+    #     for year in dff['Year'].unique():
+    #         filtered_data = dff[dff['Year'] == year]
+    #         dropdown_buttons.append({
+    #             "label": f"{year}", "method": "update",
+    #             "args": [{"labels": [filtered_data['Markets']], "values": [filtered_data['Indicator Value']]},
+    #                     {"title": f"Treemap for Year {year}"}]
+    #         })
+        
+    #     # Find the index of the latest year to make it the default selection
+    #     default_year_index = list(dff['Year'].unique()).index(latest_year)
+
+    #     # Add dropdown menu
+    #     fig2.update_layout(
+    #         updatemenus=[{
+    #             "buttons": dropdown_buttons,
+    #             "direction": "down",
+    #             "x": 1,
+    #             "xanchor": "right",
+    #             "y": 1.1, "yanchor": "top",
+    #             "active": default_year_index
+    #         }],
+    #         annotations=[{
+    #             "x": 0.5, "y": -0.3, "xref": "paper", "yref": "paper",
+    #             "text": "Produced By: CDRI Data Hub",
+    #             "showarrow": False, "font": {"size": 12, "color": 'rgba(0, 0, 0, 0.7)'},
+    #             "align": "center"
+    #         }]
+    #     )
+    elif subsector_1 == "Export":
+        dff = dff.sort_values(by='Indicator Value', ascending=True)
+        fig2 = go.Figure(layout=layout)
+
         latest_year = dff['Year'].max()
         latest_data = dff[dff['Year'] == latest_year]
-        
-        # Add a Treemap trace for the latest year
-        fig2.add_trace(go.Treemap(
-            labels=latest_data['Markets'],
-            parents=[""] * len(latest_data),
-            values=latest_data['Indicator Value'],
-            textinfo="label+value"
-        ))
 
-        # Create the year selector dropdown (without the "All Years" option)
+        fig2.add_trace(go.Bar(
+            y=latest_data['Markets'],
+            x=latest_data['Indicator Value'],
+            text=latest_data['Indicator Value'],
+            textposition="auto",
+            orientation="h",
+        ))
+        
+
         dropdown_buttons = []
 
-        # Add a button for each year in the data
         for year in dff['Year'].unique():
             filtered_data = dff[dff['Year'] == year]
             dropdown_buttons.append({
-                "label": f"{year}", "method": "update",
-                "args": [{"labels": [filtered_data['Markets']], "values": [filtered_data['Indicator Value']]},
-                        {"title": f"Treemap for Year {year}"}]
+                "label": f"{year}",
+                "method": "update",
+                "args": [
+                    {"y": [filtered_data['Markets']], "x": [filtered_data['Indicator Value']]},
+                ]
             })
-        
-        # Find the index of the latest year to make it the default selection
+
         default_year_index = list(dff['Year'].unique()).index(latest_year)
 
-        # Add dropdown menu
         fig2.update_layout(
             updatemenus=[{
                 "buttons": dropdown_buttons,
                 "direction": "down",
-                "x": 1,  # Position the dropdown to the right
-                "xanchor": "right",  # Align the dropdown to the right
+                "x": 1,
+                "xanchor": "right",
                 "y": 1.1, "yanchor": "top",
-                "active": default_year_index  # Set the dropdown to start with the latest year
+                "active": default_year_index
             }],
-            annotations=[{
-                "x": 0.5, "y": -0.3, "xref": "paper", "yref": "paper",
-                "text": "Source: CDRI Data Hub",
-                "showarrow": False, "font": {"size": 12, "color": 'rgba(0, 0, 0, 0.7)'},
-                "align": "center"
-            }]
+            annotations=[ 
+                dict(
+                    x=0.5,
+                    y=-0.3, 
+                    xref="paper", yref="paper",
+                    text="Produced By: CDRI Data Hub",
+                    showarrow=False,
+                    font=dict(size=12, color='rgba(0, 0, 0, 0.7)'),
+                    align='center'
+                ),
+            ],
         )
-
-
+        title_text = f"{dff['Sub-Sector (2)'].unique()[0]} {dff['Sub-Sector (1)'].unique()[0]} {dff['Indicator'].unique()[0]}"
+        fig1.update_layout(
+            title=dict(
+                text=title_text,
+            ),
+        )
+        fig2.update_layout(
+            title=dict(
+                text=f"{title_text} ({latest_year})",
+            ),
+        )
 
 
     # Return graph
@@ -482,7 +547,7 @@ def update_report(sector, subsector_1, subsector_2, province, indicator, year):
     dff = dff.rename(columns={'Latiude': 'Latitude'})
     indicator_unit = dff['Indicator Unit'].unique()
     
-    return create_graph(dff, subsector_1, indicator), create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit), create_dataview(dff), create_metadata(dff), indicator_unit.tolist()
+    return create_graph(dff, subsector_1, indicator, province), create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit), create_dataview(dff), create_metadata(dff), indicator_unit.tolist()
 
 
 @callback(Output("download-data", "data"), Input("download-button", "n_clicks"),
@@ -526,9 +591,9 @@ def download_data(n_clicks, sector, subsector_1, subsector_2, province, indicato
 #     return True,f"{sector}: {subsector_2} {subsector_1} ", content 
 
 # Calllback for info on map
-@callback(Output("info", "children"), Input('subsector-1-dropdown', 'value'), Input('subsector-2-dropdown', 'value'), Input('indicator-dropdown', 'value'), Input('indicator-unit', 'data'), Input("geojson", "hoverData"))
-def info_hover(subsector_1, subsector_2, indicator, indicator_unit, feature):
-    return get_info(subsector_1=subsector_1, subsector_2=subsector_2, indicator=indicator, feature=feature, indicator_unit=indicator_unit)
+@callback(Output("info", "children"), Input('subsector-1-dropdown', 'value'), Input('subsector-2-dropdown', 'value'), Input('year-slider', 'value'), Input('indicator-dropdown', 'value'), Input('indicator-unit', 'data'), Input("geojson", "hoverData"))
+def info_hover(subsector_1, subsector_2, year, indicator, indicator_unit, feature):
+    return get_info(subsector_1=subsector_1, subsector_2=subsector_2, indicator=indicator, feature=feature, indicator_unit=indicator_unit, year=year)
 
 
 # Callbacks for dynamic dropdown updates
