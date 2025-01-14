@@ -398,83 +398,37 @@ def create_graph(dff, subsector_1, indicator, province):
             ),
         )
     
-    # elif subsector_1 == "Export":
-    #     fig2 = go.Figure(layout=layout)
-        
-    #     # Filter data for the latest year
-    #     latest_year = dff['Year'].max()
-    #     latest_data = dff[dff['Year'] == latest_year]
-        
-    #     # Add a Treemap trace for the latest year
-    #     fig2.add_trace(go.Treemap(
-    #         labels=latest_data['Markets'],
-    #         parents=[""] * len(latest_data),
-    #         values=latest_data['Indicator Value'],
-    #         textinfo="label+value"
-    #     ))
-
-    #     # Create the year selector dropdown (without the "All Years" option)
-    #     dropdown_buttons = []
-
-    #     # Add a button for each year in the data
-    #     for year in dff['Year'].unique():
-    #         filtered_data = dff[dff['Year'] == year]
-    #         dropdown_buttons.append({
-    #             "label": f"{year}", "method": "update",
-    #             "args": [{"labels": [filtered_data['Markets']], "values": [filtered_data['Indicator Value']]},
-    #                     {"title": f"Treemap for Year {year}"}]
-    #         })
-        
-    #     # Find the index of the latest year to make it the default selection
-    #     default_year_index = list(dff['Year'].unique()).index(latest_year)
-
-    #     # Add dropdown menu
-    #     fig2.update_layout(
-    #         updatemenus=[{
-    #             "buttons": dropdown_buttons,
-    #             "direction": "down",
-    #             "x": 1,
-    #             "xanchor": "right",
-    #             "y": 1.1, "yanchor": "top",
-    #             "active": default_year_index
-    #         }],
-    #         annotations=[{
-    #             "x": 0.5, "y": -0.3, "xref": "paper", "yref": "paper",
-    #             "text": "Produced By: CDRI Data Hub",
-    #             "showarrow": False, "font": {"size": 12, "color": 'rgba(0, 0, 0, 0.7)'},
-    #             "align": "center"
-    #         }]
-    #     )
     elif subsector_1 == "Export":
-        dff = dff.sort_values(by='Indicator Value', ascending=True)
         fig2 = go.Figure(layout=layout)
-
+        
+        # Filter data for the latest year
         latest_year = dff['Year'].max()
         latest_data = dff[dff['Year'] == latest_year]
-
-        fig2.add_trace(go.Bar(
-            y=latest_data['Markets'],
-            x=latest_data['Indicator Value'],
-            text=latest_data['Indicator Value'],
-            textposition="auto",
-            orientation="h",
-        ))
         
+        # Add a Treemap trace for the latest year
+        fig2.add_trace(go.Treemap(
+            labels=latest_data['Markets'],
+            parents=[""] * len(latest_data),
+            values=latest_data['Indicator Value'],
+            textinfo="label+value"
+        ))
 
+        # Create the year selector dropdown (without the "All Years" option)
         dropdown_buttons = []
 
+        # Add a button for each year in the data
         for year in dff['Year'].unique():
             filtered_data = dff[dff['Year'] == year]
             dropdown_buttons.append({
-                "label": f"{year}",
-                "method": "update",
-                "args": [
-                    {"y": [filtered_data['Markets']], "x": [filtered_data['Indicator Value']]},
-                ]
+                "label": f"{year}", "method": "update",
+                "args": [{"labels": [filtered_data['Markets']], "values": [filtered_data['Indicator Value']]},
+                        ]
             })
-
+        
+        # Find the index of the latest year to make it the default selection
         default_year_index = list(dff['Year'].unique()).index(latest_year)
 
+        # Add dropdown menu
         fig2.update_layout(
             updatemenus=[{
                 "buttons": dropdown_buttons,
@@ -484,17 +438,12 @@ def create_graph(dff, subsector_1, indicator, province):
                 "y": 1.1, "yanchor": "top",
                 "active": default_year_index
             }],
-            annotations=[ 
-                dict(
-                    x=0.5,
-                    y=-0.3, 
-                    xref="paper", yref="paper",
-                    text="Produced By: CDRI Data Hub",
-                    showarrow=False,
-                    font=dict(size=12, color='rgba(0, 0, 0, 0.7)'),
-                    align='center'
-                ),
-            ],
+            annotations=[{
+                "x": 0.5, "y": -0.3, "xref": "paper", "yref": "paper",
+                "text": "Produced By: CDRI Data Hub",
+                "showarrow": False, "font": {"size": 12, "color": 'rgba(0, 0, 0, 0.7)'},
+                "align": "center"
+            }]
         )
         title_text = f"{dff['Sub-Sector (2)'].unique()[0]} {dff['Sub-Sector (1)'].unique()[0]} {dff['Indicator'].unique()[0]}"
         fig1.update_layout(
@@ -504,9 +453,71 @@ def create_graph(dff, subsector_1, indicator, province):
         )
         fig2.update_layout(
             title=dict(
-                text=f"{title_text} ({latest_year})",
+                text=f"{title_text} By Countries ({latest_year})",
             ),
         )
+    # elif subsector_1 == "Export":
+    #     dff = dff.sort_values(by='Indicator Value', ascending=True)
+    #     fig2 = go.Figure(layout=layout)
+
+    #     latest_year = dff['Year'].max()
+    #     latest_data = dff[dff['Year'] == latest_year]
+
+    #     fig2.add_trace(go.Bar(
+    #         y=latest_data['Markets'],
+    #         x=latest_data['Indicator Value'],
+    #         text=latest_data['Indicator Value'],
+    #         textposition="auto",
+    #         orientation="h",
+    #     ))
+        
+
+    #     dropdown_buttons = []
+
+    #     for year in dff['Year'].unique():
+    #         filtered_data = dff[dff['Year'] == year]
+    #         dropdown_buttons.append({
+    #             "label": f"{year}",
+    #             "method": "update",
+    #             "args": [
+    #                 {"y": [filtered_data['Markets']], "x": [filtered_data['Indicator Value']]},
+    #             ]
+    #         })
+
+    #     default_year_index = list(dff['Year'].unique()).index(latest_year)
+
+    #     fig2.update_layout(
+    #         updatemenus=[{
+    #             "buttons": dropdown_buttons,
+    #             "direction": "down",
+    #             "x": 1,
+    #             "xanchor": "right",
+    #             "y": 1.1, "yanchor": "top",
+    #             "active": default_year_index
+    #         }],
+    #         annotations=[ 
+    #             dict(
+    #                 x=0.5,
+    #                 y=-0.3, 
+    #                 xref="paper", yref="paper",
+    #                 text="Produced By: CDRI Data Hub",
+    #                 showarrow=False,
+    #                 font=dict(size=12, color='rgba(0, 0, 0, 0.7)'),
+    #                 align='center'
+    #             ),
+    #         ],
+    #     )
+    #     title_text = f"{dff['Sub-Sector (2)'].unique()[0]} {dff['Sub-Sector (1)'].unique()[0]} {dff['Indicator'].unique()[0]}"
+    #     fig1.update_layout(
+    #         title=dict(
+    #             text=title_text,
+    #         ),
+    #     )
+    #     fig2.update_layout(
+    #         title=dict(
+    #             text=f"{title_text} ({latest_year})",
+    #         ),
+    #     )
 
 
     # Return graph
