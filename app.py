@@ -42,7 +42,7 @@ app._favicon = ("favicon.ico")
 app.layout = dmc.MantineProvider(
     dmc.AppShell(
         [
-            dcc.Location(id="url", refresh=False),
+            dcc.Location(id="url", refresh=True),
             *banner(),
             dmc.AppShellMain(
                 [

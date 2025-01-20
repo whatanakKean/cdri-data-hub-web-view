@@ -63,21 +63,6 @@ def footer():
                                         href="/development-economics-and-trade",
                                         style={"color": "white", "display": "block"}
                                     ),
-                                    dmc.Anchor(
-                                        ">     Educational Research and Innovation",
-                                        href="/educational-research-and-innovation",
-                                        style={"color": "white", "display": "block"}
-                                    ),
-                                    dmc.Anchor(
-                                        ">     Natural Resource and Environment",
-                                        href="/natural-resource-and-environment",
-                                        style={"color": "white", "display": "block"}
-                                    ),
-                                    dmc.Anchor(
-                                        ">     Governance and Inclusive Society",
-                                        href="/governance-and-inclusive-society",
-                                        style={"color": "white", "display": "block"}
-                                    ),
                                 ]
                             )
                         ],

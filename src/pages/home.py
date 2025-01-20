@@ -11,18 +11,6 @@ sector = [
      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Phnompenhview.jpg/450px-Phnompenhview.jpg", 
      "isEnabled": True, 
      "href": "/development-economics-and-trade"},
-    {"name": "Educational Research and Innovation", 
-     "image": "https://opendevelopmentcambodia.net/wp-content/uploads/2021/05/8385981409_704990f061_o-1536x1025.jpg", 
-     "isEnabled": False, 
-     "href": "/educational-research-and-innovation"},
-    {"name": "Natural Resource and Environment", 
-     "image": "https://www.undp.org/sites/g/files/zskgke326/files/migration/kh/UNDP_KH_Kulen.jpg", 
-     "isEnabled": False, 
-     "href": "/natural-resource-and-environment"},
-    {"name": "Governance and Inclusive Society", 
-     "image": "https://upload.wikimedia.org/wikipedia/en/thumb/6/66/Cambodian_Peace_Palace_%28day%29.jpg/450px-Cambodian_Peace_Palace_%28day%29.jpg", 
-     "isEnabled": False, 
-     "href": "/governance-and-inclusive-society"}
 ]
 
 home_page = html.Main([  
@@ -86,10 +74,10 @@ home_page = html.Main([
                 style={
                     "position": "relative",
                     "fontSize": "2.5rem",  
-                    "color": "#336666",    # Update the color
+                    "color": "#336666",
                     "marginBottom": "2rem",  
                     "textAlign": "center",
-                    "textDecoration": "underline"  # Add underline
+                    "textDecoration": "underline"
                 },
             ),
             dmc.SimpleGrid(
@@ -107,8 +95,8 @@ home_page = html.Main([
                                 "Provide accessible, high-quality data on various sectors in Cambodia.",
                                 size="md",
                                 style={
-                                    "fontSize": "14px",  # Smaller font size for smaller screens
-                                    "lineHeight": "1.5",  # Adjust line height for readability
+                                    "fontSize": "14px",
+                                    "lineHeight": "1.5",
                                 },
                             ),
                         ],
@@ -125,8 +113,8 @@ home_page = html.Main([
                                 "Support decision-making through easy-to-use data visualization tools.",
                                 size="md",
                                 style={
-                                    "fontSize": "14px",  # Smaller font size for better readability on small screens
-                                    "lineHeight": "1.5",  # Adjust line height for readability
+                                    "fontSize": "14px",
+                                    "lineHeight": "1.5",
                                 },
                             ),
                         ],
@@ -172,14 +160,14 @@ home_page = html.Main([
                 style={
                     "position": "relative",
                     "fontSize": "2.5rem",  
-                    "color": "#336666",    # Update the color
+                    "color": "#336666",
                     "marginBottom": "2rem",  
                     "textAlign": "center",
-                    "textDecoration": "underline"  # Add underline
+                    "textDecoration": "underline"
                 },
             ),
             dmc.SimpleGrid(
-                cols={"base": 1, "sm": 2, "lg": 3},
+                cols={"base": 1, "sm": 2, "lg": 2},
                 children=[
                     dmc.Card(
                         children=[

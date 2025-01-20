@@ -17,18 +17,6 @@ buttons = [
                         "Development Economics and Trade",
                         href="/development-economics-and-trade"
                     )
-                    # dmc.MenuItem(
-                    #     "Educational Research and Innovation",
-                    #     href="/educational-research-and-innovation"
-                    # ),
-                    # dmc.MenuItem(
-                    #     "Natural Resource and Environment",
-                    #     href="/natural-resource-and-environment"
-                    # ),
-                    # dmc.MenuItem(
-                    #     "Governance and Inclusive Society",
-                    #     href="/governance-and-inclusive-society"
-                    # ),
                 ]
             ),
         ],

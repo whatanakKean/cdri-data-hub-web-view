@@ -24,7 +24,8 @@ def sidebar(data):
                 data=[{'label': option, 'value': option} for option in data["Series Name"].dropna().str.strip().unique() if option],
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
-                checkIconPosition="right"
+                checkIconPosition="right",
+                allowDeselect=False,
             ),
             dmc.Select(
                 label="Select Sector", 
@@ -34,7 +35,8 @@ def sidebar(data):
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
                 mt="md",
-                checkIconPosition="right"
+                checkIconPosition="right",
+                allowDeselect=False,
             ),
             dmc.Select(
                 label="Select Sub-Sector (1)", 
@@ -44,7 +46,8 @@ def sidebar(data):
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
                 mt="md",
-                checkIconPosition="right"
+                checkIconPosition="right",
+                allowDeselect=False,
             ),
             dmc.Select(
                 label="Select Product", 
@@ -54,7 +57,8 @@ def sidebar(data):
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
                 mt="md",
-                checkIconPosition="right"
+                checkIconPosition="right",
+                allowDeselect=False,
             ),
             dmc.Select(
                 label="Select Indicator", 
@@ -64,7 +68,8 @@ def sidebar(data):
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
                 mt="md",
-                checkIconPosition="right"
+                checkIconPosition="right",
+                allowDeselect=False,
             ),
         ], shadow="xs", p="md", radius="md", withBorder=True),
         dmc.Accordion(chevronPosition="right", variant="contained", radius="md", children=[
