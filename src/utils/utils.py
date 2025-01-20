@@ -73,9 +73,11 @@ def load_data(file_path="src/data/Datahub_Agri_Latest.xlsx", sheet_name="Databas
 
 
 # Data filter function
-def filter_data(data, sector, subsector_1=None, subsector_2=None, province=None, indicator=None, product=None, series_name=None):
+def filter_data(data, sector=ModuleNotFoundError, subsector_1=None, subsector_2=None, province=None, indicator=None, product=None, series_name=None):
     # Filter by Sector, Sub-Sector (1), and Sub-Sector (2)
-    filtered_data = data[(data["Sector"] == sector)]
+    filtered_data = data
+    if sector is not None:
+        filtered_data = filtered_data[(filtered_data["Sector"] == sector)]
     
     # Filter by Indicator if provided
     if series_name is not None:
@@ -84,9 +86,13 @@ def filter_data(data, sector, subsector_1=None, subsector_2=None, province=None,
     if subsector_1 is not None:
         filtered_data = filtered_data[filtered_data["Sub-Sector (1)"] == subsector_1]
     
+    
+    
     if indicator is not None:
         filtered_data = filtered_data[filtered_data["Indicator"] == indicator]
         
+    
+    
     if subsector_2 is not None:
         filtered_data = filtered_data[filtered_data["Sub-Sector (2)"] == subsector_2]
     
@@ -102,6 +108,40 @@ def filter_data(data, sector, subsector_1=None, subsector_2=None, province=None,
     if province != 'All':
         filtered_data = filtered_data[filtered_data["Province"] == province]
     
-    
 
     return filtered_data
+
+
+
+
+## Display Modal
+# @callback(
+#     [Output("info-modal", "opened"), Output("info-modal", "title"), Output("modal-content", "children")],
+#     [Input("geojson", "clickData")],State('sector-dropdown', 'value'), State('subsector-1-dropdown', 'value'), 
+#           State('subsector-2-dropdown', 'value'), State('province-dropdown', 'value'),
+#     prevent_initial_call=True  # Prevents callback execution on load
+# )
+# def display_modal(feature, sector, subsector_1, subsector_2, province):
+#     dff = filter_data(data, sector, subsector_1, subsector_2, province)
+    
+#     if feature is None:
+#         raise dash.exceptions.PreventUpdate
+    
+#     style = {
+#         "border": f"1px solid {dmc.DEFAULT_THEME['colors']['indigo'][4]}",
+#         "textAlign": "center",
+#     }
+#     # Modal content
+#     content = [
+#         dmc.Grid(
+#             children=[
+#                 dmc.GridCol(html.Div("span=4", style=style), span="auto"),
+#                 dmc.GridCol(html.Div("span=4", style=style), span=4),
+#                 dmc.GridCol(html.Div("span=4", style=style), span="auto"),
+#             ],
+#             gutter="xl",
+#         ),
+#         create_dataview(dff)
+#     ]
+
+#     return True,f"{sector}: {subsector_2} {subsector_1} ", content 

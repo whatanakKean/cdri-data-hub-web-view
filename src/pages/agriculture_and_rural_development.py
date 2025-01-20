@@ -180,7 +180,7 @@ def create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit):
     ctg = ["{}+".format(int(cls)) for cls in classes[:-1]] + ["{}+".format(int(classes[-1]))]
     colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=30, height=300, position="bottomright")
     
-    if subsector_1 == "Production":
+    if subsector_1 in ["Production", "Agricultural Cooperative"]:
         with open('./assets/geoBoundaries-KHM-ADM1_simplified.json') as f:
             geojson_data = json.load(f)
         
@@ -293,7 +293,7 @@ def create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit):
         )
         
 def create_graph(dff, subsector_1, indicator, province):
-    if subsector_1 not in ["Production", "Export"]:
+    if subsector_1 not in ["Production", "Export", "Contract Farming", "Agricultural Cooperative"]:
         return html.Div([
             dmc.Text("Visualization is Under Construction", size="lg")
         ], style={'height': '400px', 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center'})
@@ -391,7 +391,7 @@ def create_graph(dff, subsector_1, indicator, province):
                 ),
             ],
         )
-        title_text = f"{dff['Sub-Sector (2)'].unique()[0]} {dff['Sub-Sector (1)'].unique()[0]}: {dff['Indicator'].unique()[0]} in {'All Provinces in Cambodia' if province == 'All' else province}"
+        title_text = f"{dff['Sub-Sector (2)'].unique()[0]} {dff['Sub-Sector (1)'].unique()[0]}: {dff['Indicator'].unique()[0]} in {'Cambodia' if province == 'All' else province}"
         fig1.update_layout(
             title=dict(
                 text=title_text,
@@ -461,69 +461,20 @@ def create_graph(dff, subsector_1, indicator, province):
                 text=f"{title_text} By Countries ({latest_year})",
             ),
         )
-    # elif subsector_1 == "Export":
-    #     dff = dff.sort_values(by='Indicator Value', ascending=True)
-    #     fig2 = go.Figure(layout=layout)
-
-    #     latest_year = dff['Year'].max()
-    #     latest_data = dff[dff['Year'] == latest_year]
-
-    #     fig2.add_trace(go.Bar(
-    #         y=latest_data['Markets'],
-    #         x=latest_data['Indicator Value'],
-    #         text=latest_data['Indicator Value'],
-    #         textposition="auto",
-    #         orientation="h",
-    #     ))
-        
-
-    #     dropdown_buttons = []
-
-    #     for year in dff['Year'].unique():
-    #         filtered_data = dff[dff['Year'] == year]
-    #         dropdown_buttons.append({
-    #             "label": f"{year}",
-    #             "method": "update",
-    #             "args": [
-    #                 {"y": [filtered_data['Markets']], "x": [filtered_data['Indicator Value']]},
-    #             ]
-    #         })
-
-    #     default_year_index = list(dff['Year'].unique()).index(latest_year)
-
-    #     fig2.update_layout(
-    #         updatemenus=[{
-    #             "buttons": dropdown_buttons,
-    #             "direction": "down",
-    #             "x": 1,
-    #             "xanchor": "right",
-    #             "y": 1.1, "yanchor": "top",
-    #             "active": default_year_index
-    #         }],
-    #         annotations=[ 
-    #             dict(
-    #                 x=0.5,
-    #                 y=-0.3, 
-    #                 xref="paper", yref="paper",
-    #                 text="Produced By: CDRI Data Hub",
-    #                 showarrow=False,
-    #                 font=dict(size=12, color='rgba(0, 0, 0, 0.7)'),
-    #                 align='center'
-    #             ),
-    #         ],
-    #     )
-    #     title_text = f"{dff['Sub-Sector (2)'].unique()[0]} {dff['Sub-Sector (1)'].unique()[0]} {dff['Indicator'].unique()[0]}"
-    #     fig1.update_layout(
-    #         title=dict(
-    #             text=title_text,
-    #         ),
-    #     )
-    #     fig2.update_layout(
-    #         title=dict(
-    #             text=f"{title_text} ({latest_year})",
-    #         ),
-    #     )
-
+    elif subsector_1 == "Contract Farming":
+        title_text = f"{dff['Sub-Sector (2)'].unique()[0]} {dff['Sub-Sector (1)'].unique()[0]} {dff['Indicator'].unique()[0]}"
+        fig1.update_layout(
+            title=dict(
+                text=title_text,
+            ),
+        )
+    elif subsector_1 == "Agricultural Cooperative":
+        title_text = f"{dff['Sub-Sector (1)'].unique()[0]} {dff['Indicator'].unique()[0]}"
+        fig1.update_layout(
+            title=dict(
+                text=title_text,
+            ),
+        )
 
     # Return graph
     return html.Div([ 
@@ -538,16 +489,16 @@ def create_graph(dff, subsector_1, indicator, province):
                 }
             }),
             dmc.Divider(size="sm"),
-            dcc.Graph(id="figure-linechart", figure=fig2, config={
-                'displaylogo': False,
-                'toImageButtonOptions': {
-                    'format': 'png',
-                    'filename': 'cdri_datahub_viz',
-                    'height': 500,
-                    'width': 800,
-                    'scale': 6
-                }
-            }),
+            # dcc.Graph(id="figure-linechart", figure=fig2, config={
+            #     'displaylogo': False,
+            #     'toImageButtonOptions': {
+            #         'format': 'png',
+            #         'filename': 'cdri_datahub_viz',
+            #         'height': 500,
+            #         'width': 800,
+            #         'scale': 6
+            #     }
+            # }),
         ])
 
 
@@ -574,37 +525,6 @@ def download_data(n_clicks, sector, subsector_1, subsector_2, province, indicato
     dff = filter_data(data, sector, subsector_1, subsector_2, province, indicator)
     return dict(content=dff.to_csv(index=False), filename="data.csv", type="application/csv")
 
-## Display Modal
-# @callback(
-#     [Output("info-modal", "opened"), Output("info-modal", "title"), Output("modal-content", "children")],
-#     [Input("geojson", "clickData")],State('sector-dropdown', 'value'), State('subsector-1-dropdown', 'value'), 
-#           State('subsector-2-dropdown', 'value'), State('province-dropdown', 'value'),
-#     prevent_initial_call=True  # Prevents callback execution on load
-# )
-# def display_modal(feature, sector, subsector_1, subsector_2, province):
-#     dff = filter_data(data, sector, subsector_1, subsector_2, province)
-    
-#     if feature is None:
-#         raise dash.exceptions.PreventUpdate
-    
-#     style = {
-#         "border": f"1px solid {dmc.DEFAULT_THEME['colors']['indigo'][4]}",
-#         "textAlign": "center",
-#     }
-#     # Modal content
-#     content = [
-#         dmc.Grid(
-#             children=[
-#                 dmc.GridCol(html.Div("span=4", style=style), span="auto"),
-#                 dmc.GridCol(html.Div("span=4", style=style), span=4),
-#                 dmc.GridCol(html.Div("span=4", style=style), span="auto"),
-#             ],
-#             gutter="xl",
-#         ),
-#         create_dataview(dff)
-#     ]
-
-#     return True,f"{sector}: {subsector_2} {subsector_1} ", content 
 
 # Calllback for info on map
 @callback(Output("info", "children"), Input('subsector-1-dropdown', 'value'), Input('subsector-2-dropdown', 'value'), Input('year-slider', 'value'), Input('indicator-dropdown', 'value'), Input('indicator-unit', 'data'), Input("geojson", "hoverData"))
@@ -625,13 +545,15 @@ def update_subsector_1(sector):
 @callback(
     Output('subsector-2-dropdown', 'data'),
     Output('subsector-2-dropdown', 'value'),
+    Output('subsector-2-dropdown', 'style'),
     Input('sector-dropdown', 'value'),
     Input('subsector-1-dropdown', 'value')
 )
 def update_subsector_2(sector, subsector_1):
     # Get the subsector-2 options based on the sector and subsector-1
     subsector_2_options = data[(data["Sector"] == sector) & (data["Sub-Sector (1)"] == subsector_1)]["Sub-Sector (2)"].dropna().str.strip().unique()
-    return [{'label': option, 'value': option} for option in subsector_2_options], subsector_2_options[0] if subsector_2_options.size > 0 else None
+    style = {'display': 'block'} if subsector_2_options.size > 0 else {'display': 'none'}
+    return [{'label': option, 'value': option} for option in subsector_2_options], subsector_2_options[0] if subsector_2_options.size > 0 else None, style
 
 @callback(
     Output('province-dropdown', 'data'),
@@ -643,9 +565,20 @@ def update_subsector_2(sector, subsector_1):
 )
 def update_province(sector, subsector_1, subsector_2):
     # Get the province options based on the sector, subsector-1, and subsector-2
-    province_options = data[(data["Sector"] == sector) & 
-                             (data["Sub-Sector (1)"] == subsector_1) & 
-                             (data["Sub-Sector (2)"] == subsector_2)]["Province"].dropna().str.strip().unique()
+    if subsector_2:
+        # Filter with subsector_2
+        province_options = data[
+            (data["Sector"] == sector) & 
+            (data["Sub-Sector (1)"] == subsector_1) & 
+            (data["Sub-Sector (2)"] == subsector_2)
+        ]["Province"].dropna().str.strip().unique()
+    else:
+        # Filter without subsector_2
+        province_options = data[
+            (data["Sector"] == sector) & 
+            (data["Sub-Sector (1)"] == subsector_1)
+        ]["Province"].dropna().str.strip().unique()
+        
     style = {'display': 'block'} if province_options.size > 0 else {'display': 'none'}
     return [{'label': option, 'value': option} for option in ['All'] + list(province_options)], 'All', style
 
