@@ -21,7 +21,7 @@ def sidebar(data):
             # dmc.Select(
             #     label="Select Series Name", 
             #     id="series-name-dropdown", 
-            #     value='', 
+            #     value='Rice Production', 
             #     data=[{'label': option, 'value': option} for option in data["Series Name"].dropna().str.strip().unique() if option],
             #     withScrollArea=False,
             #     styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
@@ -34,6 +34,7 @@ def sidebar(data):
                 data=[{'label': option, 'value': option} for option in data["Sector"].dropna().str.strip().unique() if option],
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
+                mt="md",
                 checkIconPosition="right",
                 allowDeselect=False,
             ),
@@ -180,7 +181,7 @@ def create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit):
     ctg = ["{}+".format(int(cls)) for cls in classes[:-1]] + ["{}+".format(int(classes[-1]))]
     colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=30, height=300, position="bottomright")
     
-    if subsector_1 in ["Production", "Agricultural Cooperative"]:
+    if 'Province' in dff.columns:
         with open('./assets/geoBoundaries-KHM-ADM1_simplified.json') as f:
             geojson_data = json.load(f)
         
@@ -230,7 +231,7 @@ def create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit):
             }
         )
     
-    elif subsector_1 == "Export":
+    elif 'Markets' in dff.columns:
         with open('./assets/countries.json') as f:
             geojson_data = json.load(f)
                 
@@ -276,6 +277,21 @@ def create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit):
             }
         )
     else:
+        with open('./assets/geoBoundaries-KHM-ADM0_simplified.json') as f:  # Assuming this file has Cambodia as a single entity
+            geojson_data = json.load(f)
+            
+        geojson_data['features'][0]['properties'][indicator] = dff['Indicator Value'].mean()
+        
+        geojson = dl.GeoJSON(
+            data=geojson_data,
+            style=style_handle,
+            zoomToBounds=True,
+            zoomToBoundsOnClick=True,
+            hoverStyle=dict(weight=5, color='#666', dashArray=''),
+            hideout=dict(colorscale=colorscale, classes=classes, style=style, colorProp=indicator),
+            id="geojson"
+        )
+        
         return html.Div([
             dl.Map(
                     style={'width': '100%', 'height': '450px'},
@@ -283,6 +299,8 @@ def create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit):
                     zoom=6,
                     children=[
                         dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                        geojson,
+                        html.Div(children=get_info(subsector_1=subsector_1, subsector_2=subsector_2, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
                     ],
                     attributionControl=False,
             )],
@@ -295,7 +313,7 @@ def create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit):
 def create_graph(dff, subsector_1, indicator, province):
     if subsector_1 not in ["Production", "Export", "Contract Farming", "Agricultural Cooperative"]:
         return html.Div([
-            dmc.Text("Visualization is Under Construction", size="lg")
+            dmc.Text("Not Enough Data To Visualize", size="lg")
         ], style={'height': '400px', 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center'})
 
     # Aggregate data
@@ -639,7 +657,7 @@ def update_year_slider(sector, subsector_1, subsector_2, province, indicator):
     max_year = int(year_options.max())
     
     # Prepare the marks for the slider based on the available years
-    marks = [{'value': year, 'label': str(year)} for year in range(min_year, max_year + 1)]
+    marks = [{'value': year, 'label': str(year)} for year in year_options]
     
     # Default value for the `year-slider` (min value)
     year_slider_value = max_year
