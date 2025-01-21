@@ -169,7 +169,7 @@ def create_metadata(dff):
     return ""
 
 
-def create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit):
+def create_map(dff, series_name, indicator, year, indicator_unit):
     # Filter data for the selected year
     dff = dff[dff["Year"] == int(year)]
 
@@ -224,7 +224,7 @@ def create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit):
                         dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
                         geojson,
                         colorbar,
-                        html.Div(children=get_info(subsector_1=subsector_1, subsector_2=subsector_2, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
+                        html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
                     
                     ],
                     attributionControl=False,
@@ -272,7 +272,7 @@ def create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit):
                         dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
                         geojson, 
                         colorbar,
-                        html.Div(children=get_info(subsector_1=subsector_1, subsector_2=subsector_2, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
+                        html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
                     ],
                     attributionControl=False,
             )],
@@ -305,7 +305,7 @@ def create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit):
                     children=[
                         dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
                         geojson,
-                        html.Div(children=get_info(subsector_1=subsector_1, subsector_2=subsector_2, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
+                        html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
                     ],
                     attributionControl=False,
             )],
@@ -315,7 +315,7 @@ def create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit):
             }
         )
         
-def create_graph(dff, subsector_1, indicator, province):
+def create_graph(dff, series_name, subsector_1, indicator, province):
     if subsector_1 not in ["Production", "Export", "Contract Farming", "Agricultural Cooperative"]:
         return html.Div([
             dmc.Text("Not Enough Data To Visualize", size="lg")
@@ -541,17 +541,14 @@ def update_report(series_name, subsector_1, subsector_2, province, indicator, ye
         province=province if province else None,
         indicator=indicator
     )
-    
     dff = dff.rename(columns={'Latiude': 'Latitude'})
     indicator_unit = dff['Indicator Unit'].unique()
-    
-    
-    
-    return create_graph(dff, subsector_1, indicator, province), create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit), create_dataview(dff), create_metadata(dff), indicator_unit.tolist()
+
+    return create_graph(dff, series_name, subsector_1, indicator, province), create_map(dff, series_name, indicator, year, indicator_unit), create_dataview(dff), create_metadata(dff), indicator_unit.tolist()
 
 
 @callback(Output("download-data", "data"), Input("download-button", "n_clicks"),
-          State('series-name-dropdown', 'value'), State('subsector-1-dropdown', 'value'), 
+          State('series-name-dropdown', 'value'), State('subsector-1-dropdown', 'value'),
           State('subsector-2-dropdown', 'value'), State('province-dropdown', 'value'), State('indicator-dropdown', 'value'))
 def download_data(n_clicks, series_name, subsector_1, subsector_2, province, indicator):
     if n_clicks is None: return dash.no_update
@@ -560,9 +557,9 @@ def download_data(n_clicks, series_name, subsector_1, subsector_2, province, ind
 
 
 # Calllback for info on map
-@callback(Output("info", "children"), Input('subsector-1-dropdown', 'value'), Input('subsector-2-dropdown', 'value'), Input('year-slider', 'value'), Input('indicator-dropdown', 'value'), Input('indicator-unit', 'data'), Input("geojson", "hoverData"))
-def info_hover(subsector_1, subsector_2, year, indicator, indicator_unit, feature):
-    return get_info(subsector_1=subsector_1, subsector_2=subsector_2, indicator=indicator, feature=feature, indicator_unit=indicator_unit, year=year)
+@callback(Output("info", "children"), Input('series-name-dropdown', 'value'), Input('year-slider', 'value'), Input('indicator-dropdown', 'value'), Input('indicator-unit', 'data'), Input("geojson", "hoverData"))
+def info_hover(series_name, year, indicator, indicator_unit, feature):
+    return get_info(series_name=series_name, indicator=indicator, feature=feature, indicator_unit=indicator_unit, year=year)
 
 
 # Callbacks for dynamic dropdown updates
@@ -594,7 +591,6 @@ def update_subsector_2(series_name, subsector_1):
     Input('subsector-2-dropdown', 'value')
 )
 def update_province(series_name, subsector_1, subsector_2):
-    # Get the province options based on the sector, subsector-1, and subsector-2
     if subsector_2:
         # Filter with subsector_2
         province_options = data[
@@ -622,7 +618,6 @@ def update_province(series_name, subsector_1, subsector_2):
     prevent_initial_call=False
 )
 def update_indicators(series_name, subsector_1, subsector_2, province):
-    # Filter data based on the selected filters
     dff = filter_data(data=data, series_name=series_name, subsector_1=subsector_1, subsector_2=subsector_2, province=province)
     
     # Extract unique indicator values

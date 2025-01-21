@@ -21,20 +21,23 @@ style_handle = assign("""function(feature, context){
     return style;
 }""")
 
-def get_info(subsector_1, indicator, indicator_unit, subsector_2=None, feature=None, year=None):
+def get_info(series_name=None, indicator=None, indicator_unit=None, feature=None, year=None, is_gis=None):
     year_text = f" in {year}" if year else ""
+    if is_gis is not None:
+        return [html.H4(f"GIS is not available for this dataset!")]
     
-    if subsector_2 is not None:
-        header = [html.H4(f"Cambodia {subsector_2} {subsector_1} {year_text}")]
-    else:
-        header = [html.H4(f"Cambodia {subsector_1}")]
+    header = [html.H4(f"")]
+    
+    if series_name is not None:
+        header = [html.H4(f"Cambodia {series_name} {year_text}")]
 
     if not feature:
         return header + [html.P("Hover over a country")]
     else:
+        
         # Check if the feature contains either 'name' or 'shapeName'
         feature_name = feature["properties"].get("name") or feature["properties"].get("shapeName")
-
+        
         # If neither 'name' nor 'shapeName' exists, handle it gracefully
         if not feature_name:
             return header + [html.P("No valid name available for this feature")]
@@ -42,8 +45,6 @@ def get_info(subsector_1, indicator, indicator_unit, subsector_2=None, feature=N
         # Handle missing indicator data
         if feature["properties"].get(indicator) is None:
             return header + [html.B(feature_name), html.Br(), "No data available"]
-
-
         
         # Return the information with the indicator value and year (if given)
         return header + [html.B(feature_name), html.Br(),
@@ -73,7 +74,7 @@ def load_data(file_path="src/data/Datahub_Agri_Latest.xlsx", sheet_name="Databas
 
 
 # Data filter function
-def filter_data(data, sector=None, subsector_1=None, subsector_2=None, province=None, indicator=None, product=None, series_name=None):
+def filter_data(data, sector=None, subsector_1=None, subsector_2=None, province=None, indicator=None, product=None, market=None, series_name=None):
     # Filter by Sector, Sub-Sector (1), and Sub-Sector (2)
     filtered_data = data
     if sector is not None:
@@ -86,18 +87,17 @@ def filter_data(data, sector=None, subsector_1=None, subsector_2=None, province=
     if subsector_1 is not None:
         filtered_data = filtered_data[filtered_data["Sub-Sector (1)"] == subsector_1]
     
-    
-    
     if indicator is not None:
         filtered_data = filtered_data[filtered_data["Indicator"] == indicator]
-        
-    
     
     if subsector_2 is not None:
         filtered_data = filtered_data[filtered_data["Sub-Sector (2)"] == subsector_2]
     
     if product is not None:
         filtered_data = filtered_data[filtered_data["Products"] == product] 
+    
+    if market is not None and market != 'All':
+        filtered_data = filtered_data[filtered_data["Markets"] == market] 
 
     # Drop columns that are entirely NaN
     filtered_data = filtered_data.dropna(axis=1, how='all')

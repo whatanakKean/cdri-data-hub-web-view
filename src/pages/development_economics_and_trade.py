@@ -12,6 +12,7 @@ import numpy as np
 
 # Load data
 data = load_data(file_path="src/data/Unpivoted_Datahub_Economic.xlsx", sheet_name="Sheet1")
+data = data.applymap(lambda x: x.strip() if isinstance(x, str) else x)
 
 # Sidebar components
 def sidebar(data):
@@ -20,7 +21,7 @@ def sidebar(data):
             dmc.Select(
                 label="Select Series Name", 
                 id="series-name-dropdown-economic", 
-                value='Export, by exported products', 
+                value='Export, by market', 
                 data=[{'label': option, 'value': option} for option in data["Series Name"].dropna().str.strip().unique() if option],
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
@@ -37,6 +38,7 @@ def sidebar(data):
                 mt="md",
                 checkIconPosition="right",
                 allowDeselect=False,
+                style={'display': 'none'},
             ),
             dmc.Select(
                 label="Select Sub-Sector (1)", 
@@ -48,12 +50,24 @@ def sidebar(data):
                 mt="md",
                 checkIconPosition="right",
                 allowDeselect=False,
+                style={'display': 'none'},
             ),
             dmc.Select(
                 label="Select Product", 
                 id="product-dropdown-economic", 
                 value='Articles of apparel and clothing accessories, knitted or crocheted.', 
                 data=[{'label': option, 'value': option} for option in data["Products"].dropna().str.strip().unique()],
+                withScrollArea=False,
+                styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
+                mt="md",
+                checkIconPosition="right",
+                allowDeselect=False,
+            ),
+            dmc.Select(
+                label="Select Market", 
+                id="market-dropdown-economic", 
+                value='All', 
+                data=[{'label': option, 'value': option} for option in ['All'] + list(data["Markets"].dropna().str.strip().unique())],
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
                 mt="md",
@@ -111,7 +125,7 @@ development_economics_and_trade = dmc.Container([
                                                 step=1
                                             )
                                         ]
-                                    )       
+                                    )        
                                 ], 
                                 value="map"
                             ),
@@ -153,24 +167,23 @@ def create_metadata(dff):
     return ""
 
 
-def create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit):
-    # Filter data for the selected year
+def create_map(dff, series_name, indicator, year, indicator_unit):
     dff = dff[dff["Year"] == int(year)]
     
-    min_value, max_value = dff['Indicator Value'].min(), dff['Indicator Value'].max()
-    num_classes = 5
-
-    # Calculate the step size and dynamically create class intervals
-    classes = np.linspace(min_value, max_value, num_classes)
-    classes = np.round(classes, -4)
-
-    # Create a dynamic color scale based on the classes
-    colorscale = ['#a1d99b', '#31a354', '#2c8e34', '#196d30', '#155d2c', '#104d27']
-    style = dict(weight=2, opacity=1, color='white', dashArray='3', fillOpacity=0.7)
-    ctg = ["{}+".format(int(cls)) for cls in classes[:-1]] + ["{}+".format(int(classes[-1]))]
-    colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=30, height=300, position="bottomright")
-    
     if 'Markets' in dff.columns:
+        min_value, max_value = dff['Indicator Value'].min(), dff['Indicator Value'].max()
+        num_classes = 5
+
+        # Calculate the step size and dynamically create class intervals
+        classes = np.linspace(min_value, max_value, num_classes)
+        classes = np.round(classes, -4)
+
+        # Create a dynamic color scale based on the classes
+        colorscale = ['#a1d99b', '#31a354', '#2c8e34', '#196d30', '#155d2c', '#104d27']
+        style = dict(weight=2, opacity=1, color='white', dashArray='3', fillOpacity=0.7)
+        ctg = ["{}+".format(int(cls)) for cls in classes[:-1]] + ["{}+".format(int(classes[-1]))]
+        colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=30, height=300, position="bottomright")
+    
         with open('./assets/countries.json') as f:
             geojson_data = json.load(f)
                 
@@ -206,7 +219,7 @@ def create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit):
                         dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
                         geojson, 
                         colorbar,
-                        html.Div(children=get_info(subsector_1=subsector_1, indicator=indicator, indicator_unit=indicator_unit), id="info-economic", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
+                        html.Div(children=get_info(indicator=indicator, indicator_unit=indicator_unit), id="info-economic", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
                     ],
                     attributionControl=False,
             )],
@@ -223,6 +236,7 @@ def create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit):
                 zoom=6,
                 children=[
                     dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                    html.Div(children=get_info(is_gis=False), className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
                 ],
                 attributionControl=False,
         )],
@@ -322,31 +336,27 @@ def create_graph(dff, subsector_1, products, indicator):
     ])
 
 # Calllback for info on map
-@callback(Output("info-economic", "children"), Input('subsector-1-dropdown-economic', 'value'), Input('indicator-dropdown-economic', 'value'), Input('indicator-unit-economic', 'data'), Input("geojson", "hoverData"))
-def info_hover(subsector_1, indicator, indicator_unit, feature):
-    return get_info(subsector_1=subsector_1, indicator=indicator, feature=feature, indicator_unit=indicator_unit)
+@callback(Output("info-economic", "children"), Input('series-name-dropdown-economic', 'value'), Input('indicator-dropdown-economic', 'value'), Input('indicator-unit-economic', 'data'), Input("geojson", "hoverData"))
+def info_hover(series_name, indicator, indicator_unit, feature):
+    return get_info(series_name=series_name, indicator=indicator, feature=feature, indicator_unit=indicator_unit)
 
 
 # Callbacks
 @callback([Output('graph-id-economic', 'children'), Output('map-id-economic', 'children'), Output('dataview-container-economic', 'children'), Output('metadata-panel-economic', 'children'), Output('indicator-unit-economic', 'data')],
           [Input("sector-dropdown-economic", "value"), Input('series-name-dropdown-economic', 'value'), Input("subsector-1-dropdown-economic", "value"), Input("product-dropdown-economic", "value"),
-           Input("indicator-dropdown-economic", "value"), Input("year-slider-economic", "value")])
-def update_report(sector, series_name, subsector_1, product, indicator, year):
-
-    dff = filter_data(data=data, sector=sector, series_name=series_name, subsector_1=subsector_1, indicator=indicator, product=product)
-    dff = dff.rename(columns={'Latiude': 'Latitude'})
-    
+           Input("indicator-dropdown-economic", "value"), Input("market-dropdown-economic", "value"), Input("year-slider-economic", "value")])
+def update_report(sector, series_name, subsector_1, product, indicator, market, year):
+    dff = filter_data(data=data, sector=sector, series_name=series_name, subsector_1=subsector_1, indicator=indicator, product=product, market=market)
     indicator_unit = dff['Indicator Unit'].unique()
-    
-    return create_graph(dff, subsector_1, product, indicator), create_map(dff, subsector_1, "Null sub Sector 2", indicator, year, indicator_unit), create_dataview(dff), create_metadata(dff), indicator_unit.tolist()
+    return create_graph(dff, subsector_1, product, indicator), create_map(dff, series_name, indicator, year, indicator_unit), create_dataview(dff), create_metadata(dff), indicator_unit.tolist()
 
 
 @callback(Output("download-data-economic", "data"), Input("download-button-economic", "n_clicks"),
           State('series-name-dropdown-economic', 'value'), State('sector-dropdown-economic', 'value'), State('subsector-1-dropdown-economic', 'value'), 
-          State('indicator-dropdown-economic', 'value'))
-def download_data(n_clicks, series_name, sector, subsector_1, indicator):
+          State('indicator-dropdown-economic', 'value'), State("market-dropdown-economic", "value"))
+def download_data(n_clicks, series_name, sector, subsector_1, indicator, market):
     if n_clicks is None: return dash.no_update
-    dff = filter_data(data, series_name, sector, subsector_1, indicator)
+    dff = filter_data(data=data, series_name=series_name, sector=sector, subsector_1=subsector_1, indicator=indicator, market=market)
     return dict(content=dff.to_csv(index=False), filename="data.csv", type="application/csv")
 
 # Callbacks for dynamic dropdown updates
@@ -387,16 +397,33 @@ def update_products(series_name, sector, subsector_1):
     return [{'label': option, 'value': option} for option in products_options], products_options[0] if products_options.size > 0 else None, style
 
 @callback(
+    Output('market-dropdown-economic', 'data'),
+    Output('market-dropdown-economic', 'value'),
+    Output('market-dropdown-economic', 'style'),
+    Input('series-name-dropdown-economic', 'value'),
+    Input('sector-dropdown-economic', 'value'),
+    Input('subsector-1-dropdown-economic', 'value')
+)
+def update_markets(series_name, sector, subsector_1):
+    # Get the subsector-2 options based on the sector and subsector-1
+    market_options = data[(data["Series Name"] == series_name) & (data["Sector"] == sector) & (data["Sub-Sector (1)"] == subsector_1)]["Markets"].dropna().str.strip().unique()
+    # Control visibility based on available options
+    style = {'display': 'block'} if market_options.size > 0 else {'display': 'none'}
+    return [{'label': option, 'value': option} for option in ['All'] + list(market_options)], 'All', style
+
+
+@callback(
     Output('indicator-dropdown-economic', 'data'),
     Output('indicator-dropdown-economic', 'value'),
     Input('series-name-dropdown-economic', 'value'),
     Input('sector-dropdown-economic', 'value'),
     Input('subsector-1-dropdown-economic', 'value'),
+    Input('market-dropdown-economic', 'value'),
     prevent_initial_call=False
 )
-def update_indicators(series_name, sector, subsector_1):
+def update_indicators(series_name, sector, subsector_1, market):
     # Filter data based on the selected filters
-    dff = filter_data(data=data, series_name=series_name, sector=sector, subsector_1=subsector_1)
+    dff = filter_data(data=data, series_name=series_name, sector=sector, subsector_1=subsector_1, market=market)
     
     # Extract unique indicator values
     indicator_values = dff['Indicator'].unique().tolist()
@@ -424,10 +451,11 @@ def update_indicators(series_name, sector, subsector_1):
     Input('sector-dropdown-economic', 'value'),
     Input('subsector-1-dropdown-economic', 'value'),
     Input('indicator-dropdown-economic', 'value'),
+    Input('market-dropdown-economic', 'value'),
 )
-def update_year_slider(series_name, sector, subsector_1, indicator):
+def update_year_slider(series_name, sector, subsector_1, indicator, market):
     # Filter the data based on the selected filters
-    dff = filter_data(data=data, series_name=series_name, sector=sector, subsector_1=subsector_1, indicator=indicator)
+    dff = filter_data(data=data, series_name=series_name, sector=sector, subsector_1=subsector_1, indicator=indicator, market=market)
     
     # Get the unique years available after filtering
     year_options = dff["Year"].dropna().unique()
