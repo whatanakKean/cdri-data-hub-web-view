@@ -13,20 +13,22 @@ import plotly.express as px
 
 # Load data
 data = load_data(file_path="src/data/Unpivoted_Datahub_Agri_Latest.xlsx", sheet_name="Sheet1")
+data = data.applymap(lambda x: x.strip() if isinstance(x, str) else x)
 
 # Sidebar components
 def sidebar(data):
     return dmc.Stack([
         dmc.Paper([
-            # dmc.Select(
-            #     label="Select Series Name", 
-            #     id="series-name-dropdown", 
-            #     value='Rice Production', 
-            #     data=[{'label': option, 'value': option} for option in data["Series Name"].dropna().str.strip().unique() if option],
-            #     withScrollArea=False,
-            #     styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
-            #     checkIconPosition="right"
-            # ),
+            dmc.Select(
+                label="Select Series Name", 
+                id="series-name-dropdown", 
+                value='Rice Production', 
+                data=[{'label': option, 'value': option} for option in data["Series Name"].dropna().str.strip().unique() if option],
+                withScrollArea=False,
+                styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
+                checkIconPosition="right",
+                allowDeselect=False,
+            ),
             dmc.Select(
                 label="Select Sector", 
                 id="sector-dropdown", 
@@ -37,6 +39,7 @@ def sidebar(data):
                 mt="md",
                 checkIconPosition="right",
                 allowDeselect=False,
+                style={'display': 'none'},
             ),
             dmc.Select(
                 label="Select Sub-Sector (1)", 
@@ -48,6 +51,7 @@ def sidebar(data):
                 mt="md",
                 checkIconPosition="right",
                 allowDeselect=False,
+                style={'display': 'none'},
             ),
             dmc.Select(
                 label="Select Sub-Sector (2)", 
@@ -59,6 +63,7 @@ def sidebar(data):
                 mt="md",
                 checkIconPosition="right",
                 allowDeselect=False,
+                style={'display': 'none'},
             ),
             dmc.Select(
                 label="Select Province", 
@@ -280,7 +285,7 @@ def create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit):
         with open('./assets/geoBoundaries-KHM-ADM0_simplified.json') as f:  # Assuming this file has Cambodia as a single entity
             geojson_data = json.load(f)
             
-        geojson_data['features'][0]['properties'][indicator] = dff['Indicator Value'].mean()
+        geojson_data['features'][0]['properties'][indicator] = dff['Indicator Value']
         
         geojson = dl.GeoJSON(
             data=geojson_data,
@@ -525,22 +530,32 @@ def create_graph(dff, subsector_1, indicator, province):
 
 # Callbacks
 @callback([Output('graph-id', 'children'), Output('map-id', 'children'), Output('dataview-container', 'children'), Output('metadata-panel', 'children'), Output('indicator-unit', 'data')],
-          [Input("sector-dropdown", "value"), Input("subsector-1-dropdown", "value"), Input("subsector-2-dropdown", "value"),
+          [Input("series-name-dropdown", "value"), Input("subsector-1-dropdown", "value"), Input("subsector-2-dropdown", "value"),
            Input("province-dropdown", "value"), Input("indicator-dropdown", "value"), Input("year-slider", "value")])
-def update_report(sector, subsector_1, subsector_2, province, indicator, year):
-    dff = filter_data(data, sector, subsector_1, subsector_2, province, indicator)
+def update_report(series_name, subsector_1, subsector_2, province, indicator, year):
+    dff = filter_data(
+        data=data,
+        series_name=series_name,
+        subsector_1=subsector_1 if subsector_1 else None,
+        subsector_2=subsector_2 if subsector_2 else None,
+        province=province if province else None,
+        indicator=indicator
+    )
+    
     dff = dff.rename(columns={'Latiude': 'Latitude'})
     indicator_unit = dff['Indicator Unit'].unique()
+    
+    
     
     return create_graph(dff, subsector_1, indicator, province), create_map(dff, subsector_1, subsector_2, indicator, year, indicator_unit), create_dataview(dff), create_metadata(dff), indicator_unit.tolist()
 
 
 @callback(Output("download-data", "data"), Input("download-button", "n_clicks"),
-          State('sector-dropdown', 'value'), State('subsector-1-dropdown', 'value'), 
+          State('series-name-dropdown', 'value'), State('subsector-1-dropdown', 'value'), 
           State('subsector-2-dropdown', 'value'), State('province-dropdown', 'value'), State('indicator-dropdown', 'value'))
-def download_data(n_clicks, sector, subsector_1, subsector_2, province, indicator):
+def download_data(n_clicks, series_name, subsector_1, subsector_2, province, indicator):
     if n_clicks is None: return dash.no_update
-    dff = filter_data(data, sector, subsector_1, subsector_2, province, indicator)
+    dff = filter_data(data=data, series_name=series_name, subsector_1=subsector_1, subsector_2=subsector_2, province=province, indicator=indicator)
     return dict(content=dff.to_csv(index=False), filename="data.csv", type="application/csv")
 
 
@@ -554,46 +569,43 @@ def info_hover(subsector_1, subsector_2, year, indicator, indicator_unit, featur
 @callback(
     Output('subsector-1-dropdown', 'data'),
     Output('subsector-1-dropdown', 'value'),
-    Input('sector-dropdown', 'value')
+    Input('series-name-dropdown', 'value')
 )
-def update_subsector_1(sector):
-    subsector_1_options = data[data["Sector"] == sector]["Sub-Sector (1)"].dropna().str.strip().unique()
+def update_subsector_1(series_name):
+    subsector_1_options = data[data["Series Name"] == series_name]["Sub-Sector (1)"].dropna().str.strip().unique()
     return [{'label': option, 'value': option} for option in subsector_1_options], subsector_1_options[0] if subsector_1_options.size > 0 else None
 
 @callback(
     Output('subsector-2-dropdown', 'data'),
     Output('subsector-2-dropdown', 'value'),
-    Output('subsector-2-dropdown', 'style'),
-    Input('sector-dropdown', 'value'),
+    Input('series-name-dropdown', 'value'),
     Input('subsector-1-dropdown', 'value')
 )
-def update_subsector_2(sector, subsector_1):
-    # Get the subsector-2 options based on the sector and subsector-1
-    subsector_2_options = data[(data["Sector"] == sector) & (data["Sub-Sector (1)"] == subsector_1)]["Sub-Sector (2)"].dropna().str.strip().unique()
-    style = {'display': 'block'} if subsector_2_options.size > 0 else {'display': 'none'}
-    return [{'label': option, 'value': option} for option in subsector_2_options], subsector_2_options[0] if subsector_2_options.size > 0 else None, style
+def update_subsector_2(series_name, subsector_1):
+    subsector_2_options = data[(data["Series Name"] == series_name) & (data["Sub-Sector (1)"] == subsector_1)]["Sub-Sector (2)"].dropna().str.strip().unique()
+    return [{'label': option, 'value': option} for option in subsector_2_options], subsector_2_options[0] if subsector_2_options.size > 0 else None
 
 @callback(
     Output('province-dropdown', 'data'),
     Output('province-dropdown', 'value'),
     Output('province-dropdown', 'style'),
-    Input('sector-dropdown', 'value'),
+    Input('series-name-dropdown', 'value'),
     Input('subsector-1-dropdown', 'value'),
     Input('subsector-2-dropdown', 'value')
 )
-def update_province(sector, subsector_1, subsector_2):
+def update_province(series_name, subsector_1, subsector_2):
     # Get the province options based on the sector, subsector-1, and subsector-2
     if subsector_2:
         # Filter with subsector_2
         province_options = data[
-            (data["Sector"] == sector) & 
+            (data["Series Name"] == series_name) & 
             (data["Sub-Sector (1)"] == subsector_1) & 
             (data["Sub-Sector (2)"] == subsector_2)
         ]["Province"].dropna().str.strip().unique()
     else:
         # Filter without subsector_2
         province_options = data[
-            (data["Sector"] == sector) & 
+            (data["Series Name"] == series_name) & 
             (data["Sub-Sector (1)"] == subsector_1)
         ]["Province"].dropna().str.strip().unique()
         
@@ -603,15 +615,15 @@ def update_province(sector, subsector_1, subsector_2):
 @callback(
     Output('indicator-dropdown', 'data'),
     Output('indicator-dropdown', 'value'),
-    Input('sector-dropdown', 'value'),
+    Input('series-name-dropdown', 'value'),
     Input('subsector-1-dropdown', 'value'),
     Input('subsector-2-dropdown', 'value'),
     Input('province-dropdown', 'value'),
     prevent_initial_call=False
 )
-def update_indicators(sector, subsector_1, subsector_2, province):
+def update_indicators(series_name, subsector_1, subsector_2, province):
     # Filter data based on the selected filters
-    dff = filter_data(data, sector, subsector_1, subsector_2, province)
+    dff = filter_data(data=data, series_name=series_name, subsector_1=subsector_1, subsector_2=subsector_2, province=province)
     
     # Extract unique indicator values
     indicator_values = dff['Indicator'].unique().tolist()
@@ -635,15 +647,15 @@ def update_indicators(sector, subsector_1, subsector_2, province):
     Output('year-slider', 'max'),
     Output('year-slider', 'value'),
     Output('year-slider', 'marks'),
-    Input('sector-dropdown', 'value'),
+    Input('series-name-dropdown', 'value'),
     Input('subsector-1-dropdown', 'value'),
     Input('subsector-2-dropdown', 'value'),
     Input('province-dropdown', 'value'),
     Input('indicator-dropdown', 'value'),
 )
-def update_year_slider(sector, subsector_1, subsector_2, province, indicator):
+def update_year_slider(series_name, subsector_1, subsector_2, province, indicator):
     # Filter the data based on the selected filters
-    dff = filter_data(data, sector, subsector_1, subsector_2, province, indicator)
+    dff = filter_data(data=data, series_name=series_name, subsector_1=subsector_1, subsector_2=subsector_2, province=province, indicator=indicator)
     
     # Get the unique years available after filtering
     year_options = dff["Year"].dropna().unique()

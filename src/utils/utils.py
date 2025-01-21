@@ -73,7 +73,7 @@ def load_data(file_path="src/data/Datahub_Agri_Latest.xlsx", sheet_name="Databas
 
 
 # Data filter function
-def filter_data(data, sector=ModuleNotFoundError, subsector_1=None, subsector_2=None, province=None, indicator=None, product=None, series_name=None):
+def filter_data(data, sector=None, subsector_1=None, subsector_2=None, province=None, indicator=None, product=None, series_name=None):
     # Filter by Sector, Sub-Sector (1), and Sub-Sector (2)
     filtered_data = data
     if sector is not None:
