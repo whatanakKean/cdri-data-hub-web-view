@@ -152,8 +152,15 @@ development_economics_and_trade = dmc.Container([
 ], fluid=True, style={'paddingTop': '1rem'})
 
 def create_dataview(dff): 
+    pivoted_data = dff.pivot_table(
+        index=[col for col in dff.columns if col not in ['Indicator', 'Indicator Value']],
+        columns='Indicator',
+        values='Indicator Value',
+        aggfunc='first'
+    ).reset_index()
+    
     return html.Div([
-        dag.AgGrid(id='ag-grid-economic', columnDefs=[{"headerName": col, "field": col} for col in dff.columns], rowData=dff.to_dict('records'), style={'height': '400px'}),
+        dag.AgGrid(id='ag-grid-economic', columnDefs=[{"headerName": col, "field": col} for col in pivoted_data.columns], rowData=pivoted_data.to_dict('records'), style={'height': '400px'}),
         dmc.Button("Download Data", id="download-button-economic", variant="outline", color="#336666", mt="md", style={'marginLeft': 'auto', 'display': 'flex', 'justifyContent': 'flex-end'}),
         dcc.Download(id="download-data-economic")
     ])
@@ -246,15 +253,16 @@ def create_map(dff, series_name, indicator, year, indicator_unit):
         }
     )
         
-def create_graph(dff, subsector_1, products, indicator):
-    if subsector_1 not in ["Trade"]:
-        return html.Div([
-            dmc.Text("Visualization is Under Construction", size="lg")
-        ], style={'height': '400px', 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center'})
+def create_graph(dff, series_name, subsector_1, products, indicator):
+    # if subsector_1 not in ["Trade"]:
+    #     return html.Div([
+    #         dmc.Text("Visualization is Under Construction", size="lg")
+    #     ], style={'height': '400px', 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center'})
 
     # Aggregate data
     dff_filtered = dff.groupby('Year')['Indicator Value'].sum().reset_index()
 
+    dff_filtered = dff.groupby('Year')['Indicator Value'].sum().reset_index()
 
     # Define layout
     layout = go.Layout(
@@ -271,7 +279,8 @@ def create_graph(dff, subsector_1, products, indicator):
             gridwidth=0.5,
             griddash='dot',
             tickformat=',',
-            rangemode='tozero'
+            rangemode='tozero',
+            title=f"{indicator} ({dff['Indicator Unit'].unique()[0]})",
         ),
         font=dict(
             family='BlinkMacSystemFont',
@@ -285,13 +294,6 @@ def create_graph(dff, subsector_1, products, indicator):
             y=1,
             xanchor="right",    
             x=1
-        ),
-        title=dict(
-            text=indicator,
-            # subtitle=dict(
-            #     text=f"Description For {indicator}",
-            #     font=dict(color="gray", size=13),
-            # ),
         ),
         xaxis=dict(
             tickmode='array',
@@ -319,21 +321,37 @@ def create_graph(dff, subsector_1, products, indicator):
         mode='lines+markers',
         name=indicator
     ))
+    title_text = f"{series_name}: {dff['Indicator'].unique()[0]}"
+    fig1.update_layout(
+        title=dict(
+            text=title_text,
+        ),
+    )
 
     # Return graph
     return html.Div([ 
-        dcc.Graph(id="figure-linechart", figure=fig1, config={
-            'displaylogo': False,
-            'toImageButtonOptions': {
-                'format': 'png',
-                'filename': 'cdri_datahub_viz',
-                'height': 500,
-                'width': 800,
-                'scale': 6
-            }
-        }),
-        dmc.Divider(size="sm")
-    ])
+            dcc.Graph(id="figure-linechart", figure=fig1, config={
+                'displaylogo': False,
+                'toImageButtonOptions': {
+                    'format': 'png',
+                    'filename': 'cdri_datahub_viz',
+                    'height': 500,
+                    'width': 800,
+                    'scale': 6
+                }
+            }),
+            dmc.Divider(size="sm"),
+            # dcc.Graph(id="figure-linechart", figure=fig2, config={
+            #     'displaylogo': False,
+            #     'toImageButtonOptions': {
+            #         'format': 'png',
+            #         'filename': 'cdri_datahub_viz',
+            #         'height': 500,
+            #         'width': 800,
+            #         'scale': 6
+            #     }
+            # }),
+        ])
 
 # Calllback for info on map
 @callback(Output("info-economic", "children"), Input('series-name-dropdown-economic', 'value'), Input('indicator-dropdown-economic', 'value'), Input('indicator-unit-economic', 'data'), Input("geojson", "hoverData"))
@@ -348,7 +366,7 @@ def info_hover(series_name, indicator, indicator_unit, feature):
 def update_report(sector, series_name, subsector_1, product, indicator, market, year):
     dff = filter_data(data=data, sector=sector, series_name=series_name, subsector_1=subsector_1, indicator=indicator, product=product, market=market)
     indicator_unit = dff['Indicator Unit'].unique()
-    return create_graph(dff, subsector_1, product, indicator), create_map(dff, series_name, indicator, year, indicator_unit), create_dataview(dff), create_metadata(dff), indicator_unit.tolist()
+    return create_graph(dff, series_name, subsector_1, product, indicator), create_map(dff, series_name, indicator, year, indicator_unit), create_dataview(dff), create_metadata(dff), indicator_unit.tolist()
 
 
 @callback(Output("download-data-economic", "data"), Input("download-button-economic", "n_clicks"),
