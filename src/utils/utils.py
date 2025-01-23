@@ -32,7 +32,7 @@ def get_info(series_name=None, indicator=None, indicator_unit=None, feature=None
         header = [html.H4(f"Cambodia {series_name} {year_text}")]
 
     if not feature:
-        return header + [html.P("Hover over a country")]
+        return header + [html.P("Hover over a location")]
     else:
         
         # Check if the feature contains either 'name' or 'shapeName'
