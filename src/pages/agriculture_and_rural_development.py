@@ -13,7 +13,7 @@ import plotly.express as px
 
 # Load data
 data = load_data(file_path="src/data/Unpivoted_Datahub_Agri_Latest.xlsx", sheet_name="Sheet1")
-data = data.applymap(lambda x: x.strip() if isinstance(x, str) else x)
+# data = data.applymap(lambda x: x.strip() if isinstance(x, str) else x)
 
 # Sidebar components
 def sidebar(data):

@@ -12,7 +12,7 @@ import numpy as np
 
 # Load data
 data = load_data(file_path="src/data/Unpivoted_Datahub_Economic.xlsx", sheet_name="Sheet1")
-data = data.applymap(lambda x: x.strip() if isinstance(x, str) else x)
+# data = data.applymap(lambda x: x.strip() if isinstance(x, str) else x)
 
 # Sidebar components
 def sidebar(data):
