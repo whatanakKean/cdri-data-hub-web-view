@@ -365,18 +365,19 @@ def create_graph(dff, series_name, subsector_1, indicator, province):
         xaxis=dict(
             tickmode='array',
             tickvals=dff_filtered['Year'].unique(),
+            title="Produced By: CDRI Data Hub",
         ),
-        annotations=[ 
-            dict(
-                x=0.5,
-                y=-0.15, 
-                xref="paper", yref="paper",
-                text="Produced By: CDRI Data Hub",
-                showarrow=False,
-                font=dict(size=12, color='rgba(0, 0, 0, 0.7)'),
-                align='center'
-            ),
-        ],
+        # annotations=[ 
+        #     dict(
+        #         x=0.5,
+        #         y=-0.15, 
+        #         xref="paper", yref="paper",
+        #         text="Produced By: CDRI Data Hub",
+        #         showarrow=False,
+        #         font=dict(size=12, color='rgba(0, 0, 0, 0.7)'),
+        #         align='center'
+        #     ),
+        # ],
         margin=dict(t=100, b=80, l=50, r=50),
     )
 
@@ -387,7 +388,7 @@ def create_graph(dff, series_name, subsector_1, indicator, province):
         y=dff_filtered['Indicator Value'],
         mode='lines+markers',
         name=indicator
-    ))
+    ))  
     title_text = f"{series_name}: {dff['Indicator'].unique()[0]}"
     fig1.update_layout(
         title=dict(
@@ -397,16 +398,21 @@ def create_graph(dff, series_name, subsector_1, indicator, province):
 
     # Return graph
     return html.Div([ 
-            dcc.Graph(id="figure-linechart", figure=fig1, config={
-                'displaylogo': False,
-                'toImageButtonOptions': {
-                    'format': 'png',
-                    'filename': 'cdri_datahub_viz',
-                    'height': 500,
-                    'width': 800,
-                    'scale': 6
-                }
-            }),
+            dcc.Graph(
+                id="figure-linechart", 
+                figure=fig1, 
+                config={
+                    'displaylogo': False,
+                    'toImageButtonOptions': {
+                        'format': 'png',
+                        'filename': 'cdri_datahub_viz',
+                        'height': 500,
+                        'width': 800,
+                        'scale': 6
+                    },
+                },
+                responsive=True,
+            ),
             dmc.Divider(size="sm"),
             # dcc.Graph(id="figure-linechart", figure=fig2, config={
             #     'displaylogo': False,
@@ -567,4 +573,3 @@ def update_year_slider(series_name, subsector_1, subsector_2, province, indicato
     
     # Return the updated properties for the year-slider
     return min_year, max_year, year_slider_value, marks
-

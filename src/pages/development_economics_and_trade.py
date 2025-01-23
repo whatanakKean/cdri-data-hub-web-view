@@ -298,18 +298,19 @@ def create_graph(dff, series_name, subsector_1, products, indicator):
         xaxis=dict(
             tickmode='array',
             tickvals=dff_filtered['Year'].unique(),
+            title="Produced By: CDRI Data Hub",
         ),
-        annotations=[ 
-            dict(
-                x=0.5,
-                y=-0.15, 
-                xref="paper", yref="paper",
-                text="Produced By: CDRI Data Hub",
-                showarrow=False,
-                font=dict(size=12, color='rgba(0, 0, 0, 0.7)'),
-                align='center'
-            ),
-        ],
+        # annotations=[ 
+        #     dict(
+        #         x=0.5,
+        #         y=-0.15, 
+        #         xref="paper", yref="paper",
+        #         text="Produced By: CDRI Data Hub",
+        #         showarrow=False,
+        #         font=dict(size=12, color='rgba(0, 0, 0, 0.7)'),
+        #         align='center'
+        #     ),
+        # ],
         margin=dict(t=100, b=80, l=50, r=50),
     )
 

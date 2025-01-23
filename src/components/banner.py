@@ -1,5 +1,15 @@
 import dash_mantine_components as dmc
-from dash import Input, Output, State, callback
+from dash import Input, Output, State, callback, html
+import sqlite3
+import pandas as pd
+
+conn = sqlite3.connect("./src/data/data.db")
+data = pd.read_sql_query(f"SELECT * FROM agriculture_data;", conn)
+
+agriculture_menu_items = [
+    dmc.MenuItem(name, href=f"/{name.lower().replace(' ', '-')}")
+    for name in data['Series Name'].unique()
+]
 
 logo = "https://cdri.org.kh/storage/images/CDRI%20Logo_1704186788.png"
 buttons = [
@@ -20,6 +30,7 @@ buttons = [
                 ]
             ),
         ],
+        trigger="hover",
     ),
     dmc.Anchor(dmc.Button("About", variant="subtle", color="white"), href="https://cdri.org.kh/page/about-cdri")
 ]
@@ -65,6 +76,13 @@ def banner():
                 px=4,
                 style={"backgroundColor": "#336666"}
             ),
+            dmc.Drawer(
+                title="Insight",
+                opened=False,  # Drawer is initially closed
+                size="lg",
+                position="right",  # You can choose "left", "right", "top", "bottom"
+                children=buttons
+            )
         ]
 
 
@@ -84,3 +102,14 @@ def toggle_navbar(opened, navbar):
 )
 def close_menu_on_navigation(href):
     return False
+
+
+@callback(
+    Output("drawer", "opened"),
+    Input("insight-button", "n_clicks"),
+    prevent_initial_call=True
+)
+def toggle_drawer(n_clicks):
+    if n_clicks:
+        return True  # Open the drawer
+    return False  # Close the drawer
