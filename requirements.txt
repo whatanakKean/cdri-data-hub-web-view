@@ -8,3 +8,7 @@ dash_iconify
 dash_mantine_components
 python-dotenv
 gunicorn
+
+
+fuzzywuzzy
+python-Levenshtein

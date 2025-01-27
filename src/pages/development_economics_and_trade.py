@@ -1,4 +1,5 @@
 import json
+import math
 import dash
 from dash import html, dcc, Input, Output, State, callback
 import dash_mantine_components as dmc
@@ -12,17 +13,37 @@ import numpy as np
 
 # Load data
 data = load_data(file_path="src/data/Unpivoted_Datahub_Economic.xlsx", sheet_name="Sheet1")
-# data = data.applymap(lambda x: x.strip() if isinstance(x, str) else x)
 
 # Sidebar components
 def sidebar(data):
     return dmc.Stack([
+        dmc.SegmentedControl(
+            id="segmented-control-economic",
+            value="Filter",
+            data=[
+                {
+                    "value": "Filter",
+                    "label": dmc.Center(
+                        [DashIconify(icon="icon-preview", width=16), html.Span("Filter")],
+                        style={"gap": 10},
+                    ),
+                },
+                {
+                    "value": "Search",
+                    "label": dmc.Center(
+                        [DashIconify(icon="icon-edit", width=16), html.Span("Search")],
+                        style={"gap": 10},
+                    ),
+                }
+            ],
+            mb=10,
+        ),
         dmc.Paper([
             dmc.Select(
                 label="Select Series Name", 
                 id="series-name-dropdown-economic", 
                 value='Export, by market', 
-                data=[{'label': option, 'value': option} for option in data["Series Name"].dropna().str.strip().unique() if option],
+                data=[{'label': option, 'value': option} for option in sorted(data["Series Name"].dropna().str.strip().unique()) if option],
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
                 checkIconPosition="right",
@@ -32,7 +53,7 @@ def sidebar(data):
                 label="Select Sector", 
                 id="sector-dropdown-economic", 
                 value='Economic', 
-                data=[{'label': option, 'value': option} for option in data["Sector"].dropna().str.strip().unique() if option],
+                data=[{'label': option, 'value': option} for option in sorted(data["Sector"].dropna().str.strip().unique()) if option],
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
                 mt="md",
@@ -44,7 +65,7 @@ def sidebar(data):
                 label="Select Sub-Sector (1)", 
                 id="subsector-1-dropdown-economic", 
                 value='Trade', 
-                data=[{'label': option, 'value': option} for option in data["Sub-Sector (1)"].dropna().str.strip().unique()],
+                data=[{'label': option, 'value': option} for option in sorted(data["Sub-Sector (1)"].dropna().str.strip().unique())],
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
                 mt="md",
@@ -56,7 +77,7 @@ def sidebar(data):
                 label="Select Product", 
                 id="product-dropdown-economic", 
                 value='Articles of apparel and clothing accessories, knitted or crocheted.', 
-                data=[{'label': option, 'value': option} for option in data["Products"].dropna().str.strip().unique()],
+                data=[{'label': option, 'value': option} for option in sorted(data["Products"].dropna().str.strip().unique())],
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
                 mt="md",
@@ -67,7 +88,7 @@ def sidebar(data):
                 label="Select Market", 
                 id="market-dropdown-economic", 
                 value='All', 
-                data=[{'label': option, 'value': option} for option in ['All'] + list(data["Markets"].dropna().str.strip().unique())],
+                data=[{'label': option, 'value': option} for option in ['All'] + list(sorted(data["Markets"].dropna().str.strip().unique()))],
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
                 mt="md",
@@ -78,17 +99,33 @@ def sidebar(data):
                 label="Select Indicator", 
                 id="indicator-dropdown-economic", 
                 value='Value', 
-                data=[{'label': option, 'value': option} for option in list(data["Indicator"].dropna().str.strip().unique())],
+                data=[{'label': option, 'value': option} for option in list(sorted(data["Indicator"].dropna().str.strip().unique()))],
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
                 mt="md",
                 checkIconPosition="right",
                 allowDeselect=False,
             ),
-        ], shadow="xs", p="md", radius="md", withBorder=True),
+        ], id="filter-economic", shadow="xs", p="md", radius="md", withBorder=True),
+        dmc.Paper(
+            [
+                dmc.Select(
+                    label="Search (Not Yet Functional)", 
+                    id="search-dropdown-economic", 
+                    value='', 
+                    data=[{'label': option, 'value': option} for option in list(sorted(data["Series Name"].dropna().str.strip().unique()))],
+                    withScrollArea=False,
+                    styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
+                    checkIconPosition="right",
+                    searchable=True,
+                    allowDeselect=False,
+                )
+            ],
+            id="search-economic", shadow="xs", p="md", radius="md", withBorder=True 
+        ),
         dmc.Accordion(chevronPosition="right", variant="contained", radius="md", children=[
             dmc.AccordionItem(value="bender", children=[
-                dmc.AccordionControl(dmc.Group([html.Div([dmc.Text("Metadata"), dmc.Text("Additional information about the data", size="sm", fw=400, c="dimmed")])]),),
+                dmc.AccordionControl(dmc.Group([html.Div([dmc.Text("Metadata"), dmc.Text("Information about current data", size="sm", fw=400, c="dimmed")])]),),
                 dmc.AccordionPanel(
                     id="metadata-panel-economic",
                     children=dmc.Text("Bender is a bending unit from the future...", size="sm")
@@ -178,17 +215,34 @@ def create_map(dff, series_name, indicator, year, indicator_unit):
     dff = dff[dff["Year"] == int(year)]
     
     if 'Markets' in dff.columns:
-        min_value, max_value = dff['Indicator Value'].min(), dff['Indicator Value'].max()
+        # Calculate Choropleth Gradient Scale Range
         num_classes = 5
+        min_value = dff['Indicator Value'].min()
+        max_value = dff['Indicator Value'].max()
+        range_value = max_value - min_value
 
-        # Calculate the step size and dynamically create class intervals
-        classes = np.linspace(min_value, max_value, num_classes)
-        classes = np.round(classes, -4)
+        # Handle the case where range_value is 0
+        if range_value == 0:
+            classes = [0] * (num_classes + 1)
+        else:
+            magnitude = 10 ** int(math.log10(range_value))
+            if range_value / magnitude < 3:
+                rounding_base = magnitude // 2
+            else:
+                rounding_base = magnitude
+            width = math.ceil(range_value / num_classes / rounding_base) * rounding_base
+            
+            # Start the classes list from 0 and calculate subsequent classes
+            classes = [0] + [i * width for i in range(1, num_classes)] + [max_value]
+            
+            # Round classes to nearest rounding base and remove duplicates
+            classes = [math.ceil(cls / rounding_base) * rounding_base for cls in classes]
+            classes = sorted(set(classes))
 
         # Create a dynamic color scale based on the classes
-        colorscale = ['#a1d99b', '#31a354', '#2c8e34', '#196d30', '#155d2c', '#104d27']
+        colorscale = ['#a1d99b', '#31a354', '#2c8e34', '#196d30', '#134e20', '#0d3b17']
         style = dict(weight=2, opacity=1, color='white', dashArray='3', fillOpacity=0.7)
-        ctg = ["{}+".format(int(cls)) for cls in classes[:-1]] + ["{}+".format(int(classes[-1]))]
+        ctg = [f"{int(classes[i])}+" for i in range(len(classes))]
         colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=30, height=300, position="bottomright")
     
         with open('./assets/countries.json') as f:
@@ -342,16 +396,11 @@ def create_graph(dff, series_name, subsector_1, products, indicator):
                 }
             }),
             dmc.Divider(size="sm"),
-            # dcc.Graph(id="figure-linechart", figure=fig2, config={
-            #     'displaylogo': False,
-            #     'toImageButtonOptions': {
-            #         'format': 'png',
-            #         'filename': 'cdri_datahub_viz',
-            #         'height': 500,
-            #         'width': 800,
-            #         'scale': 6
-            #     }
-            # }),
+            dmc.Alert(
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+                title="Researcher's Note",
+                color="green"
+            ),
         ])
 
 # Calllback for info on map
@@ -393,7 +442,7 @@ def update_subsector_1(series_name, sector):
     subsector_1_options = filtered_data["Sub-Sector (1)"].dropna().str.strip().unique()
 
     # Prepare dropdown options
-    dropdown_options = [{'label': option, 'value': option} for option in subsector_1_options]
+    dropdown_options = [{'label': option, 'value': option} for option in sorted(subsector_1_options)]
 
     # Set default value if options exist, otherwise None
     default_value = subsector_1_options[0] if subsector_1_options.size > 0 else None
@@ -413,7 +462,7 @@ def update_products(series_name, sector, subsector_1):
     products_options = data[(data["Series Name"] == series_name) & (data["Sector"] == sector) & (data["Sub-Sector (1)"] == subsector_1)]["Products"].dropna().str.strip().unique()
     # Control visibility based on available options
     style = {'display': 'block'} if products_options.size > 0 else {'display': 'none'}
-    return [{'label': option, 'value': option} for option in products_options], products_options[0] if products_options.size > 0 else None, style
+    return [{'label': option, 'value': option} for option in sorted(products_options)], products_options[0] if products_options.size > 0 else None, style
 
 @callback(
     Output('market-dropdown-economic', 'data'),
@@ -428,7 +477,7 @@ def update_markets(series_name, sector, subsector_1):
     market_options = data[(data["Series Name"] == series_name) & (data["Sector"] == sector) & (data["Sub-Sector (1)"] == subsector_1)]["Markets"].dropna().str.strip().unique()
     # Control visibility based on available options
     style = {'display': 'block'} if market_options.size > 0 else {'display': 'none'}
-    return [{'label': option, 'value': option} for option in ['All'] + list(market_options)], 'All', style
+    return [{'label': option, 'value': option} for option in ['All'] + list(sorted(market_options))], 'All', style
 
 
 @callback(
@@ -452,7 +501,7 @@ def update_indicators(series_name, sector, subsector_1, market):
         return [], None
     
     # Prepare dropdown options
-    indicator_options = [{'label': indicator, 'value': indicator} for indicator in indicator_values]
+    indicator_options = [{'label': indicator, 'value': indicator} for indicator in sorted(indicator_values)]
     
     # Set default value to the first indicator
     default_value = indicator_values[0] if indicator_values else None
@@ -496,3 +545,18 @@ def update_year_slider(series_name, sector, subsector_1, indicator, market):
     # Return the updated properties for the year-slider
     return min_year, max_year, year_slider_value, marks
 
+#Callback for filter and search
+@callback(
+    [Output("filter-economic", "style"), Output("search-economic", "style")],
+    [Input("segmented-control-economic", "value")],
+)
+def toggle_papers(segmented_value):
+    # Default styles to hide both papers
+    hidden_style = {"display": "none"}
+    visible_style = {}
+
+    if segmented_value == "Filter":
+        return visible_style, hidden_style  # Show filter, hide search
+    elif segmented_value == "Search":
+        return hidden_style, visible_style  # Hide filter, show search
+    return hidden_style, hidden_style  # Default: hide both if value is unknown

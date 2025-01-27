@@ -8,6 +8,7 @@
 from dash import html, dcc, Dash, _dash_renderer
 from dash.dependencies import Input, Output, State
 from dash_extensions.enrich import DashProxy, ServersideOutputTransform
+from dash_iconify import DashIconify
 import dash_mantine_components as dmc
 
 _dash_renderer._set_react_version("18.2.0")
@@ -20,7 +21,6 @@ from src.pages.home import home_page
 from src.pages.about import about_page
 from src.pages.agriculture_and_rural_development import agriculture_and_rural_development
 from src.pages.development_economics_and_trade import development_economics_and_trade
-from src.pages.insight_agriculture import insight_agriculture
 from src.pages.not_found import not_found_page
 
 # Initialize the Dash app
@@ -49,7 +49,17 @@ app.layout = dmc.MantineProvider(
                     html.Div(id="page-content"),
                 ]
             ),
-            footer()
+            footer(),
+            dcc.Store(id="scroll-to-top-trigger"),
+            dmc.Affix(
+                dmc.Button(
+                    DashIconify(icon="ic:baseline-arrow-upward", width=20),
+                    id="back-to-top-btn",
+                    color="#336666",
+                    size="xs"
+                ),
+                position={"bottom": 10, "right": 10},
+            ),
         ],
         header={"height": 60},
         navbar={
@@ -61,12 +71,29 @@ app.layout = dmc.MantineProvider(
     )
 )
 
+# Client-side callback for smooth scrolling
+app.clientside_callback(
+    """
+    function(trigger) {
+        if (trigger) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        return null;  // Reset the trigger
+    }
+    """,
+    Output("scroll-to-top-trigger", "data"),
+    Input("back-to-top-btn", "n_clicks"),
+)
+
+
 
 # Callback to display the correct page based on the URL
 @app.callback(
     Output("page-content", "children"),
     [Input("url", "pathname")],
 )
+
+
 def display_page(pathname):
     # Return the corresponding page or the 404 page if not found
     page_routes = {
@@ -74,8 +101,6 @@ def display_page(pathname):
         "/about": about_page,
         "/agriculture-and-rural-development": agriculture_and_rural_development,
         "/development-economics-and-trade": development_economics_and_trade,
-        
-        "/insight-agriculture-and-rural-development": insight_agriculture,
     }
     return page_routes.get(pathname, not_found_page)
 
