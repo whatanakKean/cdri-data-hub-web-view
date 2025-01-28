@@ -32,6 +32,7 @@ buttons = [
         ],
         trigger="hover",
     ),
+    dmc.Anchor(dmc.Button("Data Explorer", variant="subtle", color="white"), href="/data-explorer"),
     dmc.Anchor(dmc.Button("About", variant="subtle", color="white"), href="https://cdri.org.kh/page/about-cdri")
 ]
 

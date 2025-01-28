@@ -18,7 +18,7 @@ from src.components.banner import banner
 from src.components.footer import footer
 from src.components.breadcrumb import breadcrumb
 from src.pages.home import home_page
-from src.pages.about import about_page
+from src.pages.data_explorer import data_explorer_page
 from src.pages.agriculture_and_rural_development import agriculture_and_rural_development
 from src.pages.development_economics_and_trade import development_economics_and_trade
 from src.pages.not_found import not_found_page
@@ -98,7 +98,7 @@ def display_page(pathname):
     # Return the corresponding page or the 404 page if not found
     page_routes = {
         "/": home_page,
-        "/about": about_page,
+        "/data-explorer": data_explorer_page,
         "/agriculture-and-rural-development": agriculture_and_rural_development,
         "/development-economics-and-trade": development_economics_and_trade,
     }
