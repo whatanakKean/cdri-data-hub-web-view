@@ -23,7 +23,7 @@ data_explorer_page = html.Main(
         html.Div(
             style={
                 "height": "300px",
-                "backgroundImage": "url('./assets/background.jpg')",
+                "backgroundImage": "url('./assets/data-explorer-background.jpg')",
                 "backgroundSize": "cover",
                 "backgroundPosition": "center",
                 "display": "flex",
