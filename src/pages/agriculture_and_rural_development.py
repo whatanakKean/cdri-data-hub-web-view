@@ -1,19 +1,20 @@
 import json
 import math
+import sqlite3
 import dash
 from dash import html, dcc, Input, Output, State, callback
 import dash_mantine_components as dmc
 import dash_ag_grid as dag
-from ..utils.utils import load_data, get_info, filter_data, style_handle
+import pandas as pd
+from ..utils.utils import get_info, filter_data, style_handle
 from dash_iconify import DashIconify
 import plotly.graph_objects as go
 import dash_leaflet as dl
 import dash_leaflet.express as dlx
-import numpy as np
-import plotly.express as px 
 
 # Load data
-data = load_data(file_path="src/data/Unpivoted_Datahub_Agri_Latest.xlsx", sheet_name="Sheet1")
+conn = sqlite3.connect("./src/data/data.db")
+data = pd.read_sql_query(f"SELECT * FROM agriculture_data;", conn)
 
 # Sidebar components
 def sidebar(data):
@@ -186,10 +187,11 @@ agriculture_and_rural_development = dmc.Container([
                                 ], 
                                 value="graph"
                             ),
-                            dmc.TabsPanel(html.Div(id='dataview-container'), value="dataview"),
+                            dmc.TabsPanel(html.Div(id='dataview-id'), value="dataview"),
                         ], 
                         value="map",
                     ),
+                
                 ], shadow="xs", p="md", radius="md", withBorder=True),
             ], gap="xs"),
             
@@ -216,7 +218,6 @@ def create_dataview(dff):
         dcc.Download(id="download-data")
     ])
     
-    
 def create_metadata(dff):
     if 'Source' in dff and dff['Source'].dropna().any():
         return dmc.Text(
@@ -224,10 +225,12 @@ def create_metadata(dff):
         )
     return ""
 
-
-def create_map(dff, series_name, indicator, year, indicator_unit):
+def create_map(dff, year):
     # Filter data for the selected year
     dff = dff[dff["Year"] == int(year)]
+    series_name = dff['Series Name'].unique()[0]
+    indicator = dff['Indicator'].unique()[0]
+    indicator_unit = dff['Indicator Unit'].unique()[0]
     
     # Calculate Choropleth Gradient Scale Range
     num_classes = 5
@@ -388,14 +391,11 @@ def create_map(dff, series_name, indicator, year, indicator_unit):
             }
         )
         
-def create_graph(dff, series_name, subsector_1, indicator, province):
-    # if subsector_1 not in ["Production", "Export", "Contract Farming", "Agricultural Cooperative"]:
-    #     return html.Div([
-    #         dmc.Text("Not Enough Data To Visualize", size="lg")
-    #     ], style={'height': '400px', 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center'})
-
+def create_graph(dff):
     # Aggregate data
     dff_filtered = dff.groupby('Year')['Indicator Value'].sum().reset_index()
+    series_name = dff['Series Name'].unique()[0]
+    indicator = dff['Indicator'].unique()[0]
 
     # Define layout
     layout = go.Layout(
@@ -489,7 +489,7 @@ def create_graph(dff, series_name, subsector_1, indicator, province):
 
 
 # Callbacks
-@callback([Output('graph-id', 'children'), Output('map-id', 'children'), Output('dataview-container', 'children'), Output('metadata-panel', 'children'), Output('indicator-unit', 'data')],
+@callback([Output('graph-id', 'children'), Output('map-id', 'children'), Output('dataview-id', 'children'), Output('metadata-panel', 'children'), Output('indicator-unit', 'data')],
           [Input("series-name-dropdown", "value"), Input("subsector-1-dropdown", "value"), Input("subsector-2-dropdown", "value"),
            Input("province-dropdown", "value"), Input("indicator-dropdown", "value"), Input("year-slider", "value")])
 def update_report(series_name, subsector_1, subsector_2, province, indicator, year):
@@ -504,7 +504,7 @@ def update_report(series_name, subsector_1, subsector_2, province, indicator, ye
     dff = dff.rename(columns={'Latiude': 'Latitude'})
     indicator_unit = dff['Indicator Unit'].unique()
 
-    return create_graph(dff, series_name, subsector_1, indicator, province), create_map(dff, series_name, indicator, year, indicator_unit), create_dataview(dff), create_metadata(dff), indicator_unit.tolist()
+    return create_graph(dff), create_map(dff, year), create_dataview(dff), create_metadata(dff), indicator_unit.tolist()
 
 
 @callback(Output("download-data", "data"), Input("download-button", "n_clicks"),
@@ -639,12 +639,11 @@ def update_year_slider(series_name, subsector_1, subsector_2, province, indicato
     [Input("segmented-control", "value")],
 )
 def toggle_papers(segmented_value):
-    # Default styles to hide both papers
     hidden_style = {"display": "none"}
     visible_style = {}
 
     if segmented_value == "Filter":
-        return visible_style, hidden_style  # Show filter, hide search
+        return visible_style, hidden_style
     elif segmented_value == "Search":
-        return hidden_style, visible_style  # Hide filter, show search
-    return hidden_style, hidden_style  # Default: hide both if value is unknown
+        return hidden_style, visible_style
+    return hidden_style, hidden_style

@@ -1,12 +1,16 @@
-from dash import html, Input, Output, callback
+
+import sqlite3
+from dash import html, dcc, Input, Output, State, callback
 import dash_mantine_components as dmc
-import pandas as pd
-from fuzzywuzzy import process
-from ..utils.utils import load_data
 import dash_ag_grid as dag
+import pandas as pd
+from ..utils.utils import get_info, filter_data, style_handle
+from dash_iconify import DashIconify
+import plotly.graph_objects as go
 
 # Sample dataset
-data = load_data(file_path="src/data/Unpivoted_Datahub_Agri_Latest.xlsx", sheet_name="Sheet1")
+conn = sqlite3.connect("./src/data/data.db")
+data = pd.read_sql_query(f"SELECT * FROM agriculture_data;", conn)
 
 # Predefined suggested questions
 suggested_questions = [
@@ -53,27 +57,170 @@ data_explorer_page = html.Main(
         ),
         
         dmc.Container(children=[
-            
-            # Data table to display results using dash_ag_grid
-            dag.AgGrid(
-                id="data-table",
-                columnDefs=[{"field": col} for col in data.columns],
-                rowData=data.to_dict("records"),
-                defaultColDef={"resizable": True, "sortable": True, "filter": True},
-                style={"height": "400px", "marginTop": "20px"}
-            )
+            dmc.Paper([
+                dmc.Tabs(
+                    children=[
+                        dmc.TabsList(
+                            [
+                                dmc.TabsTab("Map View", leftSection=DashIconify(icon="tabler:map"), value="map"),
+                                dmc.TabsTab("Visualization", leftSection=DashIconify(icon="tabler:chart-bar"), value="graph"),
+                                dmc.TabsTab("Data Hub", leftSection=DashIconify(icon="tabler:database"), value="dataview"),
+                            ], 
+                            grow="True",
+                        ),
+                        dmc.TabsPanel(
+                            children=[
+                                html.Div(id='data-explorer-map-id'),
+                                dmc.Box(
+                                    style={"paddingTop": "2px", "paddingBottom": "10px"},
+                                    children=[
+                                        dmc.Slider(
+                                            id="year-slider",
+                                            step=1
+                                        )
+                                    ]
+                                )       
+                            ], 
+                            value="map"
+                        ),
+                        dmc.TabsPanel(                               
+                            children=[
+                                html.Div(id='data-explorer-graph-id'),
+                            ], 
+                            value="graph"
+                        ),
+                        dmc.TabsPanel(html.Div(id='data-explorer-dataview-id'), value="dataview"),
+                    ], 
+                    value="map",
+                ),
+                ], shadow="xs", p="md", radius="md", withBorder=True),
         ], fluid=True)
-        
     ],
 )
 
+def create_dataview(dff):
+    
+    pivoted_data = dff.pivot_table(
+        index=[col for col in dff.columns if col not in ['Indicator', 'Indicator Value']],
+        columns='Indicator',
+        values='Indicator Value',
+        aggfunc='first'
+    ).reset_index()
+    
+    print(pivoted_data)
+    
+    return html.Div([
+        dag.AgGrid(id='data-explorer-ag-grid', columnDefs=[{"headerName": col, "field": col} for col in dff.columns], rowData=dff.to_dict('records'), style={'height': '400px'}),
+        dmc.Button("Download Data", id="download-button", variant="outline", color="#336666", mt="md", style={'marginLeft': 'auto', 'display': 'flex', 'justifyContent': 'flex-end'}),
+        # dcc.Download(id="data-explorer-download-data")
+    ])
+
+        
+def create_graph(dff):
+    # Aggregate data
+    dff_filtered = dff.groupby('Year')['Indicator Value'].sum().reset_index()
+    series_name = dff['Series Name'].unique()[0]
+    indicator = dff['Indicator'].unique()[0]
+
+    # Define layout
+    layout = go.Layout(
+        images=[dict(
+            source="./assets/CDRI Logo.png",
+            xref="paper", yref="paper",
+            x=1, y=1.1,
+            sizex=0.2, sizey=0.2,
+            xanchor="right", yanchor="bottom"
+        )],
+        yaxis=dict(
+            gridcolor='rgba(169, 169, 169, 0.7)',
+            showgrid=True,
+            gridwidth=0.5,
+            griddash='dot',
+            tickformat=',',
+            rangemode='tozero',
+            title=f"{indicator} ({dff['Indicator Unit'].unique()[0]})",
+        ),
+        font=dict(
+            family='BlinkMacSystemFont',
+            color='rgba(0, 0, 0, 0.7)'
+        ),
+        hovermode="x unified",
+        plot_bgcolor='white',
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1,
+            xanchor="right",    
+            x=1
+        ),
+        xaxis=dict(
+            tickmode='array',
+            tickvals=dff_filtered['Year'].unique(),
+            title="Produced By: CDRI Data Hub",
+        ),
+        # annotations=[ 
+        #     dict(
+        #         x=0.5,
+        #         y=-0.15, 
+        #         xref="paper", yref="paper",
+        #         text="Produced By: CDRI Data Hub",
+        #         showarrow=False,
+        #         font=dict(size=12, color='rgba(0, 0, 0, 0.7)'),
+        #         align='center'
+        #     ),
+        # ],
+        margin=dict(t=100, b=80, l=50, r=50),
+    )
+
+    # Create figure
+    fig1 = go.Figure(layout=layout)
+    fig1.add_trace(go.Scatter(
+        x=dff_filtered['Year'],
+        y=dff_filtered['Indicator Value'],
+        mode='lines+markers',
+        name=indicator
+    ))  
+    title_text = f"{series_name}: {dff['Indicator'].unique()[0]}"
+    fig1.update_layout(
+        title=dict(
+            text=title_text,
+        ),
+    )
+
+    # Return graph
+    return html.Div([ 
+            dcc.Graph(
+                id="figure-linechart", 
+                figure=fig1, 
+                config={
+                    'displaylogo': False,
+                    'toImageButtonOptions': {
+                        'format': 'png',
+                        'filename': 'cdri_datahub_viz',
+                        'height': 500,
+                        'width': 800,
+                        'scale': 6
+                    },
+                },
+                responsive=True,
+            ),
+            dmc.Divider(size="sm"),
+            dmc.Alert(
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+                title="Researcher's Note",
+                color="green"
+            ),
+        ])
+
+
+
 # Callback to update data table based on the selected suggestion
 @callback(
-    Output("data-table", "rowData"),
-    Output("data-table", "columnDefs"),
+    Output("data-explorer-dataview-id", "children"),
+    Output("data-explorer-graph-id", "children"),
     Input("suggestions-autocomplete", "value")
 )
-def update_table(selected_suggestion):
+def update_data(selected_suggestion):
 
     if not selected_suggestion:
         return [], []
@@ -94,18 +241,12 @@ def update_table(selected_suggestion):
         elif "Phnom Penh" in selected_suggestion:
             filters["Province"] = "Phnom Penh"
     
-    if "[Year]" in selected_suggestion:
-        filters["Year"] = 2020
+    # if "[Year]" in selected_suggestion:
+    #     filters["Year"] = 2020
     
     # Filter the dataset
     filtered_df = data
     for key, value in filters.items():
         filtered_df = filtered_df[filtered_df[key] == value]
     
-    # Convert filtered DataFrame to a format suitable for dash_ag_grid
-    if not filtered_df.empty:
-        row_data = filtered_df.to_dict("records")
-        column_defs = [{"field": col} for col in filtered_df.columns]
-        return row_data, column_defs
-    else:
-        return [], []
+    return create_dataview(filtered_df), create_graph(filtered_df)

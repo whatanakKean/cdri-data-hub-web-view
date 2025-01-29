@@ -1,18 +1,20 @@
 import json
 import math
+import sqlite3
 import dash
 from dash import html, dcc, Input, Output, State, callback
 import dash_mantine_components as dmc
 import dash_ag_grid as dag
-from ..utils.utils import load_data, get_info, filter_data, style_handle
+import pandas as pd
+from ..utils.utils import get_info, filter_data, style_handle
 from dash_iconify import DashIconify
 import plotly.graph_objects as go
 import dash_leaflet as dl
 import dash_leaflet.express as dlx
-import numpy as np
 
 # Load data
-data = load_data(file_path="src/data/Unpivoted_Datahub_Economic.xlsx", sheet_name="Sheet1")
+conn = sqlite3.connect("./src/data/data.db")
+data = pd.read_sql_query(f"SELECT * FROM economic_data;", conn)
 
 # Sidebar components
 def sidebar(data):
