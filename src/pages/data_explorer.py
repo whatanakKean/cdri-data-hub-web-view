@@ -92,7 +92,7 @@ data_explorer_page = html.Main(
                         ),
                         dmc.TabsPanel(html.Div(id='data-explorer-dataview-id'), value="dataview"),
                     ], 
-                    value="map",
+                    value="graph",
                 ),
                 ], shadow="xs", p="md", radius="md", withBorder=True),
         ], fluid=True)
