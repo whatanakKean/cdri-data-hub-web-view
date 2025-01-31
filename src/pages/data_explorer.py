@@ -63,27 +63,27 @@ data_explorer_page = html.Main(
                     children=[
                         dmc.TabsList(
                             [
-                                dmc.TabsTab("Map View", leftSection=DashIconify(icon="tabler:map"), value="map"),
+                                # dmc.TabsTab("Map View", leftSection=DashIconify(icon="tabler:map"), value="map"),
                                 dmc.TabsTab("Visualization", leftSection=DashIconify(icon="tabler:chart-bar"), value="graph"),
                                 dmc.TabsTab("Data Hub", leftSection=DashIconify(icon="tabler:database"), value="dataview"),
                             ], 
                             grow="True",
                         ),
-                        dmc.TabsPanel(
-                            children=[
-                                html.Div(id='data-explorer-map-id'),
-                                dmc.Box(
-                                    style={"paddingTop": "2px", "paddingBottom": "10px"},
-                                    children=[
-                                        dmc.Slider(
-                                            id="year-slider",
-                                            step=1
-                                        )
-                                    ]
-                                )       
-                            ], 
-                            value="map"
-                        ),
+                        # dmc.TabsPanel(
+                        #     children=[
+                        #         html.Div(id='data-explorer-map-id'),
+                        #         dmc.Box(
+                        #             style={"paddingTop": "2px", "paddingBottom": "10px"},
+                        #             children=[
+                        #                 dmc.Slider(
+                        #                     id="year-slider",
+                        #                     step=1
+                        #                 )
+                        #             ]
+                        #         )       
+                        #     ], 
+                        #     value="map"
+                        # ),
                         dmc.TabsPanel(                               
                             children=[
                                 html.Div(id='data-explorer-graph-id'),
