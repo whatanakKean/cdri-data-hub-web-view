@@ -19,27 +19,6 @@ data = pd.read_sql_query(f"SELECT * FROM economic_data;", conn)
 # Sidebar components
 def sidebar(data):
     return dmc.Stack([
-        dmc.SegmentedControl(
-            id="segmented-control-economic",
-            value="Filter",
-            data=[
-                {
-                    "value": "Filter",
-                    "label": dmc.Center(
-                        [DashIconify(icon="icon-preview", width=16), html.Span("Filter")],
-                        style={"gap": 10},
-                    ),
-                },
-                {
-                    "value": "Search",
-                    "label": dmc.Center(
-                        [DashIconify(icon="icon-edit", width=16), html.Span("Search")],
-                        style={"gap": 10},
-                    ),
-                }
-            ],
-            mb=10,
-        ),
         dmc.Paper([
             dmc.Select(
                 label="Select Series Name", 
@@ -109,22 +88,7 @@ def sidebar(data):
                 allowDeselect=False,
             ),
         ], id="filter-economic", shadow="xs", p="md", radius="md", withBorder=True),
-        dmc.Paper(
-            [
-                dmc.Select(
-                    label="Search (Not Yet Functional)", 
-                    id="search-dropdown-economic", 
-                    value='', 
-                    data=[{'label': option, 'value': option} for option in list(sorted(data["Series Name"].dropna().str.strip().unique()))],
-                    withScrollArea=False,
-                    styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
-                    checkIconPosition="right",
-                    searchable=True,
-                    allowDeselect=False,
-                )
-            ],
-            id="search-economic", shadow="xs", p="md", radius="md", withBorder=True 
-        ),
+        
         dmc.Accordion(chevronPosition="right", variant="contained", radius="md", children=[
             dmc.AccordionItem(value="bender", children=[
                 dmc.AccordionControl(dmc.Group([html.Div([dmc.Text("Metadata"), dmc.Text("Information about current data", size="sm", fw=400, c="dimmed")])]),),
@@ -546,19 +510,3 @@ def update_year_slider(series_name, sector, subsector_1, indicator, market):
     
     # Return the updated properties for the year-slider
     return min_year, max_year, year_slider_value, marks
-
-#Callback for filter and search
-@callback(
-    [Output("filter-economic", "style"), Output("search-economic", "style")],
-    [Input("segmented-control-economic", "value")],
-)
-def toggle_papers(segmented_value):
-    # Default styles to hide both papers
-    hidden_style = {"display": "none"}
-    visible_style = {}
-
-    if segmented_value == "Filter":
-        return visible_style, hidden_style  # Show filter, hide search
-    elif segmented_value == "Search":
-        return hidden_style, visible_style  # Hide filter, show search
-    return hidden_style, hidden_style  # Default: hide both if value is unknown

@@ -7,6 +7,7 @@ import pandas as pd
 from ..utils.utils import get_info, filter_data, style_handle
 from dash_iconify import DashIconify
 import plotly.graph_objects as go
+from fuzzywuzzy import process
 
 # Sample dataset
 conn = sqlite3.connect("./src/data/data.db")
@@ -99,15 +100,12 @@ data_explorer_page = html.Main(
 )
 
 def create_dataview(dff):
-    
-    pivoted_data = dff.pivot_table(
-        index=[col for col in dff.columns if col not in ['Indicator', 'Indicator Value']],
-        columns='Indicator',
-        values='Indicator Value',
-        aggfunc='first'
-    ).reset_index()
-    
-    print(pivoted_data)
+    # pivoted_data = dff.pivot_table(
+    #     index=[col for col in dff.columns if col not in ['Indicator', 'Indicator Value']],
+    #     columns='Indicator',
+    #     values='Indicator Value',
+    #     aggfunc='first'
+    # ).reset_index()
     
     return html.Div([
         dag.AgGrid(id='data-explorer-ag-grid', columnDefs=[{"headerName": col, "field": col} for col in dff.columns], rowData=dff.to_dict('records'), style={'height': '400px'}),
@@ -212,8 +210,6 @@ def create_graph(dff):
             ),
         ])
 
-
-
 # Callback to update data table based on the selected suggestion
 @callback(
     Output("data-explorer-dataview-id", "children"),
@@ -227,22 +223,40 @@ def update_data(selected_suggestion):
 
     # Extract filters from the selected suggestion
     filters = {}
-    if "rice production" in selected_suggestion.lower():
-        filters["Series Name"] = "Rice Production"
-    if "area planted" in selected_suggestion.lower():
-        filters["Indicator"] = "Area Planted"
     
-    # Extract province and year from the suggestion
-    if "[Province]" in selected_suggestion:
-        if "Kampong" in selected_suggestion:
-            filters["Province"] = "Kampong Cham"
-        elif "Kandal" in selected_suggestion:
-            filters["Province"] = "Kandal"
-        elif "Phnom Penh" in selected_suggestion:
-            filters["Province"] = "Phnom Penh"
+    # Store original and lowercase versions of Series Name
+    lower_series_name = {name.lower(): name for name in data['Series Name'].unique()}
+    match_series_name = process.extractOne(selected_suggestion.lower(), lower_series_name.keys(), score_cutoff=50)
+    if match_series_name:
+        best_match_lower, score = match_series_name
+        filters["Series Name"] = lower_series_name[best_match_lower]
+        print(">>>>> Series Name Result: ", filters["Series Name"], score)
+        
+    # Store original and lowercase versions of Indicator
+    lower_indicator = {name.lower(): name for name in data['Indicator'].unique()}
+    match_indicator = process.extractOne(selected_suggestion.lower(), lower_indicator.keys(), score_cutoff=50)
+    if match_indicator:
+        best_match_lower, score = match_indicator
+        filters["Indicator"] = lower_indicator[best_match_lower]
+        print(">>>>> Indicator Result: ", filters["Indicator"], score)
     
-    # if "[Year]" in selected_suggestion:
-    #     filters["Year"] = 2020
+    # # Store original and lowercase versions of Markets
+    # lower_markets = {name.lower(): name for name in data['Markets'].unique()}
+    # match_markets = process.extractOne(selected_suggestion.lower(), lower_markets.keys(), score_cutoff=50)
+    # if match_markets:
+    #     best_match_lower, score = match_markets
+    #     filters["Markets"] = lower_markets[best_match_lower]
+    #     print(">>>>> Markets Result: ", filters["Markets"], score)
+        
+    # # Store original and lowercase versions of Province
+    # lower_province = {name.lower(): name for name in data['Province'].unique()}
+    # match_province = process.extractOne(selected_suggestion.lower(), lower_province.keys(), score_cutoff=50)
+    # if match_province:
+    #     best_match_lower, score = match_province
+    #     filters["Province"] = lower_province[best_match_lower]
+    #     print(">>>>> Province Result: ", filters["Province"], score)
+    
+
     
     # Filter the dataset
     filtered_df = data
