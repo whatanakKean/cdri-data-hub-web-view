@@ -2,7 +2,7 @@ import json
 import math
 import sqlite3
 import dash
-from dash import html, dcc, Input, Output, State, callback
+from dash import html, dcc, Input, Output, State, ctx, callback
 import dash_mantine_components as dmc
 import dash_ag_grid as dag
 import pandas as pd
@@ -88,6 +88,17 @@ def sidebar(data):
                 checkIconPosition="right",
                 allowDeselect=False,
             ),
+            dmc.Select(
+                label="Select Year", 
+                id="year-dropdown", 
+                value=str(data["Year"].unique()[-1]),
+        	    data=[{'label': str(option), 'value': str(option)} for option in sorted(data["Year"].unique())],
+                withScrollArea=False,
+                styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
+                mt="md",
+                checkIconPosition="right",
+                allowDeselect=False,
+            )
         ], id="filter", shadow="xs", p="md", radius="md", withBorder=True),
         
         dmc.Accordion(chevronPosition="right", variant="contained", radius="md", children=[
@@ -120,16 +131,7 @@ agriculture_and_rural_development = dmc.Container([
                             ),
                             dmc.TabsPanel(
                                 children=[
-                                    html.Div(id='map-id'),
-                                    dmc.Box(
-                                        style={"paddingTop": "2px", "paddingBottom": "10px"},
-                                        children=[
-                                            dmc.Slider(
-                                                id="year-slider",
-                                                step=1
-                                            )
-                                        ]
-                                    )       
+                                    html.Div(id='map-id'),   
                                 ], 
                                 value="map"
                             ),
@@ -141,7 +143,7 @@ agriculture_and_rural_development = dmc.Container([
                             ),
                             dmc.TabsPanel(html.Div(id='dataview-id'), value="dataview"),
                         ], 
-                        value="map",
+                        id="active-tab", value="map",
                     ),
                 
                 ], shadow="xs", p="md", radius="md", withBorder=True),
@@ -149,9 +151,13 @@ agriculture_and_rural_development = dmc.Container([
             
             dcc.Store(id="selected-point-data"),
             dcc.Store(id="indicator-unit"),
-            dmc.Modal(id="info-modal", title="Point Information", children=[
-                dmc.Container(id="modal-content")
-            ], fullScreen=True)
+            dmc.Modal(
+                id="info-modal",
+                children=[
+                    dmc.Text(id="modal-body"),
+                ],
+                fullScreen=True
+            )
         ], span={"base": 12, "sm": 9}),
     ]),
 ], fluid=True, style={'paddingTop': '1rem'})
@@ -213,6 +219,8 @@ def create_map(dff, year):
     style = dict(weight=2, opacity=1, color='white', dashArray='3', fillOpacity=0.7)
     ctg = [f"{int(classes[i])}+" for i in range(len(classes))]
     colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=30, height=300, position="bottomright")
+    
+    print(dff)
 
     if 'Province' in dff.columns:
         with open('./assets/geoBoundaries-KHM-ADM1_simplified.json') as f:
@@ -228,6 +236,8 @@ def create_map(dff, year):
             if not province_data.empty:
                 # Assign the indicator value
                 feature['properties'][indicator] = province_data['Indicator Value'].values[0]
+                feature['properties']['Series Name'] = series_name
+                feature['properties']['Year'] = year
             else:
                 # Assign None for missing data
                 feature['properties'][indicator] = None
@@ -278,6 +288,8 @@ def create_map(dff, year):
             if not province_data.empty:
                 # Assign the indicator value
                 feature['properties'][indicator] = province_data['Indicator Value'].values[0]
+                feature['properties']['Series Name'] = series_name
+                feature['properties']['Year'] = year
             else:
                 # Assign None for missing data
                 feature['properties'][indicator] = None
@@ -314,6 +326,8 @@ def create_map(dff, year):
             geojson_data = json.load(f)
             
         geojson_data['features'][0]['properties'][indicator] = dff['Indicator Value'].values[0]
+        geojson_data['features'][0]['properties']['Series Name'] = series_name
+        geojson_data['features'][0]['properties']['Year'] = year
         
         geojson = dl.GeoJSON(
             data=geojson_data,
@@ -416,34 +430,35 @@ def create_graph(dff):
 
     # Return graph
     return html.Div([ 
-            dcc.Graph(
-                id="figure-linechart", 
-                figure=fig1, 
-                config={
-                    'displaylogo': False,
-                    'toImageButtonOptions': {
-                        'format': 'png',
-                        'filename': 'cdri_datahub_viz',
-                        'height': 500,
-                        'width': 800,
-                        'scale': 6
-                    },
+        dcc.Graph(
+            id="figure-linechart", 
+            figure=fig1, 
+            style={'minHeight': '450px'},
+            config={
+                'displaylogo': False,
+                'toImageButtonOptions': {
+                    'format': 'png',
+                    'filename': 'cdri_datahub_viz',
+                    'height': 500,
+                    'width': 800,
+                    'scale': 6
                 },
-                responsive=True,
-            ),
-            dmc.Divider(size="sm"),
-            dmc.Alert(
-                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-                title="Description",
-                color="green"
-            ),
-        ])
+            },
+            responsive=True,
+        ),
+        dmc.Divider(size="sm"),
+        dmc.Alert(
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+            title="Description",
+            color="green"
+        ),
+    ])
 
 
 # Callbacks
 @callback([Output('graph-id', 'children'), Output('map-id', 'children'), Output('dataview-id', 'children'), Output('metadata-panel', 'children'), Output('indicator-unit', 'data')],
           [Input("series-name-dropdown", "value"), Input("subsector-1-dropdown", "value"), Input("subsector-2-dropdown", "value"),
-           Input("province-dropdown", "value"), Input("indicator-dropdown", "value"), Input("year-slider", "value")])
+           Input("province-dropdown", "value"), Input("indicator-dropdown", "value"), Input("year-dropdown", "value")])
 def update_report(series_name, subsector_1, subsector_2, province, indicator, year):
     dff = filter_data(
         data=data,
@@ -469,7 +484,7 @@ def download_data(n_clicks, series_name, subsector_1, subsector_2, province, ind
 
 
 # Calllback for info on map
-@callback(Output("info", "children"), Input('series-name-dropdown', 'value'), Input('year-slider', 'value'), Input('indicator-dropdown', 'value'), Input('indicator-unit', 'data'), Input("geojson", "hoverData"))
+@callback(Output("info", "children"), Input('series-name-dropdown', 'value'), Input('year-dropdown', 'value'), Input('indicator-dropdown', 'value'), Input('indicator-unit', 'data'), Input("geojson", "hoverData"))
 def info_hover(series_name, year, indicator, indicator_unit, feature):
     return get_info(series_name=series_name, indicator=indicator, feature=feature, indicator_unit=indicator_unit, year=year)
 
@@ -550,36 +565,69 @@ def update_indicators(series_name, subsector_1, subsector_2, province):
 
 
 @callback(
-    Output('year-slider', 'min'),
-    Output('year-slider', 'max'),
-    Output('year-slider', 'value'),
-    Output('year-slider', 'marks'),
+    Output('year-dropdown', 'data'),
+    Output('year-dropdown', 'value'),
+    Output('year-dropdown', 'style'),
     Input('series-name-dropdown', 'value'),
     Input('subsector-1-dropdown', 'value'),
     Input('subsector-2-dropdown', 'value'),
     Input('province-dropdown', 'value'),
     Input('indicator-dropdown', 'value'),
+    Input('active-tab', 'value'),
 )
-def update_year_slider(series_name, subsector_1, subsector_2, province, indicator):
-    # Filter the data based on the selected filters
-    dff = filter_data(data=data, series_name=series_name, subsector_1=subsector_1, subsector_2=subsector_2, province=province, indicator=indicator)
+def update_year_dropdown(series_name, subsector_1, subsector_2, province, indicator, active_tab):
+    dff = filter_data(
+        data=data,
+        series_name=series_name,
+        subsector_1=subsector_1,
+        subsector_2=subsector_2,
+        province=province,
+        indicator=indicator
+    )
+
+    # Extract unique year values
+    year_values = dff['Year'].dropna().unique().tolist()
     
-    # Get the unique years available after filtering
-    year_options = dff["Year"].dropna().unique()
+    # If no year_values are available, return empty options and value
+    if not year_values:
+        return [], None, {'display': 'none' if active_tab != 'map' else 'block'}
     
-    # If no years are available, return default values
-    if not year_options.size:
-        return 0, 0, 0, []
+    # Prepare dropdown options
+    year_options = [{'label': str(year), 'value': str(year)} for year in sorted(year_values)]
     
-    # Get the minimum and maximum years
-    min_year = int(year_options.min())
-    max_year = int(year_options.max())
+    # Set default value to the latest year
+    default_value = str(max(year_values))  # Convert to string to match dropdown data format
     
-    # Prepare the marks for the slider based on the available years
-    marks = [{'value': year, 'label': str(year)} for year in year_options]
+    # Conditionally set style based on active_tab
+    dropdown_style = {'display': 'block'} if active_tab == 'map' else {'display': 'none'}
     
-    # Default value for the `year-slider` (min value)
-    year_slider_value = max_year
+    return year_options, default_value, dropdown_style
+
+
+# Callback to handle map clicks and display modal
+@callback(
+    Output("info-modal", "opened"),
+    Output("modal-body", "children"),
+    Input("geojson", "clickData"),
+    State("info-modal", "opened"),
+    prevent_initial_call=True
+)
+def handle_map_click(click_data, is_modal_open):
+    if click_data is None:
+        return dash.no_update, dash.no_update
     
-    # Return the updated properties for the year-slider
-    return min_year, max_year, year_slider_value, marks
+    # Extract feature properties from the clicked data
+    feature_properties = click_data.get("properties", {})
+    
+    dff = filter_data(
+        data=data,
+        series_name=feature_properties['Series Name'],
+    )
+    
+    # Prepare the content for the modal
+    modal_content = [
+        create_graph(dff)
+    ]
+    
+    # Open the modal and update its content
+    return not is_modal_open, modal_content

@@ -87,6 +87,17 @@ def sidebar(data):
                 checkIconPosition="right",
                 allowDeselect=False,
             ),
+            dmc.Select(
+                label="Select Year", 
+                id="year-dropdown-economic", 
+                value=str(int(data["Year"].dropna().unique()[-1])),
+        	    data=[{'label': str(int(option)), 'value': str(int(option))} for option in sorted(data["Year"].dropna().unique())],
+                withScrollArea=False,
+                styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
+                mt="md",
+                checkIconPosition="right",
+                allowDeselect=False,
+            )
         ], id="filter-economic", shadow="xs", p="md", radius="md", withBorder=True),
         
         dmc.Accordion(chevronPosition="right", variant="contained", radius="md", children=[
@@ -119,16 +130,7 @@ development_economics_and_trade = dmc.Container([
                             ),
                             dmc.TabsPanel(
                                 children=[
-                                    html.Div(id='map-id-economic'),
-                                    dmc.Box(
-                                        style={"paddingTop": "2px", "paddingBottom": "10px"},
-                                        children=[
-                                            dmc.Slider(
-                                                id="year-slider-economic",
-                                                step=1
-                                            )
-                                        ]
-                                    )        
+                                    html.Div(id='map-id-economic'),        
                                 ], 
                                 value="map"
                             ),
@@ -140,15 +142,15 @@ development_economics_and_trade = dmc.Container([
                             ),
                             dmc.TabsPanel(html.Div(id='dataview-container-economic'), value="dataview"),
                         ], 
-                        value="map",
+                        id="active-tab-economic", value="map",
                     ),
                 ], shadow="xs", p="md", radius="md", withBorder=True),
             ], gap="xs"),
             
             dcc.Store(id="selected-point-data-economic"),
             dcc.Store(id="indicator-unit-economic"),
-            dmc.Modal(id="info-modal-economic", title="Point Information", children=[
-                dmc.Container(id="modal-content-economic")
+            dmc.Modal(id="info-modal-economic", children=[
+                dmc.Container(id="modal-body-economic")
             ], fullScreen=True)
         ], span={"base": 12, "sm": 9}),
     ]),
@@ -177,8 +179,11 @@ def create_metadata(dff):
     return ""
 
 
-def create_map(dff, series_name, indicator, year, indicator_unit):
+def create_map(dff, year):
     dff = dff[dff["Year"] == int(year)]
+    series_name = dff['Series Name'].unique()[0]
+    indicator = dff['Indicator'].unique()[0]
+    indicator_unit = dff['Indicator Unit'].unique()[0]
     
     if 'Markets' in dff.columns:
         # Calculate Choropleth Gradient Scale Range
@@ -217,6 +222,8 @@ def create_map(dff, series_name, indicator, year, indicator_unit):
         # Map indicator values to geojson features
         for feature in geojson_data['features']:
             province_name = feature['properties']['name']  # Ensure correct property for province name
+            feature['properties']['Series Name'] = series_name
+            feature['properties']['Year'] = year
             
             # Find matching row in the filtered data
             province_data = dff[dff['Markets'] == province_name]
@@ -246,7 +253,7 @@ def create_map(dff, series_name, indicator, year, indicator_unit):
                         dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
                         geojson, 
                         colorbar,
-                        html.Div(children=get_info(indicator=indicator, indicator_unit=indicator_unit), id="info-economic", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
+                        html.Div(children=get_info(indicator=indicator, indicator_unit=indicator_unit, year=year), id="info-economic", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
                     ],
                     attributionControl=False,
             )],
@@ -273,16 +280,11 @@ def create_map(dff, series_name, indicator, year, indicator_unit):
         }
     )
         
-def create_graph(dff, series_name, subsector_1, products, indicator):
-    # if subsector_1 not in ["Trade"]:
-    #     return html.Div([
-    #         dmc.Text("Visualization is Under Construction", size="lg")
-    #     ], style={'height': '400px', 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center'})
-
-    # Aggregate data
-    dff_filtered = dff.groupby('Year')['Indicator Value'].sum().reset_index()
+def create_graph(dff):
 
     dff_filtered = dff.groupby('Year')['Indicator Value'].sum().reset_index()
+    series_name = dff['Series Name'].unique()[0]
+    indicator = dff['Indicator'].unique()[0]
 
     # Define layout
     layout = go.Layout(
@@ -351,7 +353,11 @@ def create_graph(dff, series_name, subsector_1, products, indicator):
 
     # Return graph
     return html.Div([ 
-            dcc.Graph(id="figure-linechart", figure=fig1, config={
+        dcc.Graph(
+            id="figure-linechart", 
+            figure=fig1, 
+            style={'minHeight': '450px'},
+            config={
                 'displaylogo': False,
                 'toImageButtonOptions': {
                     'format': 'png',
@@ -359,30 +365,32 @@ def create_graph(dff, series_name, subsector_1, products, indicator):
                     'height': 500,
                     'width': 800,
                     'scale': 6
-                }
-            }),
-            dmc.Divider(size="sm"),
-            dmc.Alert(
-                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-                title="Description",
-                color="green"
-            ),
-        ])
+                },
+            },
+            responsive=True,
+        ),
+        dmc.Divider(size="sm"),
+        dmc.Alert(
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+            title="Description",
+            color="green"
+        ),
+    ])
 
 # Calllback for info on map
-@callback(Output("info-economic", "children"), Input('series-name-dropdown-economic', 'value'), Input('indicator-dropdown-economic', 'value'), Input('indicator-unit-economic', 'data'), Input("geojson", "hoverData"))
-def info_hover(series_name, indicator, indicator_unit, feature):
-    return get_info(series_name=series_name, indicator=indicator, feature=feature, indicator_unit=indicator_unit)
+@callback(Output("info-economic", "children"), Input('series-name-dropdown-economic', 'value'), Input('year-dropdown-economic', 'value'), Input('indicator-dropdown-economic', 'value'),  Input('indicator-unit-economic', 'data'), Input("geojson", "hoverData"))
+def info_hover(series_name, year, indicator, indicator_unit, feature):
+    return get_info(series_name=series_name, indicator=indicator, feature=feature, indicator_unit=indicator_unit, year=year)
 
 
 # Callbacks
 @callback([Output('graph-id-economic', 'children'), Output('map-id-economic', 'children'), Output('dataview-container-economic', 'children'), Output('metadata-panel-economic', 'children'), Output('indicator-unit-economic', 'data')],
           [Input("sector-dropdown-economic", "value"), Input('series-name-dropdown-economic', 'value'), Input("subsector-1-dropdown-economic", "value"), Input("product-dropdown-economic", "value"),
-           Input("indicator-dropdown-economic", "value"), Input("market-dropdown-economic", "value"), Input("year-slider-economic", "value")])
+           Input("indicator-dropdown-economic", "value"), Input("market-dropdown-economic", "value"), Input("year-dropdown-economic", "value")])
 def update_report(sector, series_name, subsector_1, product, indicator, market, year):
     dff = filter_data(data=data, sector=sector, series_name=series_name, subsector_1=subsector_1, indicator=indicator, product=product, market=market)
     indicator_unit = dff['Indicator Unit'].unique()
-    return create_graph(dff, series_name, subsector_1, product, indicator), create_map(dff, series_name, indicator, year, indicator_unit), create_dataview(dff), create_metadata(dff), indicator_unit.tolist()
+    return create_graph(dff), create_map(dff, year), create_dataview(dff), create_metadata(dff), indicator_unit.tolist()
 
 
 @callback(Output("download-data-economic", "data"), Input("download-button-economic", "n_clicks"),
@@ -477,36 +485,65 @@ def update_indicators(series_name, sector, subsector_1, market):
 
 
 @callback(
-    Output('year-slider-economic', 'min'),
-    Output('year-slider-economic', 'max'),
-    Output('year-slider-economic', 'value'),
-    Output('year-slider-economic', 'marks'),
+    Output('year-dropdown-economic', 'data'),
+    Output('year-dropdown-economic', 'value'),
+    Output('year-dropdown-economic', 'style'),
     Input('series-name-dropdown-economic', 'value'),
     Input('sector-dropdown-economic', 'value'),
     Input('subsector-1-dropdown-economic', 'value'),
     Input('indicator-dropdown-economic', 'value'),
     Input('market-dropdown-economic', 'value'),
+    Input('active-tab-economic', 'value'),
 )
-def update_year_slider(series_name, sector, subsector_1, indicator, market):
+def update_year_dropdown(series_name, sector, subsector_1, indicator, market, active_tab):
     # Filter the data based on the selected filters
     dff = filter_data(data=data, series_name=series_name, sector=sector, subsector_1=subsector_1, indicator=indicator, market=market)
     
-    # Get the unique years available after filtering
-    year_options = dff["Year"].dropna().unique()
+    # Extract unique year values
+    year_values = dff['Year'].dropna().unique().tolist()
     
-    # If no years are available, return default values
-    if not year_options.size:
-        return 0, 0, 0, []
+    # If no year_values are available, return empty options and value
+    if not year_values:
+        return [], None, {'display': 'none' if active_tab != 'map' else 'block'}
     
-    # Get the minimum and maximum years
-    min_year = int(year_options.min())
-    max_year = int(year_options.max())
+    # Prepare dropdown options
+    year_options = [{'label': str(int(year)), 'value': str(int(year))} for year in sorted(year_values)]
     
-    # Prepare the marks for the slider based on the available years
-    marks = [{'value': year, 'label': str(year)} for year in range(min_year, max_year + 1)]
+    # Set default value to the latest year
+    default_value = str(max(year_values))  # Convert to string to match dropdown data format
     
-    # Default value for the `year-slider` (min value)
-    year_slider_value = max_year
+    # Conditionally set style based on active_tab
+    dropdown_style = {'display': 'block'} if active_tab == 'map' else {'display': 'none'}
     
-    # Return the updated properties for the year-slider
-    return min_year, max_year, year_slider_value, marks
+    return year_options, default_value, dropdown_style
+
+
+# Callback to handle map clicks and display modal
+@callback(
+    Output("info-modal-economic", "opened"),
+    Output("info-modal-economic", "children"),
+    Input("geojson", "clickData"),
+    State("info-modal-economic", "opened"),
+    prevent_initial_call=True
+)
+def handle_map_click(click_data, is_modal_open):
+    if click_data is None:
+        return dash.no_update, dash.no_update
+    
+    # Extract feature properties from the clicked data
+    feature_properties = click_data.get("properties", {})
+    
+    dff = filter_data(
+        data=data,
+        series_name=feature_properties['Series Name'],
+    )
+    
+    print(dff)
+    
+    # Prepare the content for the modal
+    modal_content = [
+        create_graph(dff)
+    ]
+ 
+    # Open the modal and update its content
+    return not is_modal_open, modal_content
