@@ -344,10 +344,10 @@ def create_graph(dff):
         mode='lines+markers',
         name=indicator
     ))
-    title_text = f"{series_name}: {dff['Indicator'].unique()[0]}"
+    
     fig1.update_layout(
         title=dict(
-            text=title_text,
+            text=f"{series_name}: {dff['Indicator'].unique()[0]}",
         ),
     )
 
@@ -537,8 +537,6 @@ def handle_map_click(click_data, is_modal_open):
         data=data,
         series_name=feature_properties['Series Name'],
     )
-    
-    print(dff)
     
     # Prepare the content for the modal
     modal_content = [

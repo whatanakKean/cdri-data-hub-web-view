@@ -219,8 +219,6 @@ def create_map(dff, year):
     style = dict(weight=2, opacity=1, color='white', dashArray='3', fillOpacity=0.7)
     ctg = [f"{int(classes[i])}+" for i in range(len(classes))]
     colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=30, height=300, position="bottomright")
-    
-    print(dff)
 
     if 'Province' in dff.columns:
         with open('./assets/geoBoundaries-KHM-ADM1_simplified.json') as f:
@@ -421,10 +419,9 @@ def create_graph(dff):
         mode='lines+markers',
         name=indicator
     ))  
-    title_text = f"{series_name}: {dff['Indicator'].unique()[0]}"
     fig1.update_layout(
         title=dict(
-            text=title_text,
+            text= f"{series_name}: {dff['Indicator'].unique()[0]}",
         ),
     )
 
