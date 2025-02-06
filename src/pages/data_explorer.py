@@ -189,6 +189,7 @@ def create_graph(dff):
     return html.Div([ 
             dcc.Graph(
                 id="figure-linechart", 
+                style={'minHeight': '450px'},
                 figure=fig1, 
                 config={
                     'displaylogo': False,
