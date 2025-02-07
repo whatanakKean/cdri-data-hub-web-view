@@ -149,9 +149,13 @@ development_economics_and_trade = dmc.Container([
             
             dcc.Store(id="selected-point-data-economic"),
             dcc.Store(id="indicator-unit-economic"),
-            dmc.Modal(id="info-modal-economic", children=[
-                dmc.Container(id="modal-body-economic")
-            ], fullScreen=True)
+            dmc.Modal(
+                id="info-modal-economic",
+                children=[
+                    dmc.Text(id="modal-body-economic"),
+                ],
+                fullScreen=True
+            )
         ], span={"base": 12, "sm": 9}),
     ]),
 ], fluid=True, style={'paddingTop': '1rem'})
@@ -221,16 +225,17 @@ def create_map(dff, year):
                 
         # Map indicator values to geojson features
         for feature in geojson_data['features']:
-            province_name = feature['properties']['name']  # Ensure correct property for province name
+            market_name = feature['properties']['name']  # Ensure correct property for market name
             feature['properties']['Series Name'] = series_name
+            feature['properties']['Indicator'] = indicator
             feature['properties']['Year'] = year
             
             # Find matching row in the filtered data
-            province_data = dff[dff['Markets'] == province_name]
+            market_data = dff[dff['Markets'] == market_name]
             
-            if not province_data.empty:
+            if not market_data.empty:
                 # Assign the indicator value
-                feature['properties'][indicator] = province_data['Indicator Value'].values[0]
+                feature['properties'][indicator] = market_data['Indicator Value'].values[0]
             else:
                 # Assign None for missing data
                 feature['properties'][indicator] = None
@@ -242,7 +247,7 @@ def create_map(dff, year):
                             zoomToBoundsOnClick=True,
                             hoverStyle = dict(weight=5, color='#666', dashArray=''),
                             hideout=dict(colorscale=colorscale, classes=classes, style=style, colorProp=indicator),
-                            id="geojson")
+                            id="geojson-economic")
         
         return html.Div([
             dl.Map(
@@ -377,8 +382,89 @@ def create_graph(dff):
         ),
     ])
 
+
+def create_modal(dff, feature):
+    indicator = feature['Indicator']
+    dff_filtered = dff[dff['Indicator'] == indicator]
+    series_name = dff_filtered['Series Name'].unique()[0]
+
+    # Define layout
+    layout = go.Layout(
+        images=[dict(
+            source="./assets/CDRI Logo.png",
+            xref="paper", yref="paper",
+            x=1, y=1.1,
+            sizex=0.2, sizey=0.2,
+            xanchor="right", yanchor="bottom"
+        )],
+        yaxis=dict(
+            gridcolor='rgba(169, 169, 169, 0.7)',
+            showgrid=True,
+            gridwidth=0.5,
+            griddash='dot',
+            tickformat=',',
+            rangemode='tozero',
+            title=f"{indicator} ({dff_filtered['Indicator Unit'].unique()[0]})",
+        ),
+        font=dict(
+            family='BlinkMacSystemFont',
+            color='rgba(0, 0, 0, 0.7)'
+        ),
+        hovermode="x unified",
+        plot_bgcolor='white',
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1,
+            xanchor="right",    
+            x=1
+        ),
+        xaxis=dict(
+            tickmode='array',
+            tickvals=dff_filtered['Year'].unique(),
+            title="Produced By: CDRI Data Hub",
+        ),
+        margin=dict(t=100, b=80, l=50, r=50),
+    )
+
+    # Create figure
+    fig1 = go.Figure(layout=layout)
+    fig1.add_trace(go.Scatter(
+        x=dff_filtered['Year'],
+        y=dff_filtered['Indicator Value'],
+        mode='lines+markers',
+        name=indicator
+    ))  
+    fig1.update_layout(
+        title=dict(
+            text= f"{series_name}: {indicator} in {feature['name']}",
+        ),
+    )
+
+    # Return graph with the Pie chart selector and line chart
+    return html.Div([
+        dmc.Divider(size="sm"),
+        dcc.Graph(
+            id="figure-linechart", 
+            figure=fig1, 
+            style={'minHeight': '450px'},
+            config={
+                'displaylogo': False,
+                'toImageButtonOptions': {
+                    'format': 'png',
+                    'filename': 'cdri_datahub_viz',
+                    'height': 500,
+                    'width': 800,
+                    'scale': 6
+                },
+            },
+            responsive=True,
+        ),
+    ])
+    
+
 # Calllback for info on map
-@callback(Output("info-economic", "children"), Input('series-name-dropdown-economic', 'value'), Input('year-dropdown-economic', 'value'), Input('indicator-dropdown-economic', 'value'),  Input('indicator-unit-economic', 'data'), Input("geojson", "hoverData"))
+@callback(Output("info-economic", "children"), Input('series-name-dropdown-economic', 'value'), Input('year-dropdown-economic', 'value'), Input('indicator-dropdown-economic', 'value'),  Input('indicator-unit-economic', 'data'), Input("geojson-economic", "hoverData"))
 def info_hover(series_name, year, indicator, indicator_unit, feature):
     return get_info(series_name=series_name, indicator=indicator, feature=feature, indicator_unit=indicator_unit, year=year)
 
@@ -521,27 +607,30 @@ def update_year_dropdown(series_name, sector, subsector_1, indicator, market, ac
 # Callback to handle map clicks and display modal
 @callback(
     Output("info-modal-economic", "opened"),
-    Output("info-modal-economic", "children"),
-    Input("geojson", "clickData"),
+    Output("modal-body-economic", "children"),
+    Output("geojson-economic", "clickData"),  # Reset clickData
+    Input("geojson-economic", "clickData"),
     State("info-modal-economic", "opened"),
     prevent_initial_call=True
 )
 def handle_map_click(click_data, is_modal_open):
     if click_data is None:
-        return dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update, dash.no_update
     
     # Extract feature properties from the clicked data
-    feature_properties = click_data.get("properties", {})
+    feature = click_data.get("properties", {})
+    print(feature)
     
     dff = filter_data(
         data=data,
-        series_name=feature_properties['Series Name'],
+        series_name=feature['Series Name'],
+        market=feature['name'],
     )
     
     # Prepare the content for the modal
     modal_content = [
-        create_graph(dff)
+        create_modal(dff, feature)
     ]
- 
-    # Open the modal and update its content
-    return not is_modal_open, modal_content
+    
+    # Open the modal, update its content, and reset clickData
+    return not is_modal_open, modal_content, None
