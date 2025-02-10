@@ -114,7 +114,6 @@ def create_dataview(dff):
         values='Indicator Value',
         aggfunc='first'
     ).reset_index()
-    print(pivoted_data)
     
     return html.Div([
         dag.AgGrid(id='data-explorer-ag-grid', columnDefs=[{"headerName": col, "field": col} for col in pivoted_data.columns], rowData=pivoted_data.to_dict('records'), style={'height': '400px'}),
@@ -144,8 +143,7 @@ def create_graph(dff):
             gridwidth=0.5,
             griddash='dot',
             tickformat=',',
-            rangemode='tozero',
-            title=f"{indicator} ({dff['Indicator Unit'].unique()[0]})",
+            rangemode='tozero'
         ),
         font=dict(
             family='BlinkMacSystemFont',
@@ -187,7 +185,8 @@ def create_graph(dff):
         mode='lines+markers',
         name=indicator
     ))  
-    title_text = f"{series_name}: {dff['Indicator'].unique()[0]}"
+    title_text = f"{series_name}: {dff['Indicator'].unique()[0]}" + (f" in {dff['Province'].unique()[0]}" if dff['Province'].nunique() == 1 else "") + (f" in {dff['Markets'].unique()[0]}" if dff['Markets'].nunique() == 1 else "")
+    print(title_text)
     fig1.update_layout(
         title=dict(
             text=title_text,
