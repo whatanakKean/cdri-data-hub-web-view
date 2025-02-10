@@ -1,6 +1,7 @@
 
 import sqlite3
 from dash import html, dcc, Input, Output, State, callback
+import dash
 import dash_mantine_components as dmc
 import dash_ag_grid as dag
 import pandas as pd
@@ -18,7 +19,6 @@ UNION ALL
 SELECT * FROM agriculture_data;
 """
 data = pd.read_sql_query(query, conn)
-print(data.columns)
 
 # Predefined suggested questions
 suggested_questions = [
@@ -51,10 +51,28 @@ data_explorer_page = html.Main(
                         # Suggestions dropdown
                         dmc.Autocomplete(
                             id="suggestions-autocomplete",
-                            placeholder="Select a suggestion...",
-                            data=[{"value": question, "label": question} for question in suggested_questions],
-                            style={"width": "100%", "marginBottom": "20px"}
+                            placeholder="Ask anything...",
+                            leftSection=DashIconify(icon="mingcute:ai-fill"),
+                            data=[{"value": question, "label"   : question} for question in suggested_questions],
+                            style={"width": "100%", "marginBottom": "20px"},
                         ),
+                        dmc.Box(
+                            dmc.Button(
+                                "Data Catalog",
+                                variant="outline",
+                                leftSection=DashIconify(icon="tdesign:data"),
+                                color="white",
+                                id="data-catalog-button",
+                            )
+                        ),
+                        dmc.Modal(
+                            id="data-catalog-modal",
+                            title="Data Catalog",
+                            children=[
+                                dmc.Text("data-catalog-modal-body"),
+                            ],
+                            fullScreen=True
+                        )
                     ],
                     className="animate__animated animate__fadeInUp animate__fast"
                 )
@@ -83,22 +101,25 @@ data_explorer_page = html.Main(
                     value="graph",
                 ),
                 ], shadow="xs", p="md", radius="md", withBorder=True),
-        ], fluid=True)
+        ], fluid=True),
+        dcc.Store(id='data-explorer-filter-state')
     ],
 )
 
 def create_dataview(dff):
-    # pivoted_data = dff.pivot_table(
-    #     index=[col for col in dff.columns if col not in ['Indicator', 'Indicator Value']],
-    #     columns='Indicator',
-    #     values='Indicator Value',
-    #     aggfunc='first'
-    # ).reset_index()
+    dff = dff.dropna(axis=1, how='all')
+    pivoted_data = dff.pivot_table(
+        index=[col for col in dff.columns if col not in ['Indicator', 'Indicator Value']],
+        columns='Indicator',
+        values='Indicator Value',
+        aggfunc='first'
+    ).reset_index()
+    print(pivoted_data)
     
     return html.Div([
-        dag.AgGrid(id='data-explorer-ag-grid', columnDefs=[{"headerName": col, "field": col} for col in dff.columns], rowData=dff.to_dict('records'), style={'height': '400px'}),
-        dmc.Button("Download Data", id="download-button", variant="outline", color="#336666", mt="md", style={'marginLeft': 'auto', 'display': 'flex', 'justifyContent': 'flex-end'}),
-        # dcc.Download(id="data-explorer-download-data")
+        dag.AgGrid(id='data-explorer-ag-grid', columnDefs=[{"headerName": col, "field": col} for col in pivoted_data.columns], rowData=pivoted_data.to_dict('records'), style={'height': '400px'}),
+        dmc.Button("Download Data", id="data-explorer-download-button", variant="outline", color="#336666", mt="md", style={'marginLeft': 'auto', 'display': 'flex', 'justifyContent': 'flex-end'}),
+        dcc.Download(id="data-explorer-download-data")
     ])
 
         
@@ -201,13 +222,14 @@ def create_graph(dff):
 
 # Callback to update data table based on the selected suggestion
 @callback(
-    Output("data-explorer-dataview-id", "children"),
+    [Output("data-explorer-dataview-id", "children"),
     Output("data-explorer-graph-id", "children"),
+    Output("data-explorer-filter-state", "data")],
     Input("suggestions-autocomplete", "value")
 )
 def update_data(selected_suggestion):
     if not selected_suggestion:
-        return [], []
+        return [], [], {}
 
     # Extract filters from the selected suggestion
     filters = {}
@@ -258,18 +280,23 @@ def update_data(selected_suggestion):
                 # If the filtered data is not empty, apply the filter
                 filtered_df = temp_df
     
-    return create_dataview(filtered_df), create_graph(filtered_df)
+    return create_dataview(filtered_df), create_graph(filtered_df), filtered_df.to_dict('records')
+
+@callback(Output("data-explorer-download-data", "data"), Input("data-explorer-download-button", "n_clicks"), State('data-explorer-filter-state', 'data'))
+def download_data(n_clicks, filtered_df):
+    if n_clicks is None: return dash.no_update
+    filtered_df = pd.DataFrame(filtered_df)
+    return dict(content=filtered_df.to_csv(index=False), filename="data.csv", type="application/csv")
 
 
-# Agriculture
-# = Series Name
-# - Province
-# - Indicator
-# = Year
-
-# Economic
-# = Series Name
-# = Market
-# = Product
-# - Indicator
-# = Year
+# Callback to handle opening and closing the modal
+@callback(
+    Output("data-catalog-modal", "opened"),
+    Input("data-catalog-button", "n_clicks"),
+    State("data-catalog-modal", "opened"),
+    prevent_initial_call=True
+)
+def toggle_modal(n_clicks, opened):
+    if n_clicks:
+        return not opened
+    return opened
