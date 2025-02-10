@@ -186,7 +186,7 @@ def create_graph(dff):
         name=indicator
     ))  
     title_text = f"{series_name}: {dff['Indicator'].unique()[0]}" + (f" in {dff['Province'].unique()[0]}" if dff['Province'].nunique() == 1 else "") + (f" in {dff['Markets'].unique()[0]}" if dff['Markets'].nunique() == 1 else "")
-    print(title_text)
+
     fig1.update_layout(
         title=dict(
             text=title_text,
