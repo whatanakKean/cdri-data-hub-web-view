@@ -458,7 +458,7 @@ def create_modal(dff, feature):
     indicator = feature['Indicator']
     dff_filtered = dff[dff['Indicator'] == indicator]
     series_name = dff_filtered['Series Name'].unique()[0]
-    print(feature)  
+
     # Define layout
     layout = go.Layout(
         images=[dict(

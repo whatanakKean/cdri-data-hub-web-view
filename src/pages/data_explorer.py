@@ -11,15 +11,19 @@ from fuzzywuzzy import process
 
 # Sample dataset
 conn = sqlite3.connect("./src/data/data.db")
-data = pd.read_sql_query(f"SELECT * FROM agriculture_data;", conn)
+# data = pd.read_sql_query(f"SELECT * FROM agriculture_data;", conn)
+query = """
+SELECT * FROM economic_data
+UNION ALL
+SELECT * FROM agriculture_data;
+"""
+data = pd.read_sql_query(query, conn)
+print(data.columns)
 
 # Predefined suggested questions
 suggested_questions = [
-    "Show rice production in [Province] for [Year].",
-    "What is the area planted for rice in [Province]?",
-    "Compare rice production between [Province 1] and [Province 2].",
-    "List all provinces with rice production data for [Year].",
-    "What is the total rice production in [Year]?"
+    "Show rice production yield in Battambang.",
+    "What is the area planted for rice in Kandal?"
 ]
 
 # About page with suggestions autocomplete
@@ -63,27 +67,11 @@ data_explorer_page = html.Main(
                     children=[
                         dmc.TabsList(
                             [
-                                # dmc.TabsTab("Map View", leftSection=DashIconify(icon="tabler:map"), value="map"),
                                 dmc.TabsTab("Visualization", leftSection=DashIconify(icon="tabler:chart-bar"), value="graph"),
                                 dmc.TabsTab("Data Hub", leftSection=DashIconify(icon="tabler:database"), value="dataview"),
                             ], 
                             grow="True",
                         ),
-                        # dmc.TabsPanel(
-                        #     children=[
-                        #         html.Div(id='data-explorer-map-id'),
-                        #         dmc.Box(
-                        #             style={"paddingTop": "2px", "paddingBottom": "10px"},
-                        #             children=[
-                        #                 dmc.Slider(
-                        #                     id="year-slider",
-                        #                     step=1
-                        #                 )
-                        #             ]
-                        #         )       
-                        #     ], 
-                        #     value="map"
-                        # ),
                         dmc.TabsPanel(                               
                             children=[
                                 html.Div(id='data-explorer-graph-id'),
@@ -218,7 +206,6 @@ def create_graph(dff):
     Input("suggestions-autocomplete", "value")
 )
 def update_data(selected_suggestion):
-
     if not selected_suggestion:
         return [], []
 
@@ -226,42 +213,63 @@ def update_data(selected_suggestion):
     filters = {}
     
     # Store original and lowercase versions of Series Name
-    lower_series_name = {name.lower(): name for name in data['Series Name'].unique()}
+    lower_series_name = {name.lower(): name for name in data['Series Name'].unique() if name is not None}
     match_series_name = process.extractOne(selected_suggestion.lower(), lower_series_name.keys(), score_cutoff=50)
     if match_series_name:
         best_match_lower, score = match_series_name
         filters["Series Name"] = lower_series_name[best_match_lower]
-        print(">>>>> Series Name Result: ", filters["Series Name"], score)
         
     # Store original and lowercase versions of Indicator
-    lower_indicator = {name.lower(): name for name in data['Indicator'].unique()}
+    lower_indicator = {name.lower(): name for name in data['Indicator'].unique() if name is not None}
     match_indicator = process.extractOne(selected_suggestion.lower(), lower_indicator.keys(), score_cutoff=50)
     if match_indicator:
         best_match_lower, score = match_indicator
         filters["Indicator"] = lower_indicator[best_match_lower]
-        print(">>>>> Indicator Result: ", filters["Indicator"], score)
     
-    # # Store original and lowercase versions of Markets
-    # lower_markets = {name.lower(): name for name in data['Markets'].unique()}
-    # match_markets = process.extractOne(selected_suggestion.lower(), lower_markets.keys(), score_cutoff=50)
-    # if match_markets:
-    #     best_match_lower, score = match_markets
-    #     filters["Markets"] = lower_markets[best_match_lower]
-    #     print(">>>>> Markets Result: ", filters["Markets"], score)
+    # Store original and lowercase versions of Province
+    lower_indicator = {name.lower(): name for name in data['Province'].unique() if name is not None}
+    match_indicator = process.extractOne(selected_suggestion.lower(), lower_indicator.keys(), score_cutoff=50)
+    if match_indicator:
+        best_match_lower, score = match_indicator
+        filters["Province"] = lower_indicator[best_match_lower]
+    
+    # Store original and lowercase versions of Markets
+    lower_indicator = {name.lower(): name for name in data['Markets'].unique() if name is not None}
+    match_indicator = process.extractOne(selected_suggestion.lower(), lower_indicator.keys(), score_cutoff=50)
+    if match_indicator:
+        best_match_lower, score = match_indicator
+        filters["Markets"] = lower_indicator[best_match_lower]
         
-    # # Store original and lowercase versions of Province
-    # lower_province = {name.lower(): name for name in data['Province'].unique()}
-    # match_province = process.extractOne(selected_suggestion.lower(), lower_province.keys(), score_cutoff=50)
-    # if match_province:
-    #     best_match_lower, score = match_province
-    #     filters["Province"] = lower_province[best_match_lower]
-    #     print(">>>>> Province Result: ", filters["Province"], score)
-    
-
+    # Store original and lowercase versions of Products
+    lower_indicator = {name.lower(): name for name in data['Products'].unique() if name is not None}
+    match_indicator = process.extractOne(selected_suggestion.lower(), lower_indicator.keys(), score_cutoff=50)
+    if match_indicator:
+        best_match_lower, score = match_indicator
+        filters["Products"] = lower_indicator[best_match_lower]
     
     # Filter the dataset
     filtered_df = data
     for key, value in filters.items():
-        filtered_df = filtered_df[filtered_df[key] == value]
+        if key in filtered_df.columns:
+            # Apply the filter temporarily
+            temp_df = filtered_df[filtered_df[key] == value]
+            
+            if not temp_df.empty:
+                # If the filtered data is not empty, apply the filter
+                filtered_df = temp_df
     
     return create_dataview(filtered_df), create_graph(filtered_df)
+
+
+# Agriculture
+# = Series Name
+# - Province
+# - Indicator
+# = Year
+
+# Economic
+# = Series Name
+# = Market
+# = Product
+# - Indicator
+# = Year

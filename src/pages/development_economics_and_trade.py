@@ -619,7 +619,6 @@ def handle_map_click(click_data, is_modal_open):
     
     # Extract feature properties from the clicked data
     feature = click_data.get("properties", {})
-    print(feature)
     
     dff = filter_data(
         data=data,
