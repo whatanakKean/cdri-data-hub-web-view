@@ -9,10 +9,11 @@ from ..utils.utils import get_info, filter_data, style_handle
 from dash_iconify import DashIconify
 import plotly.graph_objects as go
 from fuzzywuzzy import process
+import plotly.express as px
+import numpy as np
 
 # Sample dataset
 conn = sqlite3.connect("./src/data/data.db")
-# data = pd.read_sql_query(f"SELECT * FROM agriculture_data;", conn)
 query = """
 SELECT * FROM economic_data
 UNION ALL
@@ -46,8 +47,8 @@ data_explorer_page = html.Main(
                 dmc.Stack(
                     p="lg",
                     children=[
-                        dmc.Title('Data Explorer', order=1, style={'color': 'white', 'fontSize': '2rem'}),
-                        dmc.Text("Explore Data, Visualizations, and Spatial Insights with Natural Language", size="xl", style={'color': 'white', 'fontSize': '1rem'}),
+                        dmc.Title('Data Hub Explorer', order=1, style={'color': 'white', 'fontSize': '2rem'}),
+                        dmc.Text("Explore Data and Visualizations with Natural Language", size="xl", style={'color': 'white', 'fontSize': '1rem'}),
                         # Suggestions dropdown
                         dmc.Autocomplete(
                             id="suggestions-autocomplete",
@@ -56,15 +57,15 @@ data_explorer_page = html.Main(
                             data=[{"value": question, "label"   : question} for question in suggested_questions],
                             style={"width": "100%", "marginBottom": "20px"},
                         ),
-                        dmc.Box(
-                            dmc.Button(
-                                "Data Catalog",
-                                variant="outline",
-                                leftSection=DashIconify(icon="tdesign:data"),
-                                color="white",
-                                id="data-catalog-button",
-                            )
-                        ),
+                        # dmc.Box(
+                        #     dmc.Button(
+                        #         "Data Catalog",
+                        #         variant="outline",
+                        #         leftSection=DashIconify(icon="tdesign:data"),
+                        #         color="white",
+                        #         id="data-catalog-button",
+                        #     )
+                        # ),
                         dmc.Modal(
                             id="data-catalog-modal",
                             title="Data Catalog",
@@ -124,9 +125,13 @@ def create_dataview(dff):
         
 def create_graph(dff):
     # Aggregate data
-    dff_filtered = dff.groupby('Year')['Indicator Value'].sum().reset_index()
+    dff_filtered = dff.groupby(['Year', 'Indicator'])['Indicator Value'].sum().reset_index()
     series_name = dff['Series Name'].unique()[0]
-    indicator = dff['Indicator'].unique()[0]
+    
+    # Get the unique indicators
+    unique_indicators = dff['Indicator'].unique()
+
+    print(">> ", unique_indicators)
 
     # Define layout
     layout = go.Layout(
@@ -143,7 +148,8 @@ def create_graph(dff):
             gridwidth=0.5,
             griddash='dot',
             tickformat=',',
-            rangemode='tozero'
+            rangemode='tozero',
+            title=f"{dff['Indicator Unit'].unique()[0]}",
         ),
         font=dict(
             family='BlinkMacSystemFont',
@@ -163,34 +169,29 @@ def create_graph(dff):
             tickvals=dff_filtered['Year'].unique(),
             title="Produced By: CDRI Data Hub",
         ),
-        # annotations=[ 
-        #     dict(
-        #         x=0.5,
-        #         y=-0.15, 
-        #         xref="paper", yref="paper",
-        #         text="Produced By: CDRI Data Hub",
-        #         showarrow=False,
-        #         font=dict(size=12, color='rgba(0, 0, 0, 0.7)'),
-        #         align='center'
-        #     ),
-        # ],
         margin=dict(t=100, b=80, l=50, r=50),
     )
 
     # Create figure
     fig1 = go.Figure(layout=layout)
-    fig1.add_trace(go.Scatter(
-        x=dff_filtered['Year'],
-        y=dff_filtered['Indicator Value'],
-        mode='lines+markers',
-        name=indicator
-    ))  
-    title_text = f"{series_name}: {dff['Indicator'].unique()[0]}" + (f" in {dff['Province'].unique()[0]}" if dff['Province'].nunique() == 1 else "") + (f" in {dff['Markets'].unique()[0]}" if dff['Markets'].nunique() == 1 else "")
 
+    # Loop through unique indicators and add traces
+    for indicator in unique_indicators:
+        indicator_data = dff_filtered[dff_filtered['Indicator'] == indicator]
+        fig1.add_trace(go.Scatter(
+            x=indicator_data['Year'],
+            y=indicator_data['Indicator Value'],
+            mode='lines+markers',
+            name=indicator
+        ))
+
+    # Set title
     fig1.update_layout(
         title=dict(
-            text=title_text,
-        ),
+            text = f"{series_name}: {', '.join(unique_indicators)}" + 
+            (f" in {dff['Province'].unique()[0]}" if 'Province' in dff.columns and dff['Province'].nunique() == 1 else "") + 
+            (f" to {dff['Markets'].unique()[0]}" if 'Markets' in dff.columns and dff['Markets'].nunique() == 1 else "")
+        )
     )
 
     # Return graph
@@ -212,12 +213,8 @@ def create_graph(dff):
                 responsive=True,
             ),
             dmc.Divider(size="sm"),
-            dmc.Alert(
-                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-                title="Description",
-                color="green"
-            ),
         ])
+
 
 # Callback to update data table based on the selected suggestion
 @callback(
@@ -228,7 +225,15 @@ def create_graph(dff):
 )
 def update_data(selected_suggestion):
     if not selected_suggestion:
-        return [], [], {}
+        # Default content when no question is entered
+        default_message = dmc.Alert(
+            "Please enter a question in the search bar above to explore data visualizations and tables.",
+            title="Welcome to the CDRI Data Hub Explorer!",
+            color="blue",
+            variant="light",
+            style={'margin': '20px'}
+        )
+        return default_message, default_message, {}
 
     # Extract filters from the selected suggestion
     filters = {}
@@ -279,6 +284,7 @@ def update_data(selected_suggestion):
                 # If the filtered data is not empty, apply the filter
                 filtered_df = temp_df
     
+    # return create_dataview(filtered_df), create_graph(filtered_df), filtered_df.to_dict('records')
     return create_dataview(filtered_df), create_graph(filtered_df), filtered_df.to_dict('records')
 
 @callback(Output("data-explorer-download-data", "data"), Input("data-explorer-download-button", "n_clicks"), State('data-explorer-filter-state', 'data'))

@@ -21,10 +21,10 @@ def sidebar(data):
     return dmc.Stack([
         dmc.Paper([
             dmc.Select(
-                label="Select Series Name", 
+                label="Select Dataset", 
                 id="series-name-dropdown", 
                 value='Rice Production', 
-                data=[{'label': option, 'value': option} for option in sorted(data["Series Name"].dropna().str.strip().unique()) if option],
+                data=[{'label': option, 'value': option} for option in data["Series Name"].dropna().str.strip().unique() if option],
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
                 checkIconPosition="right",
@@ -424,8 +424,8 @@ def create_graph(dff):
     ))  
     fig1.update_layout(
         title=dict(
-            text= f"{series_name}: {dff['Indicator'].unique()[0]}",
-        ),
+            text = f"{series_name}: {dff['Indicator'].unique()[0]}" + (f" in {dff['Province'].unique()[0]}" if 'Province' in dff.columns and dff['Province'].nunique() == 1 else "") + (f" to {dff['Markets'].unique()[0]}" if 'Markets' in dff.columns and dff['Markets'].nunique() == 1 else "")
+        )
     )
 
     # Return graph
