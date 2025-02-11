@@ -1,3 +1,4 @@
+
 import sqlite3
 from dash import html, dcc, Input, Output, State, callback
 import dash
@@ -56,6 +57,15 @@ data_explorer_page = html.Main(
                             data=[{"value": question, "label"   : question} for question in suggested_questions],
                             style={"width": "100%", "marginBottom": "20px"},
                         ),
+                        # dmc.Box(
+                        #     dmc.Button(
+                        #         "Data Catalog",
+                        #         variant="outline",
+                        #         leftSection=DashIconify(icon="tdesign:data"),
+                        #         color="white",
+                        #         id="data-catalog-button",
+                        #     )
+                        # ),
                         dmc.Modal(
                             id="data-catalog-modal",
                             title="Data Catalog",
@@ -93,14 +103,6 @@ data_explorer_page = html.Main(
                 ),
                 ], shadow="xs", p="md", radius="md", withBorder=True),
         ], fluid=True),
-        
-        dmc.LoadingOverlay(
-            visible=False,  # Initially hidden
-            id="loading-overlay",
-            overlayProps={"radius": "sm", "blur": 2},
-            zIndex=10,  # Ensure it's above other content
-        ),
-        
         dcc.Store(id='data-explorer-filter-state')
     ],
 )
@@ -217,15 +219,11 @@ def create_graph(dff):
 # Callback to update data table based on the selected suggestion
 @callback(
     [Output("data-explorer-dataview-id", "children"),
-     Output("data-explorer-graph-id", "children"),
-     Output("data-explorer-filter-state", "data"),
-     Output("loading-overlay", "visible")],  # Add output for loading overlay visibility
+    Output("data-explorer-graph-id", "children"),
+    Output("data-explorer-filter-state", "data")],
     Input("suggestions-autocomplete", "value")
 )
 def update_data(selected_suggestion):
-    # Show the loading overlay
-    loading_overlay_visible = True
-
     if not selected_suggestion:
         # Default content when no question is entered
         default_message = dmc.Alert(
@@ -235,7 +233,7 @@ def update_data(selected_suggestion):
             variant="light",
             style={'margin': '20px'}
         )
-        return default_message, default_message, {}, False  # Hide loading overlay after default message
+        return default_message, default_message, {}
 
     # Extract filters from the selected suggestion
     filters = {}
@@ -254,6 +252,27 @@ def update_data(selected_suggestion):
         best_match_lower, score = match_indicator
         filters["Indicator"] = lower_indicator[best_match_lower]
     
+    # Store original and lowercase versions of Province
+    lower_indicator = {name.lower(): name for name in data['Province'].unique() if name is not None}
+    match_indicator = process.extractOne(selected_suggestion.lower(), lower_indicator.keys(), score_cutoff=50)
+    if match_indicator:
+        best_match_lower, score = match_indicator
+        filters["Province"] = lower_indicator[best_match_lower]
+    
+    # Store original and lowercase versions of Markets
+    lower_indicator = {name.lower(): name for name in data['Markets'].unique() if name is not None}
+    match_indicator = process.extractOne(selected_suggestion.lower(), lower_indicator.keys(), score_cutoff=50)
+    if match_indicator:
+        best_match_lower, score = match_indicator
+        filters["Markets"] = lower_indicator[best_match_lower]
+        
+    # Store original and lowercase versions of Products
+    lower_indicator = {name.lower(): name for name in data['Products'].unique() if name is not None}
+    match_indicator = process.extractOne(selected_suggestion.lower(), lower_indicator.keys(), score_cutoff=50)
+    if match_indicator:
+        best_match_lower, score = match_indicator
+        filters["Products"] = lower_indicator[best_match_lower]
+    
     # Filter the dataset
     filtered_df = data
     for key, value in filters.items():
@@ -265,9 +284,8 @@ def update_data(selected_suggestion):
                 # If the filtered data is not empty, apply the filter
                 filtered_df = temp_df
     
-    # Return graph, table, and hide the loading overlay
-    return create_dataview(filtered_df), create_graph(filtered_df), filtered_df.to_dict('records'), False  # Hide overlay after data processing
-
+    # return create_dataview(filtered_df), create_graph(filtered_df), filtered_df.to_dict('records')
+    return create_dataview(filtered_df), create_graph(filtered_df), filtered_df.to_dict('records')
 
 @callback(Output("data-explorer-download-data", "data"), Input("data-explorer-download-button", "n_clicks"), State('data-explorer-filter-state', 'data'))
 def download_data(n_clicks, filtered_df):
