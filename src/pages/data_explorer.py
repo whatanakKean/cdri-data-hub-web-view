@@ -5,12 +5,9 @@ import dash
 import dash_mantine_components as dmc
 import dash_ag_grid as dag
 import pandas as pd
-from ..utils.utils import get_info, filter_data, style_handle
 from dash_iconify import DashIconify
 import plotly.graph_objects as go
 from fuzzywuzzy import process
-import plotly.express as px
-import numpy as np
 
 # Sample dataset
 conn = sqlite3.connect("./src/data/data.db")
@@ -128,8 +125,6 @@ def create_graph(dff):
     dff_filtered = dff.groupby('Year')['Indicator Value'].sum().reset_index()
     series_name = dff['Series Name'].unique()[0]
     indicator = dff['Indicator'].unique()[0]
-    
-    print(">> ", dff['Indicator'].unique())
 
     # Define layout
     layout = go.Layout(
