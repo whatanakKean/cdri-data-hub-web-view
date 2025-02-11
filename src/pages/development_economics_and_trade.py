@@ -169,7 +169,7 @@ def create_dataview(dff):
     ).reset_index()
     
     return html.Div([
-        dag.AgGrid(id='ag-grid-economic', columnDefs=[{"headerName": col, "field": col} for col in pivoted_data.columns], rowData=pivoted_data.to_dict('records'), style={'height': '400px'}),
+        dag.AgGrid(id='ag-grid-economic', defaultColDef={"filter": True}, columnDefs=[{"headerName": col, "field": col} for col in pivoted_data.columns], rowData=pivoted_data.to_dict('records'), style={'height': '400px'}),
         dmc.Button("Download Data", id="download-button-economic", variant="outline", color="#336666", mt="md", style={'marginLeft': 'auto', 'display': 'flex', 'justifyContent': 'flex-end'}),
         dcc.Download(id="download-data-economic")
     ])
