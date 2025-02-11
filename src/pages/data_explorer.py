@@ -125,13 +125,11 @@ def create_dataview(dff):
         
 def create_graph(dff):
     # Aggregate data
-    dff_filtered = dff.groupby(['Year', 'Indicator'])['Indicator Value'].sum().reset_index()
+    dff_filtered = dff.groupby('Year')['Indicator Value'].sum().reset_index()
     series_name = dff['Series Name'].unique()[0]
+    indicator = dff['Indicator'].unique()[0]
     
-    # Get the unique indicators
-    unique_indicators = dff['Indicator'].unique()
-
-    print(">> ", unique_indicators)
+    print(">> ", dff['Indicator'].unique())
 
     # Define layout
     layout = go.Layout(
@@ -149,7 +147,7 @@ def create_graph(dff):
             griddash='dot',
             tickformat=',',
             rangemode='tozero',
-            title=f"{dff['Indicator Unit'].unique()[0]}",
+            title=f"{indicator} ({dff['Indicator Unit'].unique()[0]})",
         ),
         font=dict(
             family='BlinkMacSystemFont',
@@ -174,23 +172,16 @@ def create_graph(dff):
 
     # Create figure
     fig1 = go.Figure(layout=layout)
+    fig1.add_trace(go.Scatter(
+        x=dff_filtered['Year'],
+        y=dff_filtered['Indicator Value'],
+        mode='lines+markers',
+        name=indicator
+    ))
 
-    # Loop through unique indicators and add traces
-    for indicator in unique_indicators:
-        indicator_data = dff_filtered[dff_filtered['Indicator'] == indicator]
-        fig1.add_trace(go.Scatter(
-            x=indicator_data['Year'],
-            y=indicator_data['Indicator Value'],
-            mode='lines+markers',
-            name=indicator
-        ))
-
-    # Set title
     fig1.update_layout(
         title=dict(
-            text = f"{series_name}: {', '.join(unique_indicators)}" + 
-            (f" in {dff['Province'].unique()[0]}" if 'Province' in dff.columns and dff['Province'].nunique() == 1 else "") + 
-            (f" to {dff['Markets'].unique()[0]}" if 'Markets' in dff.columns and dff['Markets'].nunique() == 1 else "")
+            text = f"{series_name}: {dff['Indicator'].unique()[0]}" + (f" in {dff['Province'].unique()[0]}" if 'Province' in dff.columns and dff['Province'].nunique() == 1 else "") + (f" to {dff['Markets'].unique()[0]}" if 'Markets' in dff.columns and dff['Markets'].nunique() == 1 else "")
         )
     )
 
