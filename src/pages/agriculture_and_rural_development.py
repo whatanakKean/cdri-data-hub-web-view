@@ -119,6 +119,12 @@ agriculture_and_rural_development = dmc.Container([
         dmc.GridCol([
             dmc.Stack([
                 dmc.Paper([
+                    dmc.Autocomplete(
+                        id="suggestions-autocomplete-test",
+                        placeholder="Ask anything...",
+                        leftSection=DashIconify(icon="mingcute:ai-fill"),
+                        style={"width": "100%", "marginBottom": "20px"},
+                    ),
                     dmc.Tabs(
                         children=[
                             dmc.TabsList(

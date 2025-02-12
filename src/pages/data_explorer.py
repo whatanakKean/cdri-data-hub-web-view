@@ -125,8 +125,9 @@ def create_graph(dff):
     dff_filtered = dff.groupby('Year')['Indicator Value'].sum().reset_index()
     series_name = dff['Series Name'].unique()[0]
     indicator = dff['Indicator'].unique()[0]
+    indicator_unit = dff['Indicator Unit'].unique()[0]
 
-    # Define layout
+    # Define layout for both charts
     layout = go.Layout(
         images=[dict(
             source="./assets/CDRI Logo.png",
@@ -142,7 +143,7 @@ def create_graph(dff):
             griddash='dot',
             tickformat=',',
             rangemode='tozero',
-            title=f"{indicator} ({dff['Indicator Unit'].unique()[0]})",
+            title=f"{indicator} ({indicator_unit})",
         ),
         font=dict(
             family='BlinkMacSystemFont',
@@ -165,41 +166,70 @@ def create_graph(dff):
         margin=dict(t=100, b=80, l=50, r=50),
     )
 
-    # Create figure
-    fig1 = go.Figure(layout=layout)
-    fig1.add_trace(go.Scatter(
+    # Create line chart
+    fig_line = go.Figure(layout=layout)
+    fig_line.add_trace(go.Scatter(
         x=dff_filtered['Year'],
         y=dff_filtered['Indicator Value'],
         mode='lines+markers',
-        name=indicator
+        name=f"{indicator} (Line)"
     ))
 
-    fig1.update_layout(
-        title=dict(
-            text = f"{series_name}: {dff['Indicator'].unique()[0]}" + (f" in {dff['Province'].unique()[0]}" if 'Province' in dff.columns and dff['Province'].nunique() == 1 else "") + (f" to {dff['Markets'].unique()[0]}" if 'Markets' in dff.columns and dff['Markets'].nunique() == 1 else "")
-        )
-    )
+    # Create bar chart
+    fig_bar = go.Figure(layout=layout)
+    fig_bar.add_trace(go.Bar(
+        x=dff_filtered['Year'],
+        y=dff_filtered['Indicator Value'],
+        name=f"{indicator} (Bar)",
+        marker_color='rgba(55, 128, 191, 0.7)'
+    ))
 
-    # Return graph
+    # Update layout with title
+    title_suffix = ""
+    if 'Province' in dff.columns and dff['Province'].nunique() == 1:
+        title_suffix += f" in {dff['Province'].unique()[0]}"
+    if 'Markets' in dff.columns and dff['Markets'].nunique() == 1:
+        title_suffix += f" to {dff['Markets'].unique()[0]}"
+
+    fig_line.update_layout(title=dict(text=f"{series_name} {indicator}{title_suffix}"))
+    fig_bar.update_layout(title=dict(text=f"{series_name} {indicator}{title_suffix}"), bargap=0.5)
+
+    # Return graph components
     return html.Div([ 
-            dcc.Graph(
-                id="figure-linechart", 
-                style={'minHeight': '450px'},
-                figure=fig1, 
-                config={
-                    'displaylogo': False,
-                    'toImageButtonOptions': {
-                        'format': 'png',
-                        'filename': 'cdri_datahub_viz',
-                        'height': 500,
-                        'width': 800,
-                        'scale': 6
-                    },
+        dcc.Graph(
+            id="figure-linechart", 
+            style={'minHeight': '450px'},
+            figure=fig_line, 
+            config={
+                'displaylogo': False,
+                'toImageButtonOptions': {
+                    'format': 'png',
+                    'filename': 'cdri_datahub_linechart',
+                    'height': 500,
+                    'width': 800,
+                    'scale': 6
                 },
-                responsive=True,
-            ),
-            dmc.Divider(size="sm"),
-        ])
+            },
+            responsive=True
+        ),
+        dmc.Divider(size="sm"),
+        dcc.Graph(
+            id="figure-barchart", 
+            style={'minHeight': '450px'},
+            figure=fig_bar, 
+            config={
+                'displaylogo': False,
+                'toImageButtonOptions': {
+                    'format': 'png',
+                    'filename': 'cdri_datahub_barchart',
+                    'height': 500,
+                    'width': 800,
+                    'scale': 6
+                },
+            },
+            responsive=True,
+        ),
+    ])
 
 
 # Callback to update data table based on the selected suggestion
