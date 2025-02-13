@@ -31,30 +31,6 @@ def sidebar(data):
                 allowDeselect=False,
             ),
             dmc.Select(
-                label="Select Sector", 
-                id="sector-dropdown-economic", 
-                value='Economic', 
-                data=[{'label': option, 'value': option} for option in sorted(data["Sector"].dropna().str.strip().unique()) if option],
-                withScrollArea=False,
-                styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
-                mt="md",
-                checkIconPosition="right",
-                allowDeselect=False,
-                style={'display': 'none'},
-            ),
-            dmc.Select(
-                label="Select Sub-Sector (1)", 
-                id="subsector-1-dropdown-economic", 
-                value='Trade', 
-                data=[{'label': option, 'value': option} for option in sorted(data["Sub-Sector (1)"].dropna().str.strip().unique())],
-                withScrollArea=False,
-                styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
-                mt="md",
-                checkIconPosition="right",
-                allowDeselect=False,
-                style={'display': 'none'},
-            ),
-            dmc.Select(
                 label="Select Product", 
                 id="product-dropdown-economic", 
                 value='Articles of apparel and clothing accessories, knitted or crocheted.', 
@@ -327,17 +303,6 @@ def create_graph(dff):
             tickvals=dff_filtered['Year'].unique(),
             title="Produced By: CDRI Data Hub",
         ),
-        # annotations=[ 
-        #     dict(
-        #         x=0.5,
-        #         y=-0.15, 
-        #         xref="paper", yref="paper",
-        #         text="Produced By: CDRI Data Hub",
-        #         showarrow=False,
-        #         font=dict(size=12, color='rgba(0, 0, 0, 0.7)'),
-        #         align='center'
-        #     ),
-        # ],
         margin=dict(t=100, b=80, l=50, r=50),
     )
 
@@ -471,55 +436,29 @@ def info_hover(series_name, year, indicator, indicator_unit, feature):
 
 # Callbacks
 @callback([Output('graph-id-economic', 'children'), Output('map-id-economic', 'children'), Output('dataview-container-economic', 'children'), Output('metadata-panel-economic', 'children'), Output('indicator-unit-economic', 'data')],
-          [Input("sector-dropdown-economic", "value"), Input('series-name-dropdown-economic', 'value'), Input("subsector-1-dropdown-economic", "value"), Input("product-dropdown-economic", "value"),
+          [Input('series-name-dropdown-economic', 'value'), Input("product-dropdown-economic", "value"),
            Input("indicator-dropdown-economic", "value"), Input("market-dropdown-economic", "value"), Input("year-dropdown-economic", "value")])
-def update_report(sector, series_name, subsector_1, product, indicator, market, year):
-    dff = filter_data(data=data, sector=sector, series_name=series_name, subsector_1=subsector_1, indicator=indicator, product=product, market=market)
+def update_report(series_name, product, indicator, market, year):
+    dff = filter_data(data=data, series_name=series_name, indicator=indicator, product=product, market=market)
     indicator_unit = dff['Indicator Unit'].unique()
     return create_graph(dff), create_map(dff, year), create_dataview(dff), create_metadata(dff), indicator_unit.tolist()
 
 
 @callback(Output("download-data-economic", "data"), Input("download-button-economic", "n_clicks"),
-          State('series-name-dropdown-economic', 'value'), State('sector-dropdown-economic', 'value'), State('subsector-1-dropdown-economic', 'value'), 
-          State('indicator-dropdown-economic', 'value'), State("market-dropdown-economic", "value"))
-def download_data(n_clicks, series_name, sector, subsector_1, indicator, market):
+          State('series-name-dropdown-economic', 'value'), State('indicator-dropdown-economic', 'value'), State("market-dropdown-economic", "value"))
+def download_data(n_clicks, series_name, indicator, market):
     if n_clicks is None: return dash.no_update
-    dff = filter_data(data=data, series_name=series_name, sector=sector, subsector_1=subsector_1, indicator=indicator, market=market)
+    dff = filter_data(data=data, series_name=series_name, indicator=indicator, market=market)
     return dict(content=dff.to_csv(index=False), filename="data.csv", type="application/csv")
-
-# Callbacks for dynamic dropdown updates
-@callback(
-    Output('subsector-1-dropdown-economic', 'data'),
-    Output('subsector-1-dropdown-economic', 'value'),
-    Input('series-name-dropdown-economic', 'value'),
-    Input('sector-dropdown-economic', 'value')
-)
-def update_subsector_1(series_name, sector):
-    # Filter data by Sector and Series Name
-    filtered_data = data[(data["Sector"] == sector) & (data["Series Name"] == series_name)]
-
-    # Extract unique Sub-Sector (1) values
-    subsector_1_options = filtered_data["Sub-Sector (1)"].dropna().str.strip().unique()
-
-    # Prepare dropdown options
-    dropdown_options = [{'label': option, 'value': option} for option in sorted(subsector_1_options)]
-
-    # Set default value if options exist, otherwise None
-    default_value = subsector_1_options[0] if subsector_1_options.size > 0 else None
-    
-    return dropdown_options, default_value
 
 @callback(
     Output('product-dropdown-economic', 'data'),
     Output('product-dropdown-economic', 'value'),
     Output('product-dropdown-economic', 'style'),
     Input('series-name-dropdown-economic', 'value'),
-    Input('sector-dropdown-economic', 'value'),
-    Input('subsector-1-dropdown-economic', 'value')
 )
-def update_products(series_name, sector, subsector_1):
-    # Get the subsector-2 options based on the sector and subsector-1
-    products_options = data[(data["Series Name"] == series_name) & (data["Sector"] == sector) & (data["Sub-Sector (1)"] == subsector_1)]["Products"].dropna().str.strip().unique()
+def update_products(series_name):
+    products_options = data[(data["Series Name"] == series_name)]["Products"].dropna().str.strip().unique()
     # Control visibility based on available options
     style = {'display': 'block'} if products_options.size > 0 else {'display': 'none'}
     return [{'label': option, 'value': option} for option in sorted(products_options)], products_options[0] if products_options.size > 0 else None, style
@@ -529,12 +468,9 @@ def update_products(series_name, sector, subsector_1):
     Output('market-dropdown-economic', 'value'),
     Output('market-dropdown-economic', 'style'),
     Input('series-name-dropdown-economic', 'value'),
-    Input('sector-dropdown-economic', 'value'),
-    Input('subsector-1-dropdown-economic', 'value')
 )
-def update_markets(series_name, sector, subsector_1):
-    # Get the subsector-2 options based on the sector and subsector-1
-    market_options = data[(data["Series Name"] == series_name) & (data["Sector"] == sector) & (data["Sub-Sector (1)"] == subsector_1)]["Markets"].dropna().str.strip().unique()
+def update_markets(series_name):
+    market_options = data[(data["Series Name"] == series_name)]["Markets"].dropna().str.strip().unique()
     # Control visibility based on available options
     style = {'display': 'block'} if market_options.size > 0 else {'display': 'none'}
     return [{'label': option, 'value': option} for option in ['All'] + list(sorted(market_options))], 'All', style
@@ -544,14 +480,12 @@ def update_markets(series_name, sector, subsector_1):
     Output('indicator-dropdown-economic', 'data'),
     Output('indicator-dropdown-economic', 'value'),
     Input('series-name-dropdown-economic', 'value'),
-    Input('sector-dropdown-economic', 'value'),
-    Input('subsector-1-dropdown-economic', 'value'),
     Input('market-dropdown-economic', 'value'),
     prevent_initial_call=False
 )
-def update_indicators(series_name, sector, subsector_1, market):
+def update_indicators(series_name, market):
     # Filter data based on the selected filters
-    dff = filter_data(data=data, series_name=series_name, sector=sector, subsector_1=subsector_1, market=market)
+    dff = filter_data(data=data, series_name=series_name, market=market)
     
     # Extract unique indicator values
     indicator_values = dff['Indicator'].unique().tolist()
@@ -575,15 +509,13 @@ def update_indicators(series_name, sector, subsector_1, market):
     Output('year-dropdown-economic', 'value'),
     Output('year-dropdown-economic', 'style'),
     Input('series-name-dropdown-economic', 'value'),
-    Input('sector-dropdown-economic', 'value'),
-    Input('subsector-1-dropdown-economic', 'value'),
     Input('indicator-dropdown-economic', 'value'),
     Input('market-dropdown-economic', 'value'),
     Input('active-tab-economic', 'value'),
 )
-def update_year_dropdown(series_name, sector, subsector_1, indicator, market, active_tab):
+def update_year_dropdown(series_name, indicator, market, active_tab):
     # Filter the data based on the selected filters
-    dff = filter_data(data=data, series_name=series_name, sector=sector, subsector_1=subsector_1, indicator=indicator, market=market)
+    dff = filter_data(data=data, series_name=series_name, indicator=indicator, market=market)
     
     # Extract unique year values
     year_values = dff['Year'].dropna().unique().tolist()

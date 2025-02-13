@@ -2,7 +2,7 @@ import json
 import math
 import sqlite3
 import dash
-from dash import html, dcc, Input, Output, State, ctx, callback
+from dash import html, dcc, Input, Output, State, callback
 import dash_mantine_components as dmc
 import dash_ag_grid as dag
 import pandas as pd
@@ -29,42 +29,6 @@ def sidebar(data):
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
                 checkIconPosition="right",
                 allowDeselect=False,
-            ),
-            dmc.Select(
-                label="Select Sector", 
-                id="sector-dropdown", 
-                value='Agriculture', 
-                data=[{'label': option, 'value': option} for option in sorted(data["Sector"].dropna().str.strip().unique()) if option],
-                withScrollArea=False,
-                styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
-                mt="md",
-                checkIconPosition="right",
-                allowDeselect=False,
-                style={'display': 'none'},
-            ),
-            dmc.Select(
-                label="Select Sub-Sector (1)", 
-                id="subsector-1-dropdown", 
-                value='Production', 
-                data=[{'label': option, 'value': option} for option in sorted(data["Sub-Sector (1)"].dropna().str.strip().unique())],
-                withScrollArea=False,
-                styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
-                mt="md",
-                checkIconPosition="right",
-                allowDeselect=False,
-                style={'display': 'none'},
-            ),
-            dmc.Select(
-                label="Select Sub-Sector (2)", 
-                id="subsector-2-dropdown", 
-                value='Rice', 
-                data=[{'label': option, 'value': option} for option in sorted(data["Sub-Sector (2)"].dropna().str.strip().unique())],
-                withScrollArea=False,
-                styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
-                mt="md",
-                checkIconPosition="right",
-                allowDeselect=False,
-                style={'display': 'none'},
             ),
             dmc.Select(
                 label="Select Province", 
@@ -190,6 +154,7 @@ def create_metadata(dff):
     return ""
 
 def create_map(dff, year):
+    print(dff)
     # Filter data for the selected year
     dff = dff[dff["Year"] == int(year)]
     series_name = dff['Series Name'].unique()[0]
@@ -406,17 +371,6 @@ def create_graph(dff):
             tickvals=dff_filtered['Year'].unique(),
             title="Produced By: CDRI Data Hub",
         ),
-        # annotations=[ 
-        #     dict(
-        #         x=0.5,
-        #         y=-0.15, 
-        #         xref="paper", yref="paper",
-        #         text="Produced By: CDRI Data Hub",
-        #         showarrow=False,
-        #         font=dict(size=12, color='rgba(0, 0, 0, 0.7)'),
-        #         align='center'
-        #     ),
-        # ],
         margin=dict(t=100, b=80, l=50, r=50),
     )
 
@@ -541,14 +495,12 @@ def create_modal(dff, feature):
 
 # Callbacks
 @callback([Output('graph-id', 'children'), Output('map-id', 'children'), Output('dataview-id', 'children'), Output('metadata-panel', 'children'), Output('indicator-unit', 'data')],
-          [Input("series-name-dropdown", "value"), Input("subsector-1-dropdown", "value"), Input("subsector-2-dropdown", "value"),
+          [Input("series-name-dropdown", "value"),
            Input("province-dropdown", "value"), Input("indicator-dropdown", "value"), Input("year-dropdown", "value")])
-def update_report(series_name, subsector_1, subsector_2, province, indicator, year):
+def update_report(series_name, province, indicator, year):
     dff = filter_data(
         data=data,
         series_name=series_name,
-        subsector_1=subsector_1 if subsector_1 else None,
-        subsector_2=subsector_2 if subsector_2 else None,
         province=province if province else None,
         indicator=indicator
     )
@@ -559,11 +511,10 @@ def update_report(series_name, subsector_1, subsector_2, province, indicator, ye
 
 
 @callback(Output("download-data", "data"), Input("download-button", "n_clicks"),
-          State('series-name-dropdown', 'value'), State('subsector-1-dropdown', 'value'),
-          State('subsector-2-dropdown', 'value'), State('province-dropdown', 'value'), State('indicator-dropdown', 'value'))
-def download_data(n_clicks, series_name, subsector_1, subsector_2, province, indicator):
+          State('series-name-dropdown', 'value'), State('province-dropdown', 'value'), State('indicator-dropdown', 'value'))
+def download_data(n_clicks, series_name, province, indicator):
     if n_clicks is None: return dash.no_update
-    dff = filter_data(data=data, series_name=series_name, subsector_1=subsector_1, subsector_2=subsector_2, province=province, indicator=indicator)
+    dff = filter_data(data=data, series_name=series_name, province=province, indicator=indicator)
     return dict(content=dff.to_csv(index=False), filename="data.csv", type="application/csv")
 
 
@@ -572,50 +523,15 @@ def download_data(n_clicks, series_name, subsector_1, subsector_2, province, ind
 def info_hover(series_name, year, indicator, indicator_unit, feature):
     return get_info(series_name=series_name, indicator=indicator, feature=feature, indicator_unit=indicator_unit, year=year)
 
-
-# Callbacks for dynamic dropdown updates
-@callback(
-    Output('subsector-1-dropdown', 'data'),
-    Output('subsector-1-dropdown', 'value'),
-    Input('series-name-dropdown', 'value')
-)
-def update_subsector_1(series_name):
-    subsector_1_options = data[data["Series Name"] == series_name]["Sub-Sector (1)"].dropna().str.strip().unique()
-    return [{'label': option, 'value': option} for option in sorted(subsector_1_options)], subsector_1_options[0] if subsector_1_options.size > 0 else None
-
-@callback(
-    Output('subsector-2-dropdown', 'data'),
-    Output('subsector-2-dropdown', 'value'),
-    Input('series-name-dropdown', 'value'),
-    Input('subsector-1-dropdown', 'value')
-)
-def update_subsector_2(series_name, subsector_1):
-    subsector_2_options = data[(data["Series Name"] == series_name) & (data["Sub-Sector (1)"] == subsector_1)]["Sub-Sector (2)"].dropna().str.strip().unique()
-    return [{'label': option, 'value': option} for option in sorted(subsector_2_options)], subsector_2_options[0] if subsector_2_options.size > 0 else None
-
 @callback(
     Output('province-dropdown', 'data'),
     Output('province-dropdown', 'value'),
     Output('province-dropdown', 'style'),
-    Input('series-name-dropdown', 'value'),
-    Input('subsector-1-dropdown', 'value'),
-    Input('subsector-2-dropdown', 'value')
+    Input('series-name-dropdown', 'value')
 )
-def update_province(series_name, subsector_1, subsector_2):
-    if subsector_2:
-        # Filter with subsector_2
-        province_options = data[
-            (data["Series Name"] == series_name) & 
-            (data["Sub-Sector (1)"] == subsector_1) & 
-            (data["Sub-Sector (2)"] == subsector_2)
-        ]["Province"].dropna().str.strip().unique()
-    else:
-        # Filter without subsector_2
-        province_options = data[
-            (data["Series Name"] == series_name) & 
-            (data["Sub-Sector (1)"] == subsector_1)
-        ]["Province"].dropna().str.strip().unique()
-        
+def update_province(series_name):
+    province_options = data[(data["Series Name"] == series_name)]["Province"].dropna().str.strip().unique()
+
     style = {'display': 'block'} if province_options.size > 0 else {'display': 'none'}
     return [{'label': option, 'value': option} for option in ['All'] + list(sorted(province_options))], 'All', style
 
@@ -623,13 +539,11 @@ def update_province(series_name, subsector_1, subsector_2):
     Output('indicator-dropdown', 'data'),
     Output('indicator-dropdown', 'value'),
     Input('series-name-dropdown', 'value'),
-    Input('subsector-1-dropdown', 'value'),
-    Input('subsector-2-dropdown', 'value'),
     Input('province-dropdown', 'value'),
     prevent_initial_call=False
 )
-def update_indicators(series_name, subsector_1, subsector_2, province):
-    dff = filter_data(data=data, series_name=series_name, subsector_1=subsector_1, subsector_2=subsector_2, province=province)
+def update_indicators(series_name, province):
+    dff = filter_data(data=data, series_name=series_name, province=province)
     
     # Extract unique indicator values
     indicator_values = dff['Indicator'].unique().tolist()
@@ -653,18 +567,14 @@ def update_indicators(series_name, subsector_1, subsector_2, province):
     Output('year-dropdown', 'value'),
     Output('year-dropdown', 'style'),
     Input('series-name-dropdown', 'value'),
-    Input('subsector-1-dropdown', 'value'),
-    Input('subsector-2-dropdown', 'value'),
     Input('province-dropdown', 'value'),
     Input('indicator-dropdown', 'value'),
     Input('active-tab', 'value'),
 )
-def update_year_dropdown(series_name, subsector_1, subsector_2, province, indicator, active_tab):
+def update_year_dropdown(series_name, province, indicator, active_tab):
     dff = filter_data(
         data=data,
         series_name=series_name,
-        subsector_1=subsector_1,
-        subsector_2=subsector_2,
         province=province,
         indicator=indicator
     )
