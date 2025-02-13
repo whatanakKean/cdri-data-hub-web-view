@@ -14,7 +14,7 @@ import dash_leaflet.express as dlx
 
 # Load data
 conn = sqlite3.connect("./src/data/data.db")
-data = pd.read_sql_query(f"SELECT * FROM economic_data;", conn)
+data = pd.read_sql_query(f"SELECT * FROM education_data;", conn)
 
 # Sidebar components
 def sidebar(data):
@@ -22,7 +22,7 @@ def sidebar(data):
         dmc.Paper([
             dmc.Select(
                 label="Select Dataset", 
-                id="series-name-dropdown-economic", 
+                id="series-name-dropdown-education", 
                 value='Export, by market', 
                 data=[{'label': option, 'value': option} for option in data["Series Name"].dropna().str.strip().unique() if option],
                 withScrollArea=False,
@@ -32,20 +32,9 @@ def sidebar(data):
             ),
             dmc.Select(
                 label="Select Product", 
-                id="product-dropdown-economic", 
+                id="product-dropdown-education", 
                 value='Articles of apparel and clothing accessories, knitted or crocheted.', 
-                data=[{'label': option, 'value': option} for option in sorted(data["Products"].dropna().str.strip().unique())],
-                withScrollArea=False,
-                styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
-                mt="md",
-                checkIconPosition="right",
-                allowDeselect=False,
-            ),
-            dmc.Select(
-                label="Select Market", 
-                id="market-dropdown-economic", 
-                value='All', 
-                data=[{'label': option, 'value': option} for option in ['All'] + list(sorted(data["Markets"].dropna().str.strip().unique()))],
+                data=[{'label': option, 'value': option} for option in sorted(data["Grade"].dropna().str.strip().unique())],
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
                 mt="md",
@@ -54,7 +43,7 @@ def sidebar(data):
             ),
             dmc.Select(
                 label="Select Indicator", 
-                id="indicator-dropdown-economic", 
+                id="indicator-dropdown-education", 
                 value='Value', 
                 data=[{'label': option, 'value': option} for option in list(sorted(data["Indicator"].dropna().str.strip().unique()))],
                 withScrollArea=False,
@@ -65,22 +54,22 @@ def sidebar(data):
             ),
             dmc.Select(
                 label="Select Year", 
-                id="year-dropdown-economic", 
-                value=str(int(data["Year"].dropna().unique()[-1])),
-        	    data=[{'label': str(int(option)), 'value': str(int(option))} for option in sorted(data["Year"].dropna().unique())],
+                id="year-dropdown-education", 
+                value=str(data["Year"].dropna().unique()[-1]),
+        	    data=[{'label': str(option), 'value': str(option)} for option in sorted(data["Year"].dropna().unique())],
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
                 mt="md",
                 checkIconPosition="right",
                 allowDeselect=False,
             )
-        ], id="filter-economic", shadow="xs", p="md", radius="md", withBorder=True),
+        ], id="filter-education", shadow="xs", p="md", radius="md", withBorder=True),
         
         dmc.Accordion(chevronPosition="right", variant="contained", radius="md", children=[
             dmc.AccordionItem(value="bender", children=[
                 dmc.AccordionControl(dmc.Group([html.Div([dmc.Text("Metadata"), dmc.Text("Information about current data", size="sm", fw=400, c="dimmed")])]),),
                 dmc.AccordionPanel(
-                    id="metadata-panel-economic",
+                    id="metadata-panel-education",
                     children=dmc.Text("Bender is a bending unit from the future...", size="sm")
                 )
             ])
@@ -88,7 +77,7 @@ def sidebar(data):
     ], gap="xs")
 
 # Page Layout
-development_economics_and_trade = dmc.Container([
+education = dmc.Container([
     dmc.Grid([
         dmc.GridCol(sidebar(data), span={"base": 12, "sm": 3}),
         dmc.GridCol([
@@ -106,29 +95,29 @@ development_economics_and_trade = dmc.Container([
                             ),
                             dmc.TabsPanel(
                                 children=[
-                                    html.Div(id='map-id-economic'),        
+                                    html.Div(id='map-id-education'),        
                                 ], 
                                 value="map"
                             ),
                             dmc.TabsPanel(                               
                                 children=[
-                                    html.Div(id='graph-id-economic'),
+                                    html.Div(id='graph-id-education'),
                                 ], 
                                 value="graph"
                             ),
-                            dmc.TabsPanel(html.Div(id='dataview-container-economic'), value="dataview"),
+                            dmc.TabsPanel(html.Div(id='dataview-container-education'), value="dataview"),
                         ], 
-                        id="active-tab-economic", value="map",
+                        id="active-tab-education", value="map",
                     ),
                 ], shadow="xs", p="md", radius="md", withBorder=True),
             ], gap="xs"),
             
-            dcc.Store(id="selected-point-data-economic"),
-            dcc.Store(id="indicator-unit-economic"),
+            dcc.Store(id="selected-point-data-education"),
+            dcc.Store(id="indicator-unit-education"),
             dmc.Modal(
-                id="info-modal-economic",
+                id="info-modal-education",
                 children=[
-                    dmc.Text(id="modal-body-economic"),
+                    dmc.Text(id="modal-body-education"),
                 ],
                 fullScreen=True
             )
@@ -145,9 +134,9 @@ def create_dataview(dff):
     ).reset_index()
     
     return html.Div([
-        dag.AgGrid(id='ag-grid-economic', defaultColDef={"filter": True}, columnDefs=[{"headerName": col, "field": col} for col in pivoted_data.columns], rowData=pivoted_data.to_dict('records'), style={'height': '400px'}),
-        dmc.Button("Download Data", id="download-button-economic", variant="outline", color="#336666", mt="md", style={'marginLeft': 'auto', 'display': 'flex', 'justifyContent': 'flex-end'}),
-        dcc.Download(id="download-data-economic")
+        dag.AgGrid(id='ag-grid-education', defaultColDef={"filter": True}, columnDefs=[{"headerName": col, "field": col} for col in pivoted_data.columns], rowData=pivoted_data.to_dict('records'), style={'height': '400px'}),
+        dmc.Button("Download Data", id="download-button-education", variant="outline", color="#336666", mt="md", style={'marginLeft': 'auto', 'display': 'flex', 'justifyContent': 'flex-end'}),
+        dcc.Download(id="download-data-education")
     ])
     
     
@@ -165,85 +154,6 @@ def create_map(dff, year):
     indicator = dff['Indicator'].unique()[0]
     indicator_unit = dff['Indicator Unit'].unique()[0]
     
-    if 'Markets' in dff.columns:
-        # Calculate Choropleth Gradient Scale Range
-        num_classes = 5
-        min_value = dff['Indicator Value'].min()
-        max_value = dff['Indicator Value'].max()
-        range_value = max_value - min_value
-
-        # Handle the case where range_value is 0
-        if range_value == 0:
-            classes = [0] * (num_classes + 1)
-        else:
-            magnitude = 10 ** int(math.log10(range_value))
-            if range_value / magnitude < 3:
-                rounding_base = magnitude // 2
-            else:
-                rounding_base = magnitude
-            width = math.ceil(range_value / num_classes / rounding_base) * rounding_base
-            
-            # Start the classes list from 0 and calculate subsequent classes
-            classes = [0] + [i * width for i in range(1, num_classes)] + [max_value]
-            
-            # Round classes to nearest rounding base and remove duplicates
-            classes = [math.ceil(cls / rounding_base) * rounding_base for cls in classes]
-            classes = sorted(set(classes))
-
-        # Create a dynamic color scale based on the classes
-        colorscale = ['#a1d99b', '#31a354', '#2c8e34', '#196d30', '#134e20', '#0d3b17']
-        style = dict(weight=2, opacity=1, color='white', dashArray='3', fillOpacity=0.7)
-        ctg = [f"{int(classes[i])}+" for i in range(len(classes))]
-        colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=30, height=300, position="bottomright")
-    
-        with open('./assets/countries.json') as f:
-            geojson_data = json.load(f)
-                
-        # Map indicator values to geojson features
-        for feature in geojson_data['features']:
-            market_name = feature['properties']['name']  # Ensure correct property for market name
-            feature['properties']['Series Name'] = series_name
-            feature['properties']['Indicator'] = indicator
-            feature['properties']['Year'] = year
-            
-            # Find matching row in the filtered data
-            market_data = dff[dff['Markets'] == market_name]
-            
-            if not market_data.empty:
-                # Assign the indicator value
-                feature['properties'][indicator] = market_data['Indicator Value'].values[0]
-            else:
-                # Assign None for missing data
-                feature['properties'][indicator] = None
-                
-        # Create geojson.
-        geojson = dl.GeoJSON(data=geojson_data,
-                            style=style_handle,
-                            zoomToBounds=True,
-                            zoomToBoundsOnClick=True,
-                            hoverStyle = dict(weight=5, color='#666', dashArray=''),
-                            hideout=dict(colorscale=colorscale, classes=classes, style=style, colorProp=indicator),
-                            id="geojson-economic")
-        
-        return html.Div([
-            dl.Map(
-                    style={'width': '100%', 'height': '450px'},
-                    center=[20, 0],  # Centered on the equator, near the Prime Meridian
-                    zoom=6,
-                    children=[
-                        dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
-                        geojson, 
-                        colorbar,
-                        html.Div(children=get_info(indicator=indicator, indicator_unit=indicator_unit, year=year), id="info-economic", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
-                    ],
-                    attributionControl=False,
-            )],
-            style={
-                'position': 'relative',
-                'zIndex': 0,
-            }
-        )
-
     return html.Div([
         dl.Map(
                 style={'width': '100%', 'height': '450px'},
@@ -262,6 +172,7 @@ def create_map(dff, year):
     )
         
 def create_graph(dff):
+
     dff_filtered = dff.groupby('Year')['Indicator Value'].sum().reset_index()
     series_name = dff['Series Name'].unique()[0]
     indicator = dff['Indicator'].unique()[0]
@@ -401,7 +312,7 @@ def create_modal(dff, feature):
     ))  
     fig1.update_layout(
         title=dict(
-            text = f"{series_name}: {dff['Indicator'].unique()[0]}" + (f" in {dff['Province'].unique()[0]}" if 'Province' in dff.columns and dff['Province'].nunique() == 1 else "") + (f" to {dff['Markets'].unique()[0]}" if 'Markets' in dff.columns and dff['Markets'].nunique() == 1 else "")
+            text = f"{series_name}: {dff['Indicator'].unique()[0]}" + (f" in {dff['Province'].unique()[0]}" if 'Province' in dff.columns and dff['Province'].nunique() == 1 else "")
         )
     )
 
@@ -428,65 +339,49 @@ def create_modal(dff, feature):
     
 
 # Calllback for info on map
-@callback(Output("info-economic", "children"), Input('series-name-dropdown-economic', 'value'), Input('year-dropdown-economic', 'value'), Input('indicator-dropdown-economic', 'value'),  Input('indicator-unit-economic', 'data'), Input("geojson-economic", "hoverData"))
+@callback(Output("info-education", "children"), Input('series-name-dropdown-education', 'value'), Input('year-dropdown-education', 'value'), Input('indicator-dropdown-education', 'value'),  Input('indicator-unit-education', 'data'), Input("geojson-education", "hoverData"))
 def info_hover(series_name, year, indicator, indicator_unit, feature):
     return get_info(series_name=series_name, indicator=indicator, feature=feature, indicator_unit=indicator_unit, year=year)
 
 
 # Callbacks
-@callback([Output('graph-id-economic', 'children'), Output('map-id-economic', 'children'), Output('dataview-container-economic', 'children'), Output('metadata-panel-economic', 'children'), Output('indicator-unit-economic', 'data')],
-          [Input('series-name-dropdown-economic', 'value'), Input("product-dropdown-economic", "value"),
-           Input("indicator-dropdown-economic", "value"), Input("market-dropdown-economic", "value"), Input("year-dropdown-economic", "value")])
-def update_report(series_name, product, indicator, market, year):
-    dff = filter_data(data=data, series_name=series_name, indicator=indicator, product=product, market=market)
-    print(">> Shape: ", series_name, dff.shape)
-    print(dff)
+@callback([Output('graph-id-education', 'children'), Output('map-id-education', 'children'), Output('dataview-container-education', 'children'), Output('metadata-panel-education', 'children'), Output('indicator-unit-education', 'data')],
+          [Input('series-name-dropdown-education', 'value'), Input("product-dropdown-education", "value"),
+           Input("indicator-dropdown-education", "value"), Input("year-dropdown-education", "value")])
+def update_report(series_name, product, indicator, year):
+    dff = filter_data(data=data, series_name=series_name, indicator=indicator, product=product)
     indicator_unit = dff['Indicator Unit'].unique()
     return create_graph(dff), create_map(dff, year), create_dataview(dff), create_metadata(dff), indicator_unit.tolist()
 
 
-@callback(Output("download-data-economic", "data"), Input("download-button-economic", "n_clicks"),
-          State('series-name-dropdown-economic', 'value'), State('indicator-dropdown-economic', 'value'), State("market-dropdown-economic", "value"))
-def download_data(n_clicks, series_name, indicator, market):
+@callback(Output("download-data-education", "data"), Input("download-button-education", "n_clicks"),
+          State('series-name-dropdown-education', 'value'), State('indicator-dropdown-education', 'value'))
+def download_data(n_clicks, series_name, indicator):
     if n_clicks is None: return dash.no_update
-    dff = filter_data(data=data, series_name=series_name, indicator=indicator, market=market)
+    dff = filter_data(data=data, series_name=series_name, indicator=indicator)
     return dict(content=dff.to_csv(index=False), filename="data.csv", type="application/csv")
 
 @callback(
-    Output('product-dropdown-economic', 'data'),
-    Output('product-dropdown-economic', 'value'),
-    Output('product-dropdown-economic', 'style'),
-    Input('series-name-dropdown-economic', 'value'),
+    Output('product-dropdown-education', 'data'),
+    Output('product-dropdown-education', 'value'),
+    Output('product-dropdown-education', 'style'),
+    Input('series-name-dropdown-education', 'value'),
 )
-def update_products(series_name):
-    products_options = data[(data["Series Name"] == series_name)]["Products"].dropna().str.strip().unique()
+def update_grade(series_name):
+    grade_options = data[(data["Series Name"] == series_name)]["Grade"].dropna().str.strip().unique()
     # Control visibility based on available options
-    style = {'display': 'block'} if products_options.size > 0 else {'display': 'none'}
-    return [{'label': option, 'value': option} for option in sorted(products_options)], products_options[0] if products_options.size > 0 else None, style
+    style = {'display': 'block'} if grade_options.size > 0 else {'display': 'none'}
+    return [{'label': option, 'value': option} for option in sorted(grade_options)], grade_options[0] if grade_options.size > 0 else None, style
 
 @callback(
-    Output('market-dropdown-economic', 'data'),
-    Output('market-dropdown-economic', 'value'),
-    Output('market-dropdown-economic', 'style'),
-    Input('series-name-dropdown-economic', 'value'),
-)
-def update_markets(series_name):
-    market_options = data[(data["Series Name"] == series_name)]["Markets"].dropna().str.strip().unique()
-    # Control visibility based on available options
-    style = {'display': 'block'} if market_options.size > 0 else {'display': 'none'}
-    return [{'label': option, 'value': option} for option in ['All'] + list(sorted(market_options))], 'All', style
-
-
-@callback(
-    Output('indicator-dropdown-economic', 'data'),
-    Output('indicator-dropdown-economic', 'value'),
-    Input('series-name-dropdown-economic', 'value'),
-    Input('market-dropdown-economic', 'value'),
+    Output('indicator-dropdown-education', 'data'),
+    Output('indicator-dropdown-education', 'value'),
+    Input('series-name-dropdown-education', 'value'),
     prevent_initial_call=False
 )
-def update_indicators(series_name, market):
+def update_indicators(series_name):
     # Filter data based on the selected filters
-    dff = filter_data(data=data, series_name=series_name, market=market)
+    dff = filter_data(data=data, series_name=series_name)
     
     # Extract unique indicator values
     indicator_values = dff['Indicator'].unique().tolist()
@@ -506,18 +401,16 @@ def update_indicators(series_name, market):
 
 
 @callback(
-    Output('year-dropdown-economic', 'data'),
-    Output('year-dropdown-economic', 'value'),
-    Output('year-dropdown-economic', 'style'),
-    Input('series-name-dropdown-economic', 'value'),
-    Input('indicator-dropdown-economic', 'value'),
-    Input('market-dropdown-economic', 'value'),
-    Input('product-dropdown-economic', 'value'),
-    Input('active-tab-economic', 'value'),
+    Output('year-dropdown-education', 'data'),
+    Output('year-dropdown-education', 'value'),
+    Output('year-dropdown-education', 'style'),
+    Input('series-name-dropdown-education', 'value'),
+    Input('indicator-dropdown-education', 'value'),
+    Input('active-tab-education', 'value'),
 )
-def update_year_dropdown(series_name, indicator, market, product, active_tab):
+def update_year_dropdown(series_name, indicator, active_tab):
     # Filter the data based on the selected filters
-    dff = filter_data(data=data, series_name=series_name, indicator=indicator, market=market, product=product)
+    dff = filter_data(data=data, series_name=series_name, indicator=indicator)
     
     # Extract unique year values
     year_values = dff['Year'].dropna().unique().tolist()
@@ -540,11 +433,11 @@ def update_year_dropdown(series_name, indicator, market, product, active_tab):
 
 # Callback to handle map clicks and display modal
 @callback(
-    Output("info-modal-economic", "opened"),
-    Output("modal-body-economic", "children"),
-    Output("geojson-economic", "clickData"),  # Reset clickData
-    Input("geojson-economic", "clickData"),
-    State("info-modal-economic", "opened"),
+    Output("info-modal-education", "opened"),
+    Output("modal-body-education", "children"),
+    Output("geojson-education", "clickData"),  # Reset clickData
+    Input("geojson-education", "clickData"),
+    State("info-modal-education", "opened"),
     prevent_initial_call=True
 )
 def handle_map_click(click_data, is_modal_open):
@@ -556,8 +449,7 @@ def handle_map_click(click_data, is_modal_open):
     
     dff = filter_data(
         data=data,
-        series_name=feature['Series Name'],
-        market=feature['name'],
+        series_name=feature['Series Name']
     )
     
     # Prepare the content for the modal

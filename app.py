@@ -22,6 +22,7 @@ from src.pages.data_explorer import data_explorer_page
 # from src.pages.sector import sector_page
 from src.pages.agriculture_and_rural_development import agriculture_and_rural_development
 from src.pages.development_economics_and_trade import development_economics_and_trade
+from src.pages.education import education
 from src.pages.not_found import not_found_page
 
 # Initialize the Dash app
@@ -101,6 +102,7 @@ def display_page(pathname):
         "/data-explorer": data_explorer_page,
         "/agriculture-and-rural-development": agriculture_and_rural_development,
         "/development-economics-and-trade": development_economics_and_trade,
+        "/education": education,
     }
     return page_routes.get(pathname, not_found_page)
 
