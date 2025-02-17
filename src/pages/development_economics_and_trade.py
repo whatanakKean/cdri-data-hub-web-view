@@ -94,6 +94,12 @@ development_economics_and_trade = dmc.Container([
         dmc.GridCol([
             dmc.Stack([
                 dmc.Paper([
+                    dmc.Autocomplete(
+                        id="suggestions-autocomplete-economic",
+                        placeholder="Ask anything...",
+                        leftSection=DashIconify(icon="mingcute:ai-fill"),
+                        style={"width": "100%", "marginBottom": "20px"},
+                    ),
                     dmc.Tabs(
                         children=[
                             dmc.TabsList(

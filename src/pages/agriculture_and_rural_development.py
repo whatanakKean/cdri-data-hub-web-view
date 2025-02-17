@@ -83,12 +83,12 @@ agriculture_and_rural_development = dmc.Container([
         dmc.GridCol([
             dmc.Stack([
                 dmc.Paper([
-                    dmc.Autocomplete(
-                        id="suggestions-autocomplete-test",
-                        placeholder="Ask anything...",
-                        leftSection=DashIconify(icon="mingcute:ai-fill"),
-                        style={"width": "100%", "marginBottom": "20px"},
-                    ),
+                    # dmc.Autocomplete(
+                    #     id="suggestions-autocomplete",
+                    #     placeholder="Ask anything...",
+                    #     leftSection=DashIconify(icon="mingcute:ai-fill"),
+                    #     style={"width": "100%", "marginBottom": "20px"},
+                    # ),
                     dmc.Tabs(
                         children=[
                             dmc.TabsList(
@@ -154,9 +154,9 @@ def create_metadata(dff):
     return ""
 
 def create_map(dff, year):
-    print(dff)
     # Filter data for the selected year
-    dff = dff[dff["Year"] == int(year)]
+    dff = dff[dff["Year"] == year]
+    
     series_name = dff['Series Name'].unique()[0]
     indicator = dff['Indicator'].unique()[0]
     indicator_unit = dff['Indicator Unit'].unique()[0]

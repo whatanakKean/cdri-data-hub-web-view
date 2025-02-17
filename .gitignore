@@ -1,1 +1,3 @@
 *.pyc
+src/etl/raw education/*
+src/etl/raw agriculture\ &\ economic/*

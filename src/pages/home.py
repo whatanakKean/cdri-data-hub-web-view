@@ -7,10 +7,14 @@ sector = [
      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Cambodian_farmers_planting_rice.jpg/1200px-Cambodian_farmers_planting_rice.jpg", 
      "isEnabled": True, 
      "href": "/agriculture-and-rural-development"},
-    {"name": "Development Economics and Trade", 
+    # {"name": "Development Economics and Trade", 
+    #  "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Phnompenhview.jpg/450px-Phnompenhview.jpg", 
+    #  "isEnabled": True, 
+    #  "href": "/development-economics-and-trade"},
+    {"name": "Education", 
      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Phnompenhview.jpg/450px-Phnompenhview.jpg", 
      "isEnabled": True, 
-     "href": "/development-economics-and-trade"},
+     "href": "/education"},
 ]
 
 home_page = html.Main([  

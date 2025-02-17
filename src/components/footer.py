@@ -58,9 +58,14 @@ def footer():
                                         href="/agriculture-and-rural-development",
                                         style={"color": "white", "display": "block"}
                                     ),
+                                    # dmc.Anchor(
+                                    #     ">     Development Economics and Trade",
+                                    #     href="/development-economics-and-trade",
+                                    #     style={"color": "white", "display": "block"}
+                                    # ),
                                     dmc.Anchor(
-                                        ">     Development Economics and Trade",
-                                        href="/development-economics-and-trade",
+                                        ">     Education",
+                                        href="/education",
                                         style={"color": "white", "display": "block"}
                                     ),
                                 ]

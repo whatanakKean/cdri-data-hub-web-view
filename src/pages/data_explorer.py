@@ -11,12 +11,15 @@ from fuzzywuzzy import process
 
 # Sample dataset
 conn = sqlite3.connect("./src/data/data.db")
-query = """
-SELECT * FROM economic_data
-UNION ALL
-SELECT * FROM agriculture_data;
-"""
-data = pd.read_sql_query(query, conn)
+
+# Query economic_data table
+query1 = "SELECT * FROM economic_data;"
+df1 = pd.read_sql_query(query1, conn)
+# Query agriculture_data table
+query2 = "SELECT * FROM agriculture_data;"
+df2 = pd.read_sql_query(query2, conn)
+# Concatenate both DataFrames
+data = pd.concat([df1, df2], ignore_index=True)
 
 # Predefined suggested questions
 suggested_questions = [
