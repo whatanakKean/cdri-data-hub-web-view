@@ -99,7 +99,7 @@ data_explorer_page = html.Main(
                         ),
                         dmc.TabsPanel(html.Div(id='data-explorer-dataview-id'), value="dataview"),
                     ], 
-                    value="graph",
+                    value="graph", color="#336666"
                 ),
                 ], shadow="xs", p="md", radius="md", withBorder=True),
         ], fluid=True),
@@ -149,7 +149,7 @@ def create_graph(dff):
             title=f"{indicator} ({indicator_unit})",
         ),
         font=dict(
-            family='BlinkMacSystemFont',
+            family='Roboto',
             color='rgba(0, 0, 0, 0.7)'
         ),
         hovermode="x unified",

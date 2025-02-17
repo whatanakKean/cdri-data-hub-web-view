@@ -124,7 +124,7 @@ development_economics_and_trade = dmc.Container([
                             ),
                             dmc.TabsPanel(html.Div(id='dataview-container-economic'), value="dataview"),
                         ], 
-                        id="active-tab-economic", value="map",
+                        id="active-tab-economic", value="map", color="#336666"
                     ),
                 ], shadow="xs", p="md", radius="md", withBorder=True),
             ], gap="xs"),
@@ -291,7 +291,7 @@ def create_graph(dff):
             title=f"{indicator} ({dff['Indicator Unit'].unique()[0]})",
         ),
         font=dict(
-            family='BlinkMacSystemFont',
+            family='Roboto',
             color='rgba(0, 0, 0, 0.7)'
         ),
         hovermode="x unified",
@@ -377,7 +377,7 @@ def create_modal(dff, feature):
             title=f"{indicator} ({dff_filtered['Indicator Unit'].unique()[0]})",
         ),
         font=dict(
-            family='BlinkMacSystemFont',
+            family='Roboto',
             color='rgba(0, 0, 0, 0.7)'
         ),
         hovermode="x unified",

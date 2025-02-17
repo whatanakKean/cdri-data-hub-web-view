@@ -52,17 +52,17 @@ def sidebar(data):
                 checkIconPosition="right",
                 allowDeselect=False,
             ),
-            dmc.Select(
-                label="Select Occupation", 
-                id="occupation-dropdown-education", 
-                value=str(data["Occupation"].dropna().unique()[-1]),
-        	    data=[{'label': str(option), 'value': str(option)} for option in sorted(data["Occupation"].dropna().unique())],
-                withScrollArea=False,
-                styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
-                mt="md",
-                checkIconPosition="right",
-                allowDeselect=False,
-            ),
+            # dmc.Select(
+            #     label="Select Occupation", 
+            #     id="occupation-dropdown-education", 
+            #     value=str(data["Occupation"].dropna().unique()[-1]),
+        	#     data=[{'label': str(option), 'value': str(option)} for option in sorted(data["Occupation"].dropna().unique())],
+            #     withScrollArea=False,
+            #     styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
+            #     mt="md",
+            #     checkIconPosition="right",
+            #     allowDeselect=False,
+            # ),
             dmc.Select(
                 label="Select Province", 
                 id="province-dropdown-education", 
@@ -129,7 +129,7 @@ education = dmc.Container([
                             ),
                             dmc.TabsPanel(html.Div(id='dataview-container-education'), value="dataview"),
                         ], 
-                        id="active-tab-education", value="map",
+                        id="active-tab-education", value="map", color="#336666"
                     ),
                 ], shadow="xs", p="md", radius="md", withBorder=True),
             ], gap="xs"),
@@ -312,26 +312,24 @@ def create_graph(dff):
         traces = []
         for grade in dff['Grade'].unique():
             grade_data = dff[dff['Grade'] == grade]
-            traces.append(go.Line(
+            traces.append(go.Scatter(
                 x=grade_data['Year'],
                 y=grade_data['Indicator Value'],
                 mode='lines+markers',
-                line=dict(shape='spline'),
-                name=f"{grade}"
+                name=f"{grade}",
             ))
     else:
         series_name = dff['Series Name'].unique()[0]
         indicator = dff['Indicator'].unique()[0]
 
         # Only one trace (no Grade dimension)
-        traces = [go.Line(
+        traces = [go.Scatter(
             x=dff['Year'],
             y=dff['Indicator Value'],
             mode='lines+markers',
-            line=dict(shape='spline'),
             name=indicator
         )]
-
+        
     # Define layout
     layout = go.Layout(
         images=[dict(
@@ -351,24 +349,24 @@ def create_graph(dff):
             title=f"{indicator} ({dff['Indicator Unit'].unique()[0]})",
         ),
         font=dict(
-            family='Calibri',
+            family='Roboto',
             color='rgba(0, 0, 0, 0.7)'
         ),
         hovermode="x unified",
         plot_bgcolor='white',
         legend=dict(
-            orientation="h",
+            orientation="h",  # Horizontal legend
             yanchor="bottom",
-            y=1,
-            xanchor="right",    
-            x=1
+            y=-0.4,
+            xanchor="center",
+            x=0.5  # Centers the legend
         ),
         xaxis=dict(
             tickmode='array',
             tickvals=dff['Year'].unique(),
-            title="Produced By: CDRI Data Hub",
+            # title="Produced By: CDRI Data Hub",
         ),
-        margin=dict(t=100, b=80, l=50, r=50),
+        margin=dict(t=100, b=100, l=50, r=50),
     )
 
     # Create figure and add traces
@@ -381,6 +379,20 @@ def create_graph(dff):
             text=f"{series_name}: {indicator}",
         ),
     )
+    
+    # If the series name is 'Dropout Rate By Occupation', plot a pie chart
+    if dff['Series Name'].unique()[0] == 'Dropout Rate By Occupation':
+        # Pie chart trace
+        pie_trace = go.Pie(
+            labels=dff['Occupation'],
+            values=dff['Indicator Value'],
+            textinfo='label+percent',
+            title="Dropout Rate By Occupation"
+        )
+        
+        layout.update(showlegend=False)
+        fig1 = go.Figure(pie_trace, layout=layout)
+        
 
     # Return graph
     return html.Div([ 
@@ -433,7 +445,7 @@ def create_modal(dff, feature):
             title=f"{indicator} ({dff_filtered['Indicator Unit'].unique()[0]})",
         ),
         font=dict(
-            family='Calibri',
+            family='Roboto',
             color='rgba(0, 0, 0, 0.7)'
         ),
         hovermode="x unified",
@@ -498,19 +510,19 @@ def info_hover(series_name, year, indicator, indicator_unit, feature):
 # Callbacks
 @callback([Output('graph-id-education', 'children'), Output('map-id-education', 'children'), Output('dataview-container-education', 'children'), Output('metadata-panel-education', 'children'), Output('indicator-unit-education', 'data')],
           [Input('series-name-dropdown-education', 'value'), 
-           Input("indicator-dropdown-education", "value"), Input("year-dropdown-education", "value"), Input('grade-dropdown-education', 'value'), Input('occupation-dropdown-education', 'value'), Input('province-dropdown-education', 'value'),])
-def update_report(series_name, indicator, year, grade, occupation, province):
-    dff = filter_data(data=data, series_name=series_name, indicator=indicator, grade=grade, occupation=occupation, province=province)
+           Input("indicator-dropdown-education", "value"), Input("year-dropdown-education", "value"), Input('grade-dropdown-education', 'value'), Input('province-dropdown-education', 'value'),])
+def update_report(series_name, indicator, year, grade, province):
+    dff = filter_data(data=data, series_name=series_name, indicator=indicator, grade=grade, province=province)
 
     indicator_unit = dff['Indicator Unit'].unique()
     return create_graph(dff), create_map(dff, year), create_dataview(dff), create_metadata(dff), indicator_unit.tolist()
 
 
 @callback(Output("download-data-education", "data"), Input("download-button-education", "n_clicks"),
-          State('series-name-dropdown-education', 'value'), State('indicator-dropdown-education', 'value'), Input('grade-dropdown-education', 'value'), Input('occupation-dropdown-education', 'value'), Input('province-dropdown-education', 'value'),)
-def download_data(n_clicks, series_name, indicator, grade, occupation, province):
+          State('series-name-dropdown-education', 'value'), State('indicator-dropdown-education', 'value'), Input('grade-dropdown-education', 'value'), Input('province-dropdown-education', 'value'),)
+def download_data(n_clicks, series_name, indicator, grade, province):
     if n_clicks is None: return dash.no_update
-    dff = filter_data(data=data, series_name=series_name, indicator=indicator, grade=grade, occupation=occupation, province=province)
+    dff = filter_data(data=data, series_name=series_name, indicator=indicator, grade=grade, province=province)
     dff = dff.loc[:, ~(dff.apply(lambda col: col.eq("").all(), axis=0))]
     return dict(content=dff.to_csv(index=False), filename="data.csv", type="application/csv")
 
@@ -525,18 +537,6 @@ def update_grade(series_name):
     # Control visibility based on available options
     style = {'display': 'block'} if grade_options.size > 0 else {'display': 'none'}
     return [{'label': option, 'value': option} for option in ['All'] + sorted(grade_options)], 'All' if grade_options.size > 0 else None, style
-
-@callback(
-    Output('occupation-dropdown-education', 'data'),
-    Output('occupation-dropdown-education', 'value'),
-    Output('occupation-dropdown-education', 'style'),
-    Input('series-name-dropdown-education', 'value'),
-)
-def update_occupation(series_name):
-    occupation_options = data[(data["Series Name"] == series_name)]["Occupation"].dropna().str.strip().unique()
-    # Control visibility based on available options
-    style = {'display': 'block'} if occupation_options.size > 0 else {'display': 'none'}
-    return [{'label': option, 'value': option} for option in sorted(occupation_options)], occupation_options[0] if occupation_options.size > 0 else None, style
 
 @callback(
     Output('province-dropdown-education', 'data'),
@@ -555,13 +555,12 @@ def update_province(series_name):
     Output('indicator-dropdown-education', 'value'),
     Input('series-name-dropdown-education', 'value'),
     Input('grade-dropdown-education', 'value'),
-    Input('occupation-dropdown-education', 'value'),
     Input('province-dropdown-education', 'value'),
     prevent_initial_call=False
 )
-def update_indicators(series_name, grade, occupation, province):
+def update_indicators(series_name, grade, province):
     # Filter data based on the selected filters
-    dff = filter_data(data=data, series_name=series_name, grade=grade, occupation=occupation, province=province)
+    dff = filter_data(data=data, series_name=series_name, grade=grade, province=province)
     
     # Extract unique indicator values
     indicator_values = dff['Indicator'].unique().tolist()
@@ -585,13 +584,12 @@ def update_indicators(series_name, grade, occupation, province):
     Input('series-name-dropdown-education', 'value'),
     Input('indicator-dropdown-education', 'value'),
     Input('grade-dropdown-education', 'value'),
-    Input('occupation-dropdown-education', 'value'),
     Input('province-dropdown-education', 'value'),
     Input('active-tab-education', 'value'),
 )
-def update_year_dropdown(series_name, indicator, grade, occupation, province, active_tab):
+def update_year_dropdown(series_name, indicator, grade, province, active_tab):
     # Filter the data based on the selected filters
-    dff = filter_data(data=data, series_name=series_name, indicator=indicator, province=province)
+    dff = filter_data(data=data, series_name=series_name, indicator=indicator, province=province, grade=grade)
     # Extract unique year values
     year_values = dff['Year'].dropna().unique().tolist()
     

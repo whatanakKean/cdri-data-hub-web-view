@@ -56,7 +56,7 @@ def sidebar(data):
                 label="Select Year", 
                 id="year-dropdown", 
                 value=str(data["Year"].unique()[-1]),
-        	    data=[{'label': str(option), 'value': str(option)} for option in sorted(data["Year"].unique())],
+        	    data=[{'label': str(option), 'value': str(option)} for option in sorted(data["Year"].dropna().unique())],
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
                 mt="md",
@@ -113,7 +113,7 @@ agriculture_and_rural_development = dmc.Container([
                             ),
                             dmc.TabsPanel(html.Div(id='dataview-id'), value="dataview"),
                         ], 
-                        id="active-tab", value="map",
+                        id="active-tab", value="map", color="#336666"
                     ),
                 
                 ], shadow="xs", p="md", radius="md", withBorder=True),
@@ -140,6 +140,9 @@ def create_dataview(dff):
         aggfunc='first'
     ).reset_index()
     
+    # Remove columns where all values are empty strings
+    pivoted_data = pivoted_data.loc[:, ~(pivoted_data.apply(lambda col: col.eq("").all(), axis=0))]
+    
     return html.Div([
         dag.AgGrid(id='ag-grid', defaultColDef={"filter": True}, columnDefs=[{"headerName": col, "field": col} for col in pivoted_data.columns], rowData=pivoted_data.to_dict('records'), style={'height': '400px'}),
         dmc.Button("Download Data", id="download-button", variant="outline", color="#336666", mt="md", style={'marginLeft': 'auto', 'display': 'flex', 'justifyContent': 'flex-end'}),
@@ -156,6 +159,7 @@ def create_metadata(dff):
 def create_map(dff, year):
     # Filter data for the selected year
     dff = dff[dff["Year"] == year]
+    print(dff)
     
     series_name = dff['Series Name'].unique()[0]
     indicator = dff['Indicator'].unique()[0]
@@ -354,7 +358,7 @@ def create_graph(dff):
             title=f"{indicator} ({dff['Indicator Unit'].unique()[0]})",
         ),
         font=dict(
-            family='BlinkMacSystemFont',
+            family='Roboto',
             color='rgba(0, 0, 0, 0.7)'
         ),
         hovermode="x unified",
@@ -438,7 +442,7 @@ def create_modal(dff, feature):
             title=f"{indicator} ({dff_filtered['Indicator Unit'].unique()[0]})",
         ),
         font=dict(
-            family='BlinkMacSystemFont',
+            family='Roboto',
             color='rgba(0, 0, 0, 0.7)'
         ),
         hovermode="x unified",
@@ -515,6 +519,7 @@ def update_report(series_name, province, indicator, year):
 def download_data(n_clicks, series_name, province, indicator):
     if n_clicks is None: return dash.no_update
     dff = filter_data(data=data, series_name=series_name, province=province, indicator=indicator)
+    dff = dff.loc[:, ~(dff.apply(lambda col: col.eq("").all(), axis=0))]
     return dict(content=dff.to_csv(index=False), filename="data.csv", type="application/csv")
 
 
