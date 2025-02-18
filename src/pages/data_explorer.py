@@ -277,6 +277,13 @@ def update_data(selected_suggestion):
     if match_indicator:
         best_match_lower, score = match_indicator
         filters["Province"] = lower_indicator[best_match_lower]
+        
+    # Store original and lowercase versions of Grade
+    lower_indicator = {str(name).lower(): name for name in data['Grade'].unique() if pd.notna(name)}
+    match_indicator = process.extractOne(selected_suggestion.lower(), lower_indicator.keys(), score_cutoff=50)
+    if match_indicator:
+        best_match_lower, score = match_indicator
+        filters["Grade"] = lower_indicator[best_match_lower]
     
     # # Store original and lowercase versions of Markets
     # lower_indicator = {name.lower(): name for name in data['Markets'].unique() if name is not None}
@@ -302,6 +309,8 @@ def update_data(selected_suggestion):
             if not temp_df.empty:
                 # If the filtered data is not empty, apply the filter
                 filtered_df = temp_df
+    
+    print(filters)
     
     # return create_dataview(filtered_df), create_graph(filtered_df), filtered_df.to_dict('records')
     return create_dataview(filtered_df), create_graph(filtered_df), filtered_df.to_dict('records')

@@ -630,31 +630,31 @@ def update_year_dropdown(series_name, indicator, grade, province, active_tab):
     return year_options, default_value, dropdown_style
 
 
-# Callback to handle map clicks and display modal
-@callback(
-    Output("info-modal-education", "opened"),
-    Output("modal-body-education", "children"),
-    Output("geojson-education", "clickData"),  # Reset clickData
-    Input("geojson-education", "clickData"),
-    State("info-modal-education", "opened"),
-    prevent_initial_call=True
-)
-def handle_map_click(click_data, is_modal_open):
-    if click_data is None:
-        return dash.no_update, dash.no_update, dash.no_update
+# # Callback to handle map clicks and display modal
+# @callback(
+#     Output("info-modal-education", "opened"),
+#     Output("modal-body-education", "children"),
+#     Output("geojson-education", "clickData"),  # Reset clickData
+#     Input("geojson-education", "clickData"),
+#     State("info-modal-education", "opened"),
+#     prevent_initial_call=True
+# )
+# def handle_map_click(click_data, is_modal_open):
+#     if click_data is None:
+#         return dash.no_update, dash.no_update, dash.no_update
     
-    # Extract feature properties from the clicked data
-    feature = click_data.get("properties", {})
+#     # Extract feature properties from the clicked data
+#     feature = click_data.get("properties", {})
     
-    dff = filter_data(
-        data=data,
-        series_name=feature['Series Name']
-    )
+#     dff = filter_data(
+#         data=data,
+#         series_name=feature['Series Name']
+#     )
     
-    # Prepare the content for the modal
-    modal_content = [
-        create_modal(dff, feature)
-    ]
+#     # Prepare the content for the modal
+#     modal_content = [
+#         create_modal(dff, feature)
+#     ]
     
-    # Open the modal, update its content, and reset clickData
-    return not is_modal_open, modal_content, None
+#     # Open the modal, update its content, and reset clickData
+#     return not is_modal_open, modal_content, None

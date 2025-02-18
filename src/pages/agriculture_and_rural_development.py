@@ -23,7 +23,7 @@ def sidebar(data):
             dmc.Select(
                 label="Select Dataset", 
                 id="series-name-dropdown", 
-                value='Rice Production', 
+                value='Rice Price', 
                 data=[{'label': option, 'value': option} for option in data["Series Name"].dropna().str.strip().unique() if option],
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
@@ -157,190 +157,203 @@ def create_metadata(dff):
     return ""
 
 def create_map(dff, year):
-    # Filter data for the selected year
-    dff = dff[dff["Year"] == year]
-    print(dff)
-    
     series_name = dff['Series Name'].unique()[0]
     indicator = dff['Indicator'].unique()[0]
     indicator_unit = dff['Indicator Unit'].unique()[0]
     
-    # Calculate Choropleth Gradient Scale Range
-    num_classes = 5
-    min_value = dff['Indicator Value'].min()
-    max_value = dff['Indicator Value'].max()
-    range_value = max_value - min_value
-
-    # Handle the case where range_value is 0
-    if range_value == 0:
-        classes = [0] * (num_classes + 1)
+    if series_name == "Rice Price":
+        return html.Div([
+            dl.Map(
+                    style={'width': '100%', 'height': '450px'},
+                    center=[0, 0],
+                    zoom=6,
+                    children=[
+                        dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                        # geojson,
+                        # html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
+                    ],
+                    attributionControl=False,
+            )],
+            style={
+                'position': 'relative',
+                'zIndex': 0,
+            }
+        )
     else:
-        magnitude = 10 ** int(math.log10(range_value))
-        if range_value / magnitude < 3:
-            rounding_base = magnitude // 2
+        dff = dff[dff["Year"] == year]
+        # Calculate Choropleth Gradient Scale Range
+        num_classes = 5
+        min_value = dff['Indicator Value'].min()
+        max_value = dff['Indicator Value'].max()
+        range_value = max_value - min_value
+
+        # Handle the case where range_value is 0
+        if range_value == 0:
+            classes = [0] * (num_classes + 1)
         else:
-            rounding_base = magnitude
-        width = math.ceil(range_value / num_classes / rounding_base) * rounding_base
-        
-        # Start the classes list from 0 and calculate subsequent classes
-        classes = [0] + [i * width for i in range(1, num_classes)] + [max_value]
-        
-        # Round classes to nearest rounding base and remove duplicates
-        classes = [math.ceil(cls / rounding_base) * rounding_base for cls in classes]
-        classes = sorted(set(classes))
-
-    # Create a dynamic color scale based on the classes
-    colorscale = ['#a1d99b', '#31a354', '#2c8e34', '#196d30', '#134e20', '#0d3b17']
-    style = dict(weight=2, opacity=1, color='white', dashArray='3', fillOpacity=0.7)
-    ctg = [f"{int(classes[i])}+" for i in range(len(classes))]
-    colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=30, height=300, position="bottomright")
-
-    if 'Province' in dff.columns:
-        with open('./assets/geoBoundaries-KHM-ADM1_simplified.json') as f:
-            geojson_data = json.load(f)
-        
-        # Map indicator values to geojson features
-        for feature in geojson_data['features']:
-            province_name = feature['properties']['shapeName']  # Ensure correct property for province name
-            
-            # Find matching row in the filtered data
-            province_data = dff[dff['Province'] == province_name]
-            
-            if not province_data.empty:
-                # Assign the indicator value
-                feature['properties'][indicator] = province_data['Indicator Value'].values[0]
-                feature['properties']['Series Name'] = series_name
-                feature['properties']['Indicator'] = indicator
-                feature['properties']['Year'] = year
+            magnitude = 10 ** int(math.log10(range_value))
+            if range_value / magnitude < 3:
+                rounding_base = magnitude // 2
             else:
-                # Assign None for missing data
-                feature['properties'][indicator] = None
-        
-        # Create geojson.
-        geojson = dl.GeoJSON(data=geojson_data,
-                            style=style_handle,
-                            zoomToBounds=True,
-                            zoomToBoundsOnClick=True,
-                            hoverStyle=dict(color='black'),
-                            hideout=dict(colorscale=colorscale, classes=classes, style=style, colorProp=indicator),
-                            id="geojson")
+                rounding_base = magnitude
+            width = math.ceil(range_value / num_classes / rounding_base) * rounding_base
+            
+            # Start the classes list from 0 and calculate subsequent classes
+            classes = [0] + [i * width for i in range(1, num_classes)] + [max_value]
+            
+            # Round classes to nearest rounding base and remove duplicates
+            classes = [math.ceil(cls / rounding_base) * rounding_base for cls in classes]
+            classes = sorted(set(classes))
 
-        # Return the map component along with the modal
-        return html.Div(
-            [
-                dl.Map(
-                    style={'width': '100%', 'height': '450px'},
-                    center=[0, 0],
-                    zoom=6,
-                    children=[
-                        dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
-                        geojson,
-                        colorbar,
-                        html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
+        # Create a dynamic color scale based on the classes
+        colorscale = ['#a1d99b', '#31a354', '#2c8e34', '#196d30', '#134e20', '#0d3b17']
+        style = dict(weight=2, opacity=1, color='white', dashArray='3', fillOpacity=0.7)
+        ctg = [f"{int(classes[i])}+" for i in range(len(classes))]
+        colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=30, height=300, position="bottomright")
+
+        if 'Province' in dff.columns:
+            with open('./assets/geoBoundaries-KHM-ADM1_simplified.json') as f:
+                geojson_data = json.load(f)
+            
+            # Map indicator values to geojson features
+            for feature in geojson_data['features']:
+                province_name = feature['properties']['shapeName']  # Ensure correct property for province name
+                
+                # Find matching row in the filtered data
+                province_data = dff[dff['Province'] == province_name]
+                
+                if not province_data.empty:
+                    # Assign the indicator value
+                    feature['properties'][indicator] = province_data['Indicator Value'].values[0]
+                    feature['properties']['Series Name'] = series_name
+                    feature['properties']['Indicator'] = indicator
+                    feature['properties']['Year'] = year
+                else:
+                    # Assign None for missing data
+                    feature['properties'][indicator] = None
+            
+            # Create geojson.
+            geojson = dl.GeoJSON(data=geojson_data,
+                                style=style_handle,
+                                zoomToBounds=True,
+                                zoomToBoundsOnClick=True,
+                                hoverStyle=dict(color='black'),
+                                hideout=dict(colorscale=colorscale, classes=classes, style=style, colorProp=indicator),
+                                id="geojson")
+
+            # Return the map component along with the modal
+            return html.Div(
+                [
+                    dl.Map(
+                        style={'width': '100%', 'height': '450px'},
+                        center=[0, 0],
+                        zoom=6,
+                        children=[
+                            dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                            geojson,
+                            colorbar,
+                            html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
+                        
+                        ],
+                        attributionControl=False,
+                    ),
+                ],
+                style={
+                    'position': 'relative',
+                    'zIndex': 0,
+                }
+            )
+        
+        elif 'Markets' in dff.columns:
+            with open('./assets/countries.json') as f:
+                geojson_data = json.load(f)
                     
-                    ],
-                    attributionControl=False,
-                ),
-            ],
-            style={
-                'position': 'relative',
-                'zIndex': 0,
-            }
-        )
-    
-    elif 'Markets' in dff.columns:
-        with open('./assets/countries.json') as f:
-            geojson_data = json.load(f)
+            # Map indicator values to geojson features
+            for feature in geojson_data['features']:
+                province_name = feature['properties']['name']  # Ensure correct property for province name
                 
-        # Map indicator values to geojson features
-        for feature in geojson_data['features']:
-            province_name = feature['properties']['name']  # Ensure correct property for province name
-            
-            # Find matching row in the filtered data
-            province_data = dff[dff['Markets'] == province_name]
-            
-            if not province_data.empty:
-                # Assign the indicator value
-                feature['properties'][indicator] = province_data['Indicator Value'].values[0]
-                feature['properties']['Series Name'] = series_name
-                feature['properties']['Indicator'] = indicator
-                feature['properties']['Year'] = year
-            else:
-                # Assign None for missing data
-                feature['properties'][indicator] = None
+                # Find matching row in the filtered data
+                province_data = dff[dff['Markets'] == province_name]
                 
-        # Create geojson.
-        geojson = dl.GeoJSON(data=geojson_data,
-                            style=style_handle,
-                            zoomToBounds=True,
-                            zoomToBoundsOnClick=True,
-                            hoverStyle=dict(color='black'),
-                            hideout=dict(colorscale=colorscale, classes=classes, style=style, colorProp=indicator),
-                            id="geojson")
-        
-        return html.Div([
-            dl.Map(
-                    style={'width': '100%', 'height': '450px'},
-                    center=[0, 0],
-                    zoom=2,
-                    children=[
-                        dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
-                        geojson, 
-                        colorbar,
-                        html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
-                    ],
-                    attributionControl=False,
-            )],
-            style={
-                'position': 'relative',
-                'zIndex': 0,
-            }
-        )
-    else:
-        with open('./assets/geoBoundaries-KHM-ADM0_simplified.json') as f:
-            geojson_data = json.load(f)
+                if not province_data.empty:
+                    # Assign the indicator value
+                    feature['properties'][indicator] = province_data['Indicator Value'].values[0]
+                    feature['properties']['Series Name'] = series_name
+                    feature['properties']['Indicator'] = indicator
+                    feature['properties']['Year'] = year
+                else:
+                    # Assign None for missing data
+                    feature['properties'][indicator] = None
+                    
+            # Create geojson.
+            geojson = dl.GeoJSON(data=geojson_data,
+                                style=style_handle,
+                                zoomToBounds=True,
+                                zoomToBoundsOnClick=True,
+                                hoverStyle=dict(color='black'),
+                                hideout=dict(colorscale=colorscale, classes=classes, style=style, colorProp=indicator),
+                                id="geojson")
             
-        geojson_data['features'][0]['properties'][indicator] = dff['Indicator Value'].values[0]
-        geojson_data['features'][0]['properties']['Series Name'] = series_name
-        geojson_data['features'][0]['properties']['Indicator'] = indicator
-        geojson_data['features'][0]['properties']['Year'] = year
-        
-        geojson = dl.GeoJSON(
-            data=geojson_data,
-            style=style_handle,
-            zoomToBounds=True,
-            zoomToBoundsOnClick=True,
-            hoverStyle=dict(color='black'),
-            hideout=dict(colorscale=colorscale, classes=classes, style=style, colorProp=indicator),
-            id="geojson"
-        )
-        
-        return html.Div([
-            dl.Map(
-                    style={'width': '100%', 'height': '450px'},
-                    center=[0, 0],
-                    zoom=6,
-                    children=[
-                        dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
-                        geojson,
-                        html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
-                    ],
-                    attributionControl=False,
-            )],
-            style={
-                'position': 'relative',
-                'zIndex': 0,
-            }
-        )
+            return html.Div([
+                dl.Map(
+                        style={'width': '100%', 'height': '450px'},
+                        center=[0, 0],
+                        zoom=2,
+                        children=[
+                            dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                            geojson, 
+                            colorbar,
+                            html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
+                        ],
+                        attributionControl=False,
+                )],
+                style={
+                    'position': 'relative',
+                    'zIndex': 0,
+                }
+            )
+        else:
+            with open('./assets/geoBoundaries-KHM-ADM0_simplified.json') as f:
+                geojson_data = json.load(f)
+                
+            geojson_data['features'][0]['properties'][indicator] = dff['Indicator Value'].values[0]
+            geojson_data['features'][0]['properties']['Series Name'] = series_name
+            geojson_data['features'][0]['properties']['Indicator'] = indicator
+            geojson_data['features'][0]['properties']['Year'] = year
+            
+            geojson = dl.GeoJSON(
+                data=geojson_data,
+                style=style_handle,
+                zoomToBounds=True,
+                zoomToBoundsOnClick=True,
+                hoverStyle=dict(color='black'),
+                hideout=dict(colorscale=colorscale, classes=classes, style=style, colorProp=indicator),
+                id="geojson"
+            )
+            
+            return html.Div([
+                dl.Map(
+                        style={'width': '100%', 'height': '450px'},
+                        center=[0, 0],
+                        zoom=6,
+                        children=[
+                            dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                            geojson,
+                            html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
+                        ],
+                        attributionControl=False,
+                )],
+                style={
+                    'position': 'relative',
+                    'zIndex': 0,
+                }
+            )
         
 def create_graph(dff):
     # Aggregate data
     dff_filtered = dff.groupby('Year')['Indicator Value'].sum().reset_index()
     series_name = dff['Series Name'].unique()[0]
     indicator = dff['Indicator'].unique()[0]
-    
-    if series_name == "Rice Price":
-        print("Hello")
     
     # Define layout
     layout = go.Layout(
@@ -380,46 +393,103 @@ def create_graph(dff):
         ),
         margin=dict(t=100, b=80, l=50, r=50),
     )
+    
+    if series_name == "Rice Price":
+        graphs = []  # Store multiple figures
 
-    # Create figure
-    fig1 = go.Figure(layout=layout)
-    fig1.add_trace(go.Scatter(
-        x=dff_filtered['Year'],
-        y=dff_filtered['Indicator Value'],
-        mode='lines+markers',
-        name=indicator
-    ))  
-    fig1.update_layout(
-        title=dict(
-            text = f"{series_name}: {dff['Indicator'].unique()[0]}" + (f" in {dff['Province'].unique()[0]}" if 'Province' in dff.columns and dff['Province'].nunique() == 1 else "") + (f" to {dff['Markets'].unique()[0]}" if 'Markets' in dff.columns and dff['Markets'].nunique() == 1 else "")
+        for variety in dff['Variety'].unique():  # Iterate through each variety
+            dff_variety = dff[dff['Variety'] == variety]
+            dff_variety['Date'] = pd.to_datetime(dff_variety['Date'])
+            print(dff_variety['Date'])
+
+            # Create figure
+            fig = go.Figure(layout=layout)
+            fig.add_trace(go.Scatter(
+                x=dff_variety['Date'],
+                y=dff_variety['Indicator Value'],
+                mode='lines+markers',
+                name=variety,
+                connectgaps=False
+            ))  
+
+            fig.update_layout(
+                title=dict(
+                    text=f"{series_name} - {variety}: {dff_variety['Indicator'].unique()[0]}"
+                    + (f" in {dff_variety['Province'].unique()[0]}" if 'Province' in dff_variety.columns and dff_variety['Province'].nunique() == 1 else "")
+                    + (f" to {dff_variety['Markets'].unique()[0]}" if 'Markets' in dff_variety.columns and dff_variety['Markets'].nunique() == 1 else "")
+                )
+            )
+
+            # Append graph to the list
+            graphs.append(html.Div([
+                dcc.Graph(
+                    id=f"figure-linechart-{variety}", 
+                    figure=fig, 
+                    style={'minHeight': '450px'},
+                    config={
+                        'displaylogo': False,
+                        'toImageButtonOptions': {
+                            'format': 'png',
+                            'filename': f'cdri_datahub_viz_{variety}',
+                            'height': 500,
+                            'width': 800,
+                            'scale': 6
+                        },
+                    },
+                    responsive=True,
+                ),
+                dmc.Divider(size="sm")
+            ]))
+
+        # Return all graphs in one Div
+        return html.Div(graphs + [  
+            dmc.Alert(
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
+                title="Description",
+                color="green"
+            )
+        ])
+    
+    else:
+        # Create figure
+        fig1 = go.Figure(layout=layout)
+        fig1.add_trace(go.Scatter(
+            x=dff_filtered['Year'],
+            y=dff_filtered['Indicator Value'],
+            mode='lines+markers',
+            name=indicator
+        ))  
+        fig1.update_layout(
+            title=dict(
+                text = f"{series_name}: {dff['Indicator'].unique()[0]}" + (f" in {dff['Province'].unique()[0]}" if 'Province' in dff.columns and dff['Province'].nunique() == 1 else "") + (f" to {dff['Markets'].unique()[0]}" if 'Markets' in dff.columns and dff['Markets'].nunique() == 1 else "")
+            )
         )
-    )
 
-    # Return graph
-    return html.Div([ 
-        dcc.Graph(
-            id="figure-linechart", 
-            figure=fig1, 
-            style={'minHeight': '450px'},
-            config={
-                'displaylogo': False,
-                'toImageButtonOptions': {
-                    'format': 'png',
-                    'filename': 'cdri_datahub_viz',
-                    'height': 500,
-                    'width': 800,
-                    'scale': 6
+        # Return graph
+        return html.Div([ 
+            dcc.Graph(
+                id="figure-linechart", 
+                figure=fig1, 
+                style={'minHeight': '450px'},
+                config={
+                    'displaylogo': False,
+                    'toImageButtonOptions': {
+                        'format': 'png',
+                        'filename': 'cdri_datahub_viz',
+                        'height': 500,
+                        'width': 800,
+                        'scale': 6
+                    },
                 },
-            },
-            responsive=True,
-        ),
-        dmc.Divider(size="sm"),
-        dmc.Alert(
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-            title="Description",
-            color="green"
-        ),
-    ])
+                responsive=True,
+            ),
+            dmc.Divider(size="sm"),
+            dmc.Alert(
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+                title="Description",
+                color="green"
+            ),
+        ])
 
 def create_modal(dff, feature):
     indicator = feature['Indicator']
@@ -538,6 +608,9 @@ def info_hover(series_name, year, indicator, indicator_unit, feature):
     Input('series-name-dropdown', 'value')
 )
 def update_province(series_name):
+    if series_name.lower() == "rice price":
+        return [], None, {'display': 'none'}
+    
     province_options = data[(data["Series Name"] == series_name)]["Province"].dropna().str.strip().unique()
 
     style = {'display': 'block'} if province_options.size > 0 else {'display': 'none'}
@@ -580,6 +653,9 @@ def update_indicators(series_name, province):
     Input('active-tab', 'value'),
 )
 def update_year_dropdown(series_name, province, indicator, active_tab):
+    if series_name.lower() == "rice price":
+        return [], None, {'display': 'none'}
+    
     dff = filter_data(
         data=data,
         series_name=series_name,
@@ -606,32 +682,32 @@ def update_year_dropdown(series_name, province, indicator, active_tab):
     return year_options, default_value, dropdown_style
 
 
-# Callback to handle map clicks and display modal
-@callback(
-    Output("info-modal", "opened"),
-    Output("modal-body", "children"),
-    Output("geojson", "clickData"),  # Reset clickData
-    Input("geojson", "clickData"),
-    State("info-modal", "opened"),
-    prevent_initial_call=True
-)
-def handle_map_click(click_data, is_modal_open):
-    if click_data is None:
-        return dash.no_update, dash.no_update, dash.no_update
+# # Callback to handle map clicks and display modal
+# @callback(
+#     Output("info-modal", "opened"),
+#     Output("modal-body", "children"),
+#     Output("geojson", "clickData"),  # Reset clickData
+#     Input("geojson", "clickData"),
+#     State("info-modal", "opened"),
+#     prevent_initial_call=True
+# )
+# def handle_map_click(click_data, is_modal_open):
+#     if click_data is None:
+#         return dash.no_update, dash.no_update, dash.no_update
     
-    # Extract feature properties from the clicked data
-    feature = click_data.get("properties", {})
+#     # Extract feature properties from the clicked data
+#     feature = click_data.get("properties", {})
     
-    dff = filter_data(
-        data=data,
-        series_name=feature['Series Name'],
-        province=feature['shapeName'],
-    )
+#     dff = filter_data(
+#         data=data,
+#         series_name=feature['Series Name'],
+#         province=feature['shapeName'],
+#     )
     
-    # Prepare the content for the modal
-    modal_content = [
-        create_modal(dff, feature)
-    ]
+#     # Prepare the content for the modal
+#     modal_content = [
+#         create_modal(dff, feature)
+#     ]
     
-    # Open the modal, update its content, and reset clickData
-    return not is_modal_open, modal_content, None
+#     # Open the modal, update its content, and reset clickData
+#     return not is_modal_open, modal_content, None
