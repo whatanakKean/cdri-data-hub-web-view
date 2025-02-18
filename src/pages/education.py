@@ -23,7 +23,7 @@ def sidebar(data):
             dmc.Select(
                 label="Select Dataset", 
                 id="series-name-dropdown-education", 
-                value='Student Flow Rates By Class', 
+                value='Student Flow Rates By Class Range', 
                 data=[{'label': option, 'value': option} for option in data["Series Name"].dropna().str.strip().unique() if option],
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
@@ -33,7 +33,7 @@ def sidebar(data):
             dmc.Select(
                 label="Select Indicator", 
                 id="indicator-dropdown-education", 
-                value='Value', 
+                value='Dropout', 
                 data=[{'label': option, 'value': option} for option in list(sorted(data["Indicator"].dropna().str.strip().unique()))],
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
@@ -52,17 +52,6 @@ def sidebar(data):
                 checkIconPosition="right",
                 allowDeselect=False,
             ),
-            # dmc.Select(
-            #     label="Select Occupation", 
-            #     id="occupation-dropdown-education", 
-            #     value=str(data["Occupation"].dropna().unique()[-1]),
-        	#     data=[{'label': str(option), 'value': str(option)} for option in sorted(data["Occupation"].dropna().unique())],
-            #     withScrollArea=False,
-            #     styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
-            #     mt="md",
-            #     checkIconPosition="right",
-            #     allowDeselect=False,
-            # ),
             dmc.Select(
                 label="Select Province", 
                 id="province-dropdown-education", 
@@ -303,102 +292,130 @@ def create_map(dff, year):
         )
    
 def create_graph(dff):
-    # Check if 'Grade' column exists
-    if 'Grade' in dff.columns:
-        series_name = dff['Series Name'].unique()[0]
-        indicator = dff['Indicator'].unique()[0]
+    series_name = dff['Series Name'].unique()[0]
+    indicator = dff['Indicator'].unique()[0]
 
-        # Create a list of traces for each Grade
+    if series_name == 'Dropout Rate By Occupation':
+        # Create a multi-bar chart with Y-axis as Occupation
         traces = []
-        for grade in dff['Grade'].unique():
-            grade_data = dff[dff['Grade'] == grade]
-            traces.append(go.Scatter(
-                x=grade_data['Year'],
-                y=grade_data['Indicator Value'],
-                mode='lines+markers',
-                name=f"{grade}",
+        for year in dff['Year'].unique():
+            year_data = dff[dff['Year'] == year]
+            traces.append(go.Bar(
+                y=year_data['Occupation'],
+                x=year_data['Indicator Value'],
+                name=str(year),
+                orientation='h'
             ))
-    else:
-        series_name = dff['Series Name'].unique()[0]
-        indicator = dff['Indicator'].unique()[0]
 
-        # Only one trace (no Grade dimension)
-        traces = [go.Scatter(
-            x=dff['Year'],
-            y=dff['Indicator Value'],
-            mode='lines+markers',
-            name=indicator
-        )]
-        
-    # Define layout
-    layout = go.Layout(
-        images=[dict(
-            source="./assets/CDRI Logo.png",
-            xref="paper", yref="paper",
-            x=1, y=1.1,
-            sizex=0.2, sizey=0.2,
-            xanchor="right", yanchor="bottom"
-        )],
-        yaxis=dict(
-            gridcolor='rgba(169, 169, 169, 0.7)',
-            showgrid=True,
-            gridwidth=0.5,
-            griddash='dot',
-            tickformat=',',
-            rangemode='tozero',
-            title=f"{indicator} ({dff['Indicator Unit'].unique()[0]})",
-        ),
-        font=dict(
-            family='Roboto',
-            color='rgba(0, 0, 0, 0.7)'
-        ),
-        hovermode="x unified",
-        plot_bgcolor='white',
-        legend=dict(
-            orientation="h",  # Horizontal legend
-            yanchor="bottom",
-            y=-0.4,
-            xanchor="center",
-            x=0.5  # Centers the legend
-        ),
-        xaxis=dict(
-            tickmode='array',
-            tickvals=dff['Year'].unique(),
-            # title="Produced By: CDRI Data Hub",
-        ),
-        margin=dict(t=100, b=100, l=50, r=50),
-    )
-
-    # Create figure and add traces
-    fig1 = go.Figure(layout=layout)
-    for trace in traces:
-        fig1.add_trace(trace)
-
-    fig1.update_layout(
-        title=dict(
-            text=f"{series_name}: {indicator}",
-        ),
-    )
-    
-    # If the series name is 'Dropout Rate By Occupation', plot a pie chart
-    if dff['Series Name'].unique()[0] == 'Dropout Rate By Occupation':
-        # Pie chart trace
-        pie_trace = go.Pie(
-            labels=dff['Occupation'],
-            values=dff['Indicator Value'],
-            textinfo='label+percent',
-            title="Dropout Rate By Occupation"
+        # Create layout for bar chart
+        layout = go.Layout(
+            images=[dict(
+                source="./assets/CDRI Logo.png",
+                xref="paper", yref="paper",
+                x=1, y=1.1,
+                sizex=0.2, sizey=0.2,
+                xanchor="right", yanchor="bottom"
+            )],
+            title=dict(text=f"{series_name}: {indicator}"),
+            font=dict(
+                family='BlinkMacSystemFont, -apple-system, sans-serif',
+                color='rgb(24, 29, 31)'
+            ),
+            barmode='group',  # Group bars for different years
+            yaxis=dict(
+                title="Occupation",
+                categoryorder='total ascending'
+            ),
+            xaxis=dict(
+                title=f"{indicator} ({dff['Indicator Unit'].unique()[0]})",
+                gridcolor='rgba(169, 169, 169, 0.7)',
+                showgrid=True,
+                gridwidth=0.5,
+                griddash='dot'
+            ),
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=-0.4,
+                xanchor="center",
+                x=0.5
+            ),
+            margin=dict(t=100, b=100, l=50, r=50),
+            plot_bgcolor='white',
         )
-        
-        layout.update(showlegend=False)
-        fig1 = go.Figure(pie_trace, layout=layout)
-        
 
-    # Return graph
-    return html.Div([ 
+        fig = go.Figure(data=traces, layout=layout)
+    else:
+        # # Original line chart implementation
+        # min_value = dff['Indicator Value'].min()
+        # max_value = dff['Indicator Value'].max()
+        # yaxis_range = [0, 100] if 0 <= min_value and max_value <= 100 else None
+
+        if 'Grade' in dff.columns:
+            traces = []
+            for grade in dff['Grade'].unique():
+                grade_data = dff[dff['Grade'] == grade]
+                traces.append(go.Scatter(
+                    x=grade_data['Year'],
+                    y=grade_data['Indicator Value'],
+                    mode='lines+markers',
+                    name=f"{grade}",
+                ))
+        else:
+            traces = [go.Scatter(
+                x=dff['Year'],
+                y=dff['Indicator Value'],
+                mode='lines+markers',
+                name=indicator
+            )]
+
+        # Create line chart layout
+        layout = go.Layout(
+            images=[dict(
+                source="./assets/CDRI Logo.png",
+                xref="paper", yref="paper",
+                x=1, y=1.1,
+                sizex=0.2, sizey=0.2,
+                xanchor="right", yanchor="bottom"
+            )],
+            yaxis=dict(
+                gridcolor='rgba(169, 169, 169, 0.7)',
+                showgrid=True,
+                gridwidth=0.5,
+                griddash='dot',
+                tickformat=',',
+                rangemode='tozero',
+                title=f"{indicator} ({dff['Indicator Unit'].unique()[0]})",
+            ),
+            font=dict(
+                family='BlinkMacSystemFont, -apple-system, sans-serif',
+                color='rgb(24, 29, 31)'
+            ),
+            hovermode="x unified",
+            plot_bgcolor='white',
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=-0.4,
+                xanchor="center",
+                x=0.5
+            ),
+            xaxis=dict(
+                tickmode='array',
+                tickvals=dff['Year'].unique(),
+            ),
+            margin=dict(t=100, b=100, l=50, r=50),
+        )
+
+        fig = go.Figure(layout=layout)
+        for trace in traces:
+            fig.add_trace(trace)
+        fig.update_layout(title=dict(text=f"{series_name}: {indicator}"))
+
+    return html.Div([
         dcc.Graph(
-            id="figure-linechart", 
-            figure=fig1, 
+            id="figure-linechart",
+            figure=fig,
             style={'minHeight': '450px'},
             config={
                 'displaylogo': False,
@@ -425,6 +442,11 @@ def create_modal(dff, feature):
     indicator = feature['Indicator']
     dff_filtered = dff[dff['Indicator'] == indicator]
     series_name = dff_filtered['Series Name'].unique()[0]
+    
+    # # Determine y-axis range if values fall between 0-100
+    # min_value = dff_filtered['Indicator Value'].min()
+    # max_value = dff_filtered['Indicator Value'].max()
+    # yaxis_range = [0, 100] if 0 <= min_value and max_value <= 100 else None
 
     # Define layout
     layout = go.Layout(
@@ -445,15 +467,15 @@ def create_modal(dff, feature):
             title=f"{indicator} ({dff_filtered['Indicator Unit'].unique()[0]})",
         ),
         font=dict(
-            family='Roboto',
-            color='rgba(0, 0, 0, 0.7)'
+            family='BlinkMacSystemFont, -apple-system, sans-serif',
+            color='rgb(24, 29, 31)'
         ),
         hovermode="x unified",
         plot_bgcolor='white',
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=1,
+            y=5,
             xanchor="right",    
             x=1
         ),
@@ -573,7 +595,7 @@ def update_indicators(series_name, grade, province):
     indicator_options = [{'label': indicator, 'value': indicator} for indicator in sorted(indicator_values)]
     
     # Set default value to the first indicator
-    default_value = indicator_values[0] if indicator_values else None
+    default_value = sorted(indicator_values)[0] if indicator_values else None
     
     return indicator_options, default_value
 

@@ -291,8 +291,8 @@ def create_graph(dff):
             title=f"{indicator} ({dff['Indicator Unit'].unique()[0]})",
         ),
         font=dict(
-            family='Roboto',
-            color='rgba(0, 0, 0, 0.7)'
+            family='BlinkMacSystemFont, -apple-system, sans-serif',
+            color='rgb(24, 29, 31)'
         ),
         hovermode="x unified",
         plot_bgcolor='white',
@@ -377,8 +377,8 @@ def create_modal(dff, feature):
             title=f"{indicator} ({dff_filtered['Indicator Unit'].unique()[0]})",
         ),
         font=dict(
-            family='Roboto',
-            color='rgba(0, 0, 0, 0.7)'
+            family='BlinkMacSystemFont, -apple-system, sans-serif',
+            color='rgb(24, 29, 31)'
         ),
         hovermode="x unified",
         plot_bgcolor='white',

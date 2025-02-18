@@ -13,7 +13,7 @@ from fuzzywuzzy import process
 conn = sqlite3.connect("./src/data/data.db")
 
 # Query economic_data table
-query1 = "SELECT * FROM economic_data;"
+query1 = "SELECT * FROM education_data;"
 df1 = pd.read_sql_query(query1, conn)
 # Query agriculture_data table
 query2 = "SELECT * FROM agriculture_data;"
@@ -149,8 +149,8 @@ def create_graph(dff):
             title=f"{indicator} ({indicator_unit})",
         ),
         font=dict(
-            family='Roboto',
-            color='rgba(0, 0, 0, 0.7)'
+            family='BlinkMacSystemFont, -apple-system, sans-serif',
+            color='rgb(24, 29, 31)'
         ),
         hovermode="x unified",
         plot_bgcolor='white',
@@ -278,19 +278,19 @@ def update_data(selected_suggestion):
         best_match_lower, score = match_indicator
         filters["Province"] = lower_indicator[best_match_lower]
     
-    # Store original and lowercase versions of Markets
-    lower_indicator = {name.lower(): name for name in data['Markets'].unique() if name is not None}
-    match_indicator = process.extractOne(selected_suggestion.lower(), lower_indicator.keys(), score_cutoff=50)
-    if match_indicator:
-        best_match_lower, score = match_indicator
-        filters["Markets"] = lower_indicator[best_match_lower]
+    # # Store original and lowercase versions of Markets
+    # lower_indicator = {name.lower(): name for name in data['Markets'].unique() if name is not None}
+    # match_indicator = process.extractOne(selected_suggestion.lower(), lower_indicator.keys(), score_cutoff=50)
+    # if match_indicator:
+    #     best_match_lower, score = match_indicator
+    #     filters["Markets"] = lower_indicator[best_match_lower]
         
-    # Store original and lowercase versions of Products
-    lower_indicator = {name.lower(): name for name in data['Products'].unique() if name is not None}
-    match_indicator = process.extractOne(selected_suggestion.lower(), lower_indicator.keys(), score_cutoff=50)
-    if match_indicator:
-        best_match_lower, score = match_indicator
-        filters["Products"] = lower_indicator[best_match_lower]
+    # # Store original and lowercase versions of Products
+    # lower_indicator = {name.lower(): name for name in data['Products'].unique() if name is not None}
+    # match_indicator = process.extractOne(selected_suggestion.lower(), lower_indicator.keys(), score_cutoff=50)
+    # if match_indicator:
+    #     best_match_lower, score = match_indicator
+    #     filters["Products"] = lower_indicator[best_match_lower]
     
     # Filter the dataset
     filtered_df = data
