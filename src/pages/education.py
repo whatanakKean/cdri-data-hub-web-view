@@ -100,7 +100,7 @@ education = dmc.Container([
                                 [
                                     dmc.TabsTab("Map View", leftSection=DashIconify(icon="tabler:map"), value="map"),
                                     dmc.TabsTab("Visualization", leftSection=DashIconify(icon="tabler:chart-bar"), value="graph"),
-                                    dmc.TabsTab("Data Hub", leftSection=DashIconify(icon="tabler:database"), value="dataview"),
+                                    dmc.TabsTab("Data View", leftSection=DashIconify(icon="tabler:database"), value="dataview"),
                                 ], 
                                 grow="True",
                             ),
@@ -316,7 +316,10 @@ def create_graph(dff):
                 sizex=0.2, sizey=0.2,
                 xanchor="right", yanchor="bottom"
             )],
-            title=dict(text=f"{series_name}: {indicator}"),
+            title=dict(
+                text=f"{series_name} {indicator}"
+                + f"<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{dff['Indicator Unit'].unique()[0]}</span>"
+            ),
             font=dict(
                 family='BlinkMacSystemFont, -apple-system, sans-serif',
                 color='rgb(24, 29, 31)'
@@ -358,14 +361,14 @@ def create_graph(dff):
                 traces.append(go.Scatter(
                     x=grade_data['Year'],
                     y=grade_data['Indicator Value'],
-                    mode='lines+markers',
+                    mode='lines+markers' if len(grade_data) == 1 else 'lines',
                     name=f"{grade}",
                 ))
         else:
             traces = [go.Scatter(
                 x=dff['Year'],
                 y=dff['Indicator Value'],
-                mode='lines+markers',
+                mode='lines+markers' if len(dff) == 1 else 'lines',
                 name=indicator
             )]
 
@@ -385,7 +388,6 @@ def create_graph(dff):
                 griddash='dot',
                 tickformat=',',
                 rangemode='tozero',
-                title=f"{indicator} ({dff['Indicator Unit'].unique()[0]})",
             ),
             font=dict(
                 family='BlinkMacSystemFont, -apple-system, sans-serif',
@@ -401,16 +403,22 @@ def create_graph(dff):
                 x=0.5
             ),
             xaxis=dict(
-                tickmode='array',
+                tickmode='auto',
                 tickvals=dff['Year'].unique(),
             ),
-            margin=dict(t=100, b=100, l=50, r=50),
+            margin=dict(t=100, b=80, l=50, r=50, pad=10),
         )
 
         fig = go.Figure(layout=layout)
         for trace in traces:
             fig.add_trace(trace)
-        fig.update_layout(title=dict(text=f"{series_name}: {indicator}"))
+        fig.update_layout(
+            title=dict(
+                text=f"{series_name} {indicator}"
+                    + f"<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{dff['Indicator Unit'].unique()[0]}</span>"
+            )
+        )
+
 
     return html.Div([
         dcc.Graph(
@@ -430,11 +438,11 @@ def create_graph(dff):
             responsive=True,
         ),
         dmc.Divider(size="sm"),
-        dmc.Alert(
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-            title="Description",
-            color="green"
-        ),
+        # dmc.Alert(
+        #     "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+        #     title="Description",
+        #     color="green"
+        # ),
     ])
 
 
@@ -480,11 +488,11 @@ def create_modal(dff, feature):
             x=1
         ),
         xaxis=dict(
-            tickmode='array',
+            tickmode='auto',
             tickvals=dff_filtered['Year'].unique(),
             title="Produced By: CDRI Data Hub",
         ),
-        margin=dict(t=100, b=80, l=50, r=50),
+        margin=dict(t=100, b=80, l=50, r=50, pad=10),
     )
 
     # Create figure
@@ -492,12 +500,14 @@ def create_modal(dff, feature):
     fig1.add_trace(go.Scatter(
         x=dff_filtered['Year'],
         y=dff_filtered['Indicator Value'],
-        mode='lines+markers',
+        mode='lines+markers' if len(dff_filtered) == 1 else 'lines',
         name=indicator
     ))  
     fig1.update_layout(
         title=dict(
-            text = f"{series_name}: {dff['Indicator'].unique()[0]}" + (f" in {dff['Province'].unique()[0]}" if 'Province' in dff.columns and dff['Province'].nunique() == 1 else "")
+            text=f"{series_name} {dff['Indicator'].unique()[0]}"
+                + (f" in {dff['Province'].unique()[0]}" if 'Province' in dff.columns and dff['Province'].nunique() == 1 else "")
+                + f"<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{dff['Indicator Unit'].unique()[0]}</span>"
         )
     )
 

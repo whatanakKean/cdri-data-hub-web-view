@@ -5,6 +5,7 @@ import dash
 from dash import html, dcc, Input, Output, State, callback
 import dash_mantine_components as dmc
 import dash_ag_grid as dag
+import numpy as np
 import pandas as pd
 from ..utils.utils import get_info, filter_data, style_handle
 from dash_iconify import DashIconify
@@ -93,9 +94,9 @@ agriculture_and_rural_development = dmc.Container([
                         children=[
                             dmc.TabsList(
                                 [
-                                    dmc.TabsTab("Map View", leftSection=DashIconify(icon="tabler:map"), value="map"),
-                                    dmc.TabsTab("Visualization", leftSection=DashIconify(icon="tabler:chart-bar"), value="graph"),
-                                    dmc.TabsTab("Data Hub", leftSection=DashIconify(icon="tabler:database"), value="dataview"),
+                                    dmc.TabsTab("Map View", leftSection=DashIconify(icon="tabler:map"), value="map", id="map-tab"),
+                                    dmc.TabsTab("Visualization", leftSection=DashIconify(icon="tabler:chart-bar"), value="graph", id="graph-tab"),
+                                    dmc.TabsTab("Data View", leftSection=DashIconify(icon="tabler:database"), value="dataview", id="dataview-tab"),
                                 ], 
                                 grow="True",
                             ),
@@ -169,6 +170,7 @@ def create_map(dff, year):
                     zoom=6,
                     children=[
                         dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                        html.Div(children=get_info(is_gis=False), className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
                         # geojson,
                         # html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
                     ],
@@ -371,7 +373,6 @@ def create_graph(dff):
             griddash='dot',
             tickformat=',',
             rangemode='tozero',
-            title=f"{indicator} ({dff['Indicator Unit'].unique()[0]})",
         ),
         font=dict(
             family='BlinkMacSystemFont, -apple-system, sans-serif',
@@ -387,36 +388,36 @@ def create_graph(dff):
             x=1
         ),
         xaxis=dict(
-            tickmode='array',
+            tickmode='auto',
             tickvals=dff_filtered['Year'].unique(),
             title="Produced By: CDRI Data Hub",
         ),
-        margin=dict(t=100, b=80, l=50, r=50),
+        margin=dict(t=100, b=80, l=50, r=50, pad=10),
     )
     
     if series_name == "Rice Price":
         graphs = []  # Store multiple figures
-
+        test = dff[dff['Variety'] == 'Jamine A1 Super']
+        print(">> Yoo", test["Indicator Value"].dropna())
         for variety in dff['Variety'].unique():  # Iterate through each variety
             dff_variety = dff[dff['Variety'] == variety]
             dff_variety['Date'] = pd.to_datetime(dff_variety['Date'])
-            print(dff_variety['Date'])
+            dff_variety = dff_variety.sort_values(by='Date')
+            
 
             # Create figure
             fig = go.Figure(layout=layout)
             fig.add_trace(go.Scatter(
                 x=dff_variety['Date'],
                 y=dff_variety['Indicator Value'],
-                mode='lines+markers',
+                mode = 'lines+markers' if len(dff_variety.dropna()) == 1 else 'lines',
                 name=variety,
                 connectgaps=False
             ))  
 
             fig.update_layout(
                 title=dict(
-                    text=f"{series_name} - {variety}: {dff_variety['Indicator'].unique()[0]}"
-                    + (f" in {dff_variety['Province'].unique()[0]}" if 'Province' in dff_variety.columns and dff_variety['Province'].nunique() == 1 else "")
-                    + (f" to {dff_variety['Markets'].unique()[0]}" if 'Markets' in dff_variety.columns and dff_variety['Markets'].nunique() == 1 else "")
+                    text=f"{dff_variety['Sub-Sector (1)'].unique()[0]} of {variety}<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{dff_variety['Indicator Unit'].unique()[0]}</span>"
                 )
             )
 
@@ -442,13 +443,15 @@ def create_graph(dff):
             ]))
 
         # Return all graphs in one Div
-        return html.Div(graphs + [  
-            dmc.Alert(
-                "Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
-                title="Description",
-                color="green"
-            )
-        ])
+        return html.Div(
+            graphs 
+            # + 
+            # [dmc.Alert(
+            #     "Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
+            #     title="Description",
+            #     color="green"
+            # )]
+        )
     
     else:
         # Create figure
@@ -456,12 +459,15 @@ def create_graph(dff):
         fig1.add_trace(go.Scatter(
             x=dff_filtered['Year'],
             y=dff_filtered['Indicator Value'],
-            mode='lines+markers',
+            mode='lines+markers' if len(dff_filtered) == 1 else 'lines',
             name=indicator
         ))  
         fig1.update_layout(
             title=dict(
-                text = f"{series_name}: {dff['Indicator'].unique()[0]}" + (f" in {dff['Province'].unique()[0]}" if 'Province' in dff.columns and dff['Province'].nunique() == 1 else "") + (f" to {dff['Markets'].unique()[0]}" if 'Markets' in dff.columns and dff['Markets'].nunique() == 1 else "")
+                text=f"{series_name} {dff['Indicator'].unique()[0]}"
+                    + (f" in {dff['Province'].unique()[0]}" if 'Province' in dff.columns and dff['Province'].nunique() == 1 else "")
+                    + (f" to {dff['Markets'].unique()[0]}" if 'Markets' in dff.columns and dff['Markets'].nunique() == 1 else "")
+                    + f"<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{dff['Indicator Unit'].unique()[0]}</span>"
             )
         )
 
@@ -484,11 +490,11 @@ def create_graph(dff):
                 responsive=True,
             ),
             dmc.Divider(size="sm"),
-            dmc.Alert(
-                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-                title="Description",
-                color="green"
-            ),
+            # dmc.Alert(
+            #     "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+            #     title="Description",
+            #     color="green"
+            # ),
         ])
 
 def create_modal(dff, feature):
@@ -528,11 +534,11 @@ def create_modal(dff, feature):
             x=1
         ),
         xaxis=dict(
-            tickmode='array',
+            tickmode='auto',
             tickvals=dff_filtered['Year'].unique(),
             title="Produced By: CDRI Data Hub",
         ),
-        margin=dict(t=100, b=80, l=50, r=50),
+        margin=dict(t=100, b=80, l=50, r=50, pad=10),
     )
 
     # Create figure
@@ -540,15 +546,14 @@ def create_modal(dff, feature):
     fig1.add_trace(go.Scatter(
         x=dff_filtered['Year'],
         y=dff_filtered['Indicator Value'],
-        mode='lines+markers',
+        mode='lines+markers' if len(dff_filtered) == 1 else 'lines',
         name=indicator
     ))  
     fig1.update_layout(
         title=dict(
-            text= f"{series_name}: {indicator} in {feature['shapeName']}",
+            text= f"{series_name}: {indicator} in {feature['shapeName']}" + f"<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{dff['Indicator Unit'].unique()[0]}</span>",
         ),
     )
-
     # Return graph with the Pie chart selector and line chart
     return html.Div([
         dmc.Divider(size="sm"),

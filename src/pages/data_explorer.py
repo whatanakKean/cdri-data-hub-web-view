@@ -50,11 +50,12 @@ data_explorer_page = html.Main(
                         dmc.Title('Data Hub Explorer', order=1, style={'color': 'white', 'fontSize': '2rem'}),
                         dmc.Text("Explore Data and Visualizations with Natural Language", size="xl", style={'color': 'white', 'fontSize': '1rem'}),
                         # Suggestions dropdown
-                        dmc.Autocomplete(
+                        dmc.TextInput(
                             id="suggestions-autocomplete",
                             placeholder="Ask anything...",
                             leftSection=DashIconify(icon="mingcute:ai-fill"),
-                            data=[{"value": question, "label"   : question} for question in suggested_questions],
+                            debounce=500,
+                            # data=[{"value": question, "label"   : question} for question in suggested_questions],
                             style={"width": "100%", "marginBottom": "20px"},
                         ),
                         # dmc.Box(
@@ -73,7 +74,7 @@ data_explorer_page = html.Main(
                                 dmc.Text("data-catalog-modal-body"),
                             ],
                             fullScreen=True
-                        )
+                        ),
                     ],
                     className="animate__animated animate__fadeInUp animate__fast"
                 )
@@ -87,7 +88,7 @@ data_explorer_page = html.Main(
                         dmc.TabsList(
                             [
                                 dmc.TabsTab("Visualization", leftSection=DashIconify(icon="tabler:chart-bar"), value="graph"),
-                                dmc.TabsTab("Data Hub", leftSection=DashIconify(icon="tabler:database"), value="dataview"),
+                                dmc.TabsTab("Data View", leftSection=DashIconify(icon="tabler:database"), value="dataview"),
                             ], 
                             grow="True",
                         ),
@@ -146,7 +147,6 @@ def create_graph(dff):
             griddash='dot',
             tickformat=',',
             rangemode='tozero',
-            title=f"{indicator} ({indicator_unit})",
         ),
         font=dict(
             family='BlinkMacSystemFont, -apple-system, sans-serif',
@@ -162,30 +162,43 @@ def create_graph(dff):
             x=1
         ),
         xaxis=dict(
-            tickmode='array',
+            tickmode='auto',
             tickvals=dff_filtered['Year'].unique(),
             title="Produced By: CDRI Data Hub",
         ),
-        margin=dict(t=100, b=80, l=50, r=50),
+        margin=dict(t=100, b=80, l=50, r=50, pad=10),
+    
     )
-
-    # Create line chart
+    traces = []
+    if dff['Grade'].notna().all():
+        for grade in dff['Grade'].unique():
+            grade_data = dff[dff['Series Name'] == grade]
+            traces.append(go.Scatter(
+                x=grade_data['Year'],
+                y=grade_data['Indicator Value'],
+                mode='lines+markers' if len(grade_data) == 1 else 'lines',
+                name=f"{grade}",
+            ))
+    else:
+        trace = go.Scatter(
+            x=dff_filtered['Year'],
+            y=dff_filtered['Indicator Value'],
+            mode='lines+markers' if len(dff_filtered) == 1 else 'lines',
+            name=f"{indicator} (Line)"
+        )
+        traces.append(trace)
     fig_line = go.Figure(layout=layout)
-    fig_line.add_trace(go.Scatter(
-        x=dff_filtered['Year'],
-        y=dff_filtered['Indicator Value'],
-        mode='lines+markers',
-        name=f"{indicator} (Line)"
-    ))
+    for trace in traces:
+        fig_line.add_trace(trace)
 
-    # Create bar chart
-    fig_bar = go.Figure(layout=layout)
-    fig_bar.add_trace(go.Bar(
-        x=dff_filtered['Year'],
-        y=dff_filtered['Indicator Value'],
-        name=f"{indicator} (Bar)",
-        marker_color='rgba(55, 128, 191, 0.7)'
-    ))
+    # # Create bar chart
+    # fig_bar = go.Figure(layout=layout)
+    # fig_bar.add_trace(go.Bar(
+    #     x=dff_filtered['Year'],
+    #     y=dff_filtered['Indicator Value'],
+    #     name=f"{indicator} (Bar)",
+    #     marker_color='rgba(55, 128, 191, 0.7)'
+    # ))
 
     # Update layout with title
     title_suffix = ""
@@ -194,8 +207,8 @@ def create_graph(dff):
     if 'Markets' in dff.columns and dff['Markets'].nunique() == 1:
         title_suffix += f" to {dff['Markets'].unique()[0]}"
 
-    fig_line.update_layout(title=dict(text=f"{series_name} {indicator}{title_suffix}"))
-    fig_bar.update_layout(title=dict(text=f"{series_name} {indicator}{title_suffix}"), bargap=0.5)
+    fig_line.update_layout(title=dict(text=f"{series_name} {indicator}{title_suffix}<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{dff['Indicator Unit'].unique()[0]}</span>"))
+    # fig_bar.update_layout(title=dict(text=f"{series_name} {indicator}{title_suffix}"), bargap=0.5)
 
     # Return graph components
     return html.Div([ 
@@ -216,22 +229,23 @@ def create_graph(dff):
             responsive=True
         ),
         dmc.Divider(size="sm"),
-        dcc.Graph(
-            id="figure-barchart", 
-            style={'minHeight': '450px'},
-            figure=fig_bar, 
-            config={
-                'displaylogo': False,
-                'toImageButtonOptions': {
-                    'format': 'png',
-                    'filename': 'cdri_datahub_barchart',
-                    'height': 500,
-                    'width': 800,
-                    'scale': 6
-                },
-            },
-            responsive=True,
-        ),
+        # dcc.Graph(
+        #     id="figure-barchart", 
+        #     style={'minHeight': '450px'},
+        #     figure=fig_bar, 
+        #     config={
+        #         'displaylogo': False,
+        #         'toImageButtonOptions': {
+        #             'format': 'png',
+        #             'filename': 'cdri_datahub_barchart',
+        #             'height': 500,
+        #             'width': 800,
+        #             'scale': 6
+        #         },
+        #     },
+        #     responsive=True,
+        # ),
+    
     ])
 
 
@@ -256,49 +270,14 @@ def update_data(selected_suggestion):
 
     # Extract filters from the selected suggestion
     filters = {}
-    
-    # Store original and lowercase versions of Series Name
-    lower_series_name = {name.lower(): name for name in data['Series Name'].unique() if name is not None}
-    match_series_name = process.extractOne(selected_suggestion.lower(), lower_series_name.keys(), score_cutoff=50)
-    if match_series_name:
-        best_match_lower, score = match_series_name
-        filters["Series Name"] = lower_series_name[best_match_lower]
+    for col in ["Series Name", "Sub-Sector (1)", "Sub-Sector (2)", "Indicator", "Markets", "Province", "Grade"]:
+        lower_mapping = {str(name).lower(): name for name in data[col].unique() if pd.notna(name)}
+        match = process.extractOne(selected_suggestion.lower(), lower_mapping.keys(), score_cutoff=70)
+        if match:
+            best_match_lower, score = match
+            filters[col] = lower_mapping[best_match_lower]
+            print(col, " : ", match)
         
-    # Store original and lowercase versions of Indicator
-    lower_indicator = {name.lower(): name for name in data['Indicator'].unique() if name is not None}
-    match_indicator = process.extractOne(selected_suggestion.lower(), lower_indicator.keys(), score_cutoff=50)
-    if match_indicator:
-        best_match_lower, score = match_indicator
-        filters["Indicator"] = lower_indicator[best_match_lower]
-    
-    # Store original and lowercase versions of Province
-    lower_indicator = {name.lower(): name for name in data['Province'].unique() if name is not None}
-    match_indicator = process.extractOne(selected_suggestion.lower(), lower_indicator.keys(), score_cutoff=50)
-    if match_indicator:
-        best_match_lower, score = match_indicator
-        filters["Province"] = lower_indicator[best_match_lower]
-        
-    # Store original and lowercase versions of Grade
-    lower_indicator = {str(name).lower(): name for name in data['Grade'].unique() if pd.notna(name)}
-    match_indicator = process.extractOne(selected_suggestion.lower(), lower_indicator.keys(), score_cutoff=50)
-    if match_indicator:
-        best_match_lower, score = match_indicator
-        filters["Grade"] = lower_indicator[best_match_lower]
-    
-    # # Store original and lowercase versions of Markets
-    # lower_indicator = {name.lower(): name for name in data['Markets'].unique() if name is not None}
-    # match_indicator = process.extractOne(selected_suggestion.lower(), lower_indicator.keys(), score_cutoff=50)
-    # if match_indicator:
-    #     best_match_lower, score = match_indicator
-    #     filters["Markets"] = lower_indicator[best_match_lower]
-        
-    # # Store original and lowercase versions of Products
-    # lower_indicator = {name.lower(): name for name in data['Products'].unique() if name is not None}
-    # match_indicator = process.extractOne(selected_suggestion.lower(), lower_indicator.keys(), score_cutoff=50)
-    # if match_indicator:
-    #     best_match_lower, score = match_indicator
-    #     filters["Products"] = lower_indicator[best_match_lower]
-    
     # Filter the dataset
     filtered_df = data
     for key, value in filters.items():
@@ -311,6 +290,18 @@ def update_data(selected_suggestion):
                 filtered_df = temp_df
     
     print(filters)
+    # print(filtered_df)
+    
+    if not filters or 'Series Name' not in filters:
+        # Default content when no question is entered
+        default_message = dmc.Alert(
+            "Please enter a question in the search bar above to explore data visualizations and tables.",
+            title="Dataset Not Found!",
+            color="blue",
+            variant="light",
+            style={'margin': '20px'}
+        )
+        return default_message, default_message, {}
     
     # return create_dataview(filtered_df), create_graph(filtered_df), filtered_df.to_dict('records')
     return create_dataview(filtered_df), create_graph(filtered_df), filtered_df.to_dict('records')

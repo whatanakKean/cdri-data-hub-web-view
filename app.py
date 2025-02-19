@@ -30,6 +30,7 @@ app = DashProxy(
     __name__,
     external_stylesheets=[
         dmc.styles.ALL,
+        dmc.styles.CAROUSEL,
         "https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css",  # Animation CSS
     ],
     transforms=[ServersideOutputTransform()],

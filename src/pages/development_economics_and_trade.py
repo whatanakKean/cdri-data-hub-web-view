@@ -94,19 +94,19 @@ development_economics_and_trade = dmc.Container([
         dmc.GridCol([
             dmc.Stack([
                 dmc.Paper([
-                    dmc.Autocomplete(
-                        id="suggestions-autocomplete-economic",
-                        placeholder="Ask anything...",
-                        leftSection=DashIconify(icon="mingcute:ai-fill"),
-                        style={"width": "100%", "marginBottom": "20px"},
-                    ),
+                    # dmc.Autocomplete(
+                    #     id="suggestions-autocomplete-economic",
+                    #     placeholder="Ask anything...",
+                    #     leftSection=DashIconify(icon="mingcute:ai-fill"),
+                    #     style={"width": "100%", "marginBottom": "20px"},
+                    # ),
                     dmc.Tabs(
                         children=[
                             dmc.TabsList(
                                 [
                                     dmc.TabsTab("Map View", leftSection=DashIconify(icon="tabler:map"), value="map"),
                                     dmc.TabsTab("Visualization", leftSection=DashIconify(icon="tabler:chart-bar"), value="graph"),
-                                    dmc.TabsTab("Data Hub", leftSection=DashIconify(icon="tabler:database"), value="dataview"),
+                                    dmc.TabsTab("Data View", leftSection=DashIconify(icon="tabler:database"), value="dataview"),
                                 ], 
                                 grow="True",
                             ),
@@ -304,11 +304,11 @@ def create_graph(dff):
             x=1
         ),
         xaxis=dict(
-            tickmode='array',
+            tickmode='auto',
             tickvals=dff_filtered['Year'].unique(),
             title="Produced By: CDRI Data Hub",
         ),
-        margin=dict(t=100, b=80, l=50, r=50),
+        margin=dict(t=100, b=80, l=50, r=50, pad=10),
     )
 
     # Create figure
@@ -316,7 +316,7 @@ def create_graph(dff):
     fig1.add_trace(go.Scatter(
         x=dff_filtered['Year'],
         y=dff_filtered['Indicator Value'],
-        mode='lines+markers',
+        mode='lines+markers' if len(dff_filtered) == 1 else 'lines',
         name=indicator
     ))
     
@@ -345,11 +345,11 @@ def create_graph(dff):
             responsive=True,
         ),
         dmc.Divider(size="sm"),
-        dmc.Alert(
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-            title="Description",
-            color="green"
-        ),
+        # dmc.Alert(
+        #     "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+        #     title="Description",
+        #     color="green"
+        # ),
     ])
 
 
@@ -390,11 +390,11 @@ def create_modal(dff, feature):
             x=1
         ),
         xaxis=dict(
-            tickmode='array',
+            tickmode='auto',
             tickvals=dff_filtered['Year'].unique(),
             title="Produced By: CDRI Data Hub",
         ),
-        margin=dict(t=100, b=80, l=50, r=50),
+        margin=dict(t=100, b=80, l=50, r=50, pad=10),
     )
 
     # Create figure
@@ -402,7 +402,7 @@ def create_modal(dff, feature):
     fig1.add_trace(go.Scatter(
         x=dff_filtered['Year'],
         y=dff_filtered['Indicator Value'],
-        mode='lines+markers',
+        mode='lines+markers' if len(dff_filtered) == 1 else 'lines',
         name=indicator
     ))  
     fig1.update_layout(
