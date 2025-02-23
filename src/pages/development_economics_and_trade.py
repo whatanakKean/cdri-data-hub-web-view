@@ -283,6 +283,7 @@ def create_graph(dff):
         )],
         yaxis=dict(
             gridcolor='rgba(169, 169, 169, 0.7)',
+            color='rgba(0, 0, 0, 0.6)',
             showgrid=True,
             gridwidth=0.5,
             griddash='dot',
@@ -305,8 +306,9 @@ def create_graph(dff):
         ),
         xaxis=dict(
             tickmode='auto',
+            color='rgba(0, 0, 0, 0.6)',
             tickvals=dff_filtered['Year'].unique(),
-            title="Produced By: CDRI Data Hub",
+            title="<span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.7);'>Produced By: CDRI Data Hub</span>",
         ),
         margin=dict(t=100, b=80, l=50, r=50, pad=10),
     )
@@ -369,6 +371,7 @@ def create_modal(dff, feature):
         )],
         yaxis=dict(
             gridcolor='rgba(169, 169, 169, 0.7)',
+            color='rgba(0, 0, 0, 0.6)',
             showgrid=True,
             gridwidth=0.5,
             griddash='dot',
@@ -391,8 +394,9 @@ def create_modal(dff, feature):
         ),
         xaxis=dict(
             tickmode='auto',
+            color='rgba(0, 0, 0, 0.6)',
             tickvals=dff_filtered['Year'].unique(),
-            title="Produced By: CDRI Data Hub",
+            title="<span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.7);'>Produced By: CDRI Data Hub</span>",
         ),
         margin=dict(t=100, b=80, l=50, r=50, pad=10),
     )

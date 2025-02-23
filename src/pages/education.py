@@ -1,6 +1,7 @@
 import json
 import math
 import sqlite3
+import string
 import dash
 from dash import html, dcc, Input, Output, State, callback
 import dash_mantine_components as dmc
@@ -23,7 +24,7 @@ def sidebar(data):
             dmc.Select(
                 label="Select Dataset", 
                 id="series-name-dropdown-education", 
-                value='Student Flow Rates By Class Range', 
+                value='Student Flow Rates', 
                 data=[{'label': option, 'value': option} for option in data["Series Name"].dropna().str.strip().unique() if option],
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
@@ -42,21 +43,31 @@ def sidebar(data):
                 allowDeselect=False,
             ),
             dmc.Select(
-                label="Select Grade", 
-                id="grade-dropdown-education", 
-                value="All",
-        	    data=[{'label': str(option), 'value': str(option)} for option in ['All'] + list(sorted(data["Grade"].dropna().unique()))],
+                label="Select Province", 
+                id="province-dropdown-education", 
+                value="Cambodia",
+        	    data=[{'label': str(option), 'value': str(option)} for option in sorted(data["Province"].dropna().unique())],
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
                 mt="md",
                 checkIconPosition="right",
                 allowDeselect=False,
             ),
+            dmc.SegmentedControl(
+                id="segmented-grade-level",
+                value="Level",
+                data=[
+                    {"value": "Level", "label": "Level"},
+                    {"value": "Grade", "label": "Grade"},
+                ],
+                mt="md",
+                fullWidth=True,
+            ),
             dmc.Select(
-                label="Select Province", 
-                id="province-dropdown-education", 
-                value="Whole Kingdom",
-        	    data=[{'label': str(option), 'value': str(option)} for option in sorted(data["Province"].dropna().unique())],
+                label="Select Grade", 
+                id="grade-dropdown-education", 
+                value="All",
+        	    data=[{'label': str(option), 'value': str(option)} for option in ['All'] + list(sorted(data["Grade"].dropna().unique()))],
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
                 mt="md",
@@ -73,7 +84,7 @@ def sidebar(data):
                 mt="md",
                 checkIconPosition="right",
                 allowDeselect=False,
-            )
+            ),
         ], id="filter-education", shadow="xs", p="md", radius="md", withBorder=True),
         
         dmc.Accordion(chevronPosition="right", variant="contained", radius="md", children=[
@@ -136,6 +147,7 @@ education = dmc.Container([
     ]),
 ], fluid=True, style={'paddingTop': '1rem'})
 
+
 def create_dataview(dff): 
     pivoted_data = dff.pivot_table(
         index=[col for col in dff.columns if col not in ['Indicator', 'Indicator Value']],
@@ -197,8 +209,10 @@ def create_map(dff, year):
     # Create a dynamic color scale based on the classes
     colorscale = ['#a1d99b', '#31a354', '#2c8e34', '#196d30', '#134e20', '#0d3b17']
     style = dict(weight=2, opacity=1, color='white', dashArray='3', fillOpacity=0.7)
+    ctg = [f"{int(classes[i])}+" for i in range(len(classes))]
+    colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=30, height=300, position="bottomright")
 
-    if 'Province' in dff.columns and dff['Province'].unique() != 'Whole Kingdom':
+    if 'Province' in dff.columns and dff['Province'].unique() != 'Cambodia':
         ctg = [f"{int(classes[i])}+" for i in range(len(classes))]
         colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=30, height=300, position="bottomright")
     
@@ -239,7 +253,7 @@ def create_map(dff, year):
                     center=[0, 0],
                     zoom=6,
                     children=[
-                        dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                        dl.TileLayer(url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"),
                         geojson,
                         colorbar,
                         html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info-education", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
@@ -279,8 +293,9 @@ def create_map(dff, year):
                     center=[0, 0],
                     zoom=6,
                     children=[
-                        dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                        dl.TileLayer(url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"),
                         geojson,
+                        colorbar,
                         html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info-education", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
                     ],
                     attributionControl=False,
@@ -290,86 +305,174 @@ def create_map(dff, year):
                 'zIndex': 0,
             }
         )
-   
-def create_graph(dff):
+
+
+def create_graph(dff, year):
     series_name = dff['Series Name'].unique()[0]
     indicator = dff['Indicator'].unique()[0]
 
     if series_name == 'Dropout Rate By Occupation':
-        # Create a multi-bar chart with Y-axis as Occupation
-        traces = []
-        for year in dff['Year'].unique():
-            year_data = dff[dff['Year'] == year]
-            traces.append(go.Bar(
-                y=year_data['Occupation'],
-                x=year_data['Indicator Value'],
-                name=str(year),
-                orientation='h'
-            ))
+        # dff = dff[dff["Year"] == year]
+        prefixes = [f"({letter})" for letter in string.ascii_lowercase]
+        # Get unique sub-sectors
+        sub_sectors = dff['Sub-Sector (1)'].unique()
+        
+        # Create a list to store all figures
+        all_figures = []
+        
+        # Create separate plot for each sub-sector
+        for idx, sub_sector in enumerate(sub_sectors):
+            # Filter data for current sub-sector
+            sub_sector_data = dff[dff['Sub-Sector (1)'] == sub_sector]
+            
+            # Create traces for this sub-sector
+            traces = []
+            for year in sub_sector_data['Year'].unique():
+                year_data = sub_sector_data[sub_sector_data['Year'] == year]
+                traces.append(go.Bar(
+                    y=year_data['Occupation'],
+                    x=year_data['Indicator Value'],
+                    name=str(year),
+                    orientation='h'
+                ))
 
-        # Create layout for bar chart
-        layout = go.Layout(
-            images=[dict(
-                source="./assets/CDRI Logo.png",
-                xref="paper", yref="paper",
-                x=1, y=1.1,
-                sizex=0.2, sizey=0.2,
-                xanchor="right", yanchor="bottom"
-            )],
-            title=dict(
-                text=f"{series_name} {indicator}"
-                + f"<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{dff['Indicator Unit'].unique()[0]}</span>"
-            ),
-            font=dict(
-                family='BlinkMacSystemFont, -apple-system, sans-serif',
-                color='rgb(24, 29, 31)'
-            ),
-            barmode='group',  # Group bars for different years
-            yaxis=dict(
-                title="Occupation",
-                categoryorder='total ascending'
-            ),
-            xaxis=dict(
-                title=f"{indicator} ({dff['Indicator Unit'].unique()[0]})",
-                gridcolor='rgba(169, 169, 169, 0.7)',
-                showgrid=True,
-                gridwidth=0.5,
-                griddash='dot'
-            ),
-            legend=dict(
-                orientation="h",
-                yanchor="bottom",
-                y=-0.4,
-                xanchor="center",
-                x=0.5
-            ),
-            margin=dict(t=100, b=100, l=50, r=50),
-            plot_bgcolor='white',
-        )
+            # Create layout for bar chart
+            layout = go.Layout(
+                images=[dict(
+                    source="./assets/CDRI Logo.png",
+                    xref="paper", yref="paper",
+                    x=1, y=1.1,
+                    sizex=0.2, sizey=0.2,
+                    xanchor="right", yanchor="bottom"
+                )],
+                title=dict(
+                    text=f"Student Occupation After Dropout ({sub_sector})"
+                    + f"<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{sub_sector_data['Indicator Unit'].unique()[0]}</span>"
+                ),
+                font=dict(
+                    family='BlinkMacSystemFont, -apple-system, sans-serif',
+                    color='rgb(24, 29, 31)'
+                ),
+                hovermode="y unified",
+                barmode='group',
+                yaxis=dict(
+                    title="Occupation",
+                    color='rgba(0, 0, 0, 0.6)',
+                    categoryorder='total ascending'
+                ),
+                xaxis=dict(
+                    title=f"{indicator} ({sub_sector_data['Indicator Unit'].unique()[0]})",
+                    gridcolor='rgba(169, 169, 169, 0.7)',
+                    color='rgba(0, 0, 0, 0.6)',
+                    showgrid=True,
+                    gridwidth=0.5,
+                    griddash='dot'
+                ),
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=-0.4,
+                    xanchor="center",
+                    x=0.5,
+                    font=dict(
+                        color='rgba(0, 0, 0, 0.6)'
+                    )
+                ),
+                annotations=[
+                    dict(
+                        x=0.5,  # Center horizontally (matches legend's x)
+                        y=-0.5,  # Slightly below the legend (adjust as needed)
+                        xref="paper",  # Use "paper" coordinates (0 to 1)
+                        yref="paper",
+                        text="Source:",  # Customize this
+                        showarrow=False,  # No arrow, just text
+                        font=dict(
+                            color='rgba(0, 0, 0, 0.6)',  # Match legend font color
+                            size=12  # Adjust size as needed
+                        )
+                    )
+                ],
+                margin=dict(t=100, b=100, l=50, r=50),
+                plot_bgcolor='white',
+            )
+            
+            # Create figure for this sub-sector
+            fig = go.Figure(data=traces, layout=layout)
+            
+            # Create figure component (without alert)
+            figure_component = html.Div([
+                dcc.Graph(
+                    id=f"figure-barchart-{sub_sector}",
+                    figure=fig,
+                    style={'minHeight': '450px'},
+                    config={
+                        'displaylogo': False,
+                        'toImageButtonOptions': {
+                            'format': 'png',
+                            'filename': f'cdri_datahub_viz_{sub_sector}',
+                            'height': 500,
+                            'width': 800,
+                            'scale': 6
+                        },
+                    },          
+                    responsive=True,
+                ),
+                dmc.Divider(size="sm"),
+            ])
+            
+            all_figures.append(figure_component)
+        
+        return html.Div([
+            html.Div(all_figures),
+            dmc.Alert(
+                """Figures (a) and (b) illustrate economic activities after dropping out of school using data from the Cambodia Socio-Economic Survey. Due to data availability, individuals aged 6–19 are assumed to be current students who have dropped out, while those aged 20–40 are considered students who dropped out earlier and have been out of school for a longer period.
 
-        fig = go.Figure(data=traces, layout=layout)
+The figures show that after dropping out, current dropouts are primarily engaged in low-skilled jobs, such as elementary occupations. In contrast, when comparing current dropouts with older dropouts, it is evident that older dropouts are more involved in high-skilled jobs, such as clerks, professionals, technicians and associate professionals, legislators, senior officials, and managers. This is likely because older dropouts have been out of school for a longer period and may have developed skills through work experience and/or further education.
+
+However, it is important to note that we cannot guarantee that students aged 16–19 who are currently classified as dropouts did so recently; they may have dropped out earlier.""",
+                title="Description",
+                color="green"
+            )
+        ])
+    
     else:
-        # # Original line chart implementation
-        # min_value = dff['Indicator Value'].min()
-        # max_value = dff['Indicator Value'].max()
-        # yaxis_range = [0, 100] if 0 <= min_value and max_value <= 100 else None
-
         if 'Grade' in dff.columns:
             traces = []
-            for grade in dff['Grade'].unique():
+            for idx, grade in enumerate(dff['Grade'].unique()):
                 grade_data = dff[dff['Grade'] == grade]
-                traces.append(go.Scatter(
-                    x=grade_data['Year'],
-                    y=grade_data['Indicator Value'],
-                    mode='lines+markers' if len(grade_data) == 1 else 'lines',
-                    name=f"{grade}",
-                ))
+                line_color = ["#156082", "#A80000", "#8EA4BC", "#156082", "#156082", "#156082", "#156082", "#156082", "#156082", "#156082", "#156082", "#156082", "#156082"]
+                sub_sector = dff["Sub-Sector (1)"].unique()[0]
+                
+                if sub_sector == "Level":
+                    traces.append(go.Scatter(
+                        x=grade_data['Year'],
+                        y=grade_data['Indicator Value'],
+                        mode='lines+markers' if len(grade_data) == 1 else 'lines',
+                        name=f"{grade}",
+                        line=dict(color=line_color[idx])
+                    ))
+                elif sub_sector == "Grade":
+                    traces.append(go.Scatter(
+                        x=grade_data['Year'],
+                        y=grade_data['Indicator Value'],
+                        mode='lines+markers' if len(grade_data) == 1 else 'lines',
+                        name=f"{grade}"
+                    ))
+                else:
+                    traces.append(go.Scatter(
+                        x=grade_data['Year'],
+                        y=grade_data['Indicator Value'],
+                        mode='lines+markers' if len(grade_data) == 1 else 'lines',
+                        name=f"{grade}",
+                        line=dict(color=line_color[idx])
+                    ))
         else:
             traces = [go.Scatter(
                 x=dff['Year'],
                 y=dff['Indicator Value'],
                 mode='lines+markers' if len(dff) == 1 else 'lines',
-                name=indicator
+                name=indicator,
+                line=dict(color="#156082")
             )]
 
         # Create line chart layout
@@ -383,6 +486,7 @@ def create_graph(dff):
             )],
             yaxis=dict(
                 gridcolor='rgba(169, 169, 169, 0.7)',
+                color='rgba(0, 0, 0, 0.6)',
                 showgrid=True,
                 gridwidth=0.5,
                 griddash='dot',
@@ -404,6 +508,7 @@ def create_graph(dff):
             ),
             xaxis=dict(
                 tickmode='auto',
+                color='rgba(0, 0, 0, 0.6)',
                 tickvals=dff['Year'].unique(),
             ),
             margin=dict(t=100, b=80, l=50, r=50, pad=10),
@@ -412,14 +517,22 @@ def create_graph(dff):
         fig = go.Figure(layout=layout)
         for trace in traces:
             fig.add_trace(trace)
-        fig.update_layout(
-            title=dict(
-                text=f"{series_name} {indicator}"
-                    + f"<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{dff['Indicator Unit'].unique()[0]}</span>"
+            
+        if series_name == "Successful Student":
+            fig.update_layout(
+                title=dict(
+                    text=f"{indicator} in {dff['Province'].unique()[0]}"
+                        + f"<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{dff['Indicator Unit'].unique()[0]}</span>"
+                )
             )
-        )
-
-
+        else:
+            fig.update_layout(
+                title=dict(
+                    text=f"{series_name}: {indicator} in {dff['Province'].unique()[0]}"
+                        + f"<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{dff['Indicator Unit'].unique()[0]}</span>"
+                )
+            )
+        
     return html.Div([
         dcc.Graph(
             id="figure-linechart",
@@ -438,11 +551,13 @@ def create_graph(dff):
             responsive=True,
         ),
         dmc.Divider(size="sm"),
-        # dmc.Alert(
-        #     "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-        #     title="Description",
-        #     color="green"
-        # ),
+        dmc.Alert(
+            "The figure illustrates the student dropout rates from 2012 to 2023 across different grade levels: primary school, lower-secondary school, and upper-secondary school in Cambodia. It shows that the overall student dropout rates declined dramatically, a trend that can be attributed to the government’s efforts to improve the education system in Cambodia. Notably, during the 2019-2020 academic year, the overall dropout rate for upper-secondary school reached an unusually low level, primarily due to Grade 12 data. This was followed by a decline in class repetition compared to other years. In other words, most students that year were promoted to the next grade. This was primarily due to the COVID-19 pandemic, during which schools were closed, and the Ministry of Education, Youth, and Sport (MoEYS) announced the automatic promotion of all students. As a result, the dropout rate for that year was exceptionally low."
+            if series_name == "Student Flow Rates" and indicator == "Dropout" 
+            else "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            title="Description",
+            color="green"
+        )
     ])
 
 
@@ -467,6 +582,7 @@ def create_modal(dff, feature):
         )],
         yaxis=dict(
             gridcolor='rgba(169, 169, 169, 0.7)',
+            color='rgba(0, 0, 0, 0.6)',
             showgrid=True,
             gridwidth=0.5,
             griddash='dot',
@@ -489,8 +605,9 @@ def create_modal(dff, feature):
         ),
         xaxis=dict(
             tickmode='auto',
+            color='rgba(0, 0, 0, 0.6)',
             tickvals=dff_filtered['Year'].unique(),
-            title="Produced By: CDRI Data Hub",
+            title=f"<span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.7);'>Source: {dff_filtered['Source'].unique()}</span>",
         ),
         margin=dict(t=100, b=80, l=50, r=50, pad=10),
     )
@@ -501,7 +618,8 @@ def create_modal(dff, feature):
         x=dff_filtered['Year'],
         y=dff_filtered['Indicator Value'],
         mode='lines+markers' if len(dff_filtered) == 1 else 'lines',
-        name=indicator
+        name=indicator,
+        line=dict(color="#156082")
     ))  
     fig1.update_layout(
         title=dict(
@@ -541,34 +659,62 @@ def info_hover(series_name, year, indicator, indicator_unit, feature):
 
 # Callbacks
 @callback([Output('graph-id-education', 'children'), Output('map-id-education', 'children'), Output('dataview-container-education', 'children'), Output('metadata-panel-education', 'children'), Output('indicator-unit-education', 'data')],
-          [Input('series-name-dropdown-education', 'value'), 
+          [Input('series-name-dropdown-education', 'value'), Input('segmented-grade-level', 'value'),
            Input("indicator-dropdown-education", "value"), Input("year-dropdown-education", "value"), Input('grade-dropdown-education', 'value'), Input('province-dropdown-education', 'value'),])
-def update_report(series_name, indicator, year, grade, province):
-    dff = filter_data(data=data, series_name=series_name, indicator=indicator, grade=grade, province=province)
+def update_report(series_name, grade_or_level, indicator, year, grade, province):
+    dff = filter_data(data=data, series_name=series_name, subsector_1=grade_or_level, indicator=indicator, grade=grade, province=province)
 
     indicator_unit = dff['Indicator Unit'].unique()
-    return create_graph(dff), create_map(dff, year), create_dataview(dff), create_metadata(dff), indicator_unit.tolist()
+    return create_graph(dff, year), create_map(dff, year), create_dataview(dff), create_metadata(dff), indicator_unit.tolist()
 
 
 @callback(Output("download-data-education", "data"), Input("download-button-education", "n_clicks"),
-          State('series-name-dropdown-education', 'value'), State('indicator-dropdown-education', 'value'), Input('grade-dropdown-education', 'value'), Input('province-dropdown-education', 'value'),)
-def download_data(n_clicks, series_name, indicator, grade, province):
+          State('series-name-dropdown-education', 'value'), State('segmented-grade-level', 'value'), State('indicator-dropdown-education', 'value'), Input('grade-dropdown-education', 'value'), Input('province-dropdown-education', 'value'),)
+def download_data(n_clicks, series_name, grade_or_level, indicator, grade, province):
     if n_clicks is None: return dash.no_update
-    dff = filter_data(data=data, series_name=series_name, indicator=indicator, grade=grade, province=province)
+    dff = filter_data(data=data, series_name=series_name, subsector_1=grade_or_level,indicator=indicator, grade=grade, province=province)
     dff = dff.loc[:, ~(dff.apply(lambda col: col.eq("").all(), axis=0))]
     return dict(content=dff.to_csv(index=False), filename="data.csv", type="application/csv")
 
+
+@callback(
+    [Output('segmented-grade-level', 'style'),
+     Output('segmented-grade-level', 'value')],
+    Input('series-name-dropdown-education', 'value')
+)
+def update_segmented_control_visibility(series_name):
+    # If the series name is "Student Flow Rates", show the segmented control
+    if series_name == "Student Flow Rates":
+        return {'visibility': 'visible', 'position': 'relative'}, "Level"  # Keep value None when visible
+    else:
+        return {'visibility': 'hidden', 'position': 'absolute'}, None  # Clear value when hidden
+    
 @callback(
     Output('grade-dropdown-education', 'data'),
     Output('grade-dropdown-education', 'value'),
     Output('grade-dropdown-education', 'style'),
+    Output('grade-dropdown-education', 'label'),
     Input('series-name-dropdown-education', 'value'),
+    Input('segmented-grade-level', 'value')
 )
-def update_grade(series_name):
-    grade_options = data[(data["Series Name"] == series_name)]["Grade"].dropna().str.strip().unique()
+def update_grade(series_name, grade_or_level):
+    # Filtering data based on Series Name
+    if series_name == "Student Flow Rates":
+        # Filter based on the 'Sub-Sector (1)' column using grade_or_level
+        grade_options = data[(data["Series Name"] == series_name) & 
+                              (data["Sub-Sector (1)"] == grade_or_level)]["Grade"].dropna().str.strip().unique()
+    else:
+        # Default behavior (filtering just by Series Name)
+        grade_options = data[(data["Series Name"] == series_name)]["Grade"].dropna().str.strip().unique()
+
     # Control visibility based on available options
     style = {'display': 'block'} if grade_options.size > 0 else {'display': 'none'}
-    return [{'label': option, 'value': option} for option in ['All'] + sorted(grade_options)], 'All' if grade_options.size > 0 else None, style
+
+    # Update the label based on the segmented control value
+    label = "Select Level" if grade_or_level == "Level" else "Select Grade"
+
+    return [{'label': option, 'value': option} for option in ['All'] + list(grade_options)], 'All' if grade_options.size > 0 else None, style, label
+
 
 @callback(
     Output('province-dropdown-education', 'data'),
@@ -580,7 +726,7 @@ def update_province(series_name):
     province_options = data[(data["Series Name"] == series_name)]["Province"].dropna().str.strip().unique()
     # Control visibility based on available options
     style = {'display': 'block'} if province_options.size > 0 else {'display': 'none'}
-    return [{'label': option, 'value': option} for option in sorted(province_options)], "Whole Kingdom" if province_options.size > 0 else None, style
+    return [{'label': option, 'value': option} for option in sorted(province_options)], "Cambodia" if province_options.size > 0 else None, style
 
 @callback(
     Output('indicator-dropdown-education', 'data'),
@@ -636,7 +782,8 @@ def update_year_dropdown(series_name, indicator, grade, province, active_tab):
     default_value = str(max(year_values))  # Convert to string to match dropdown data format
 
     # Conditionally set style based on active_tab
-    dropdown_style = {'display': 'block'} if active_tab == 'map' else {'display': 'none'}
+    dropdown_style = {'display': 'block'} if active_tab in ['map', 'graph'] else {'display': 'none'}
+
     return year_options, default_value, dropdown_style
 
 

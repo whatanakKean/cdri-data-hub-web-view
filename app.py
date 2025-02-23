@@ -110,4 +110,4 @@ server = app.server
 
 # Run the server
 if __name__ == "__main__":
-    app.run_server(debug=True, port=8050, processes=1, threaded=True)
+    app.run_server(debug="True", port=8050, processes=1, threaded=True)

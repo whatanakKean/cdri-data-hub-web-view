@@ -1,8 +1,9 @@
 import json
 import math
 import sqlite3
+import string
 import dash
-from dash import html, dcc, Input, Output, State, callback
+from dash import html, dcc, Input, Output, State, callback, ctx
 import dash_mantine_components as dmc
 import dash_ag_grid as dag
 import numpy as np
@@ -24,10 +25,21 @@ def sidebar(data):
             dmc.Select(
                 label="Select Dataset", 
                 id="series-name-dropdown", 
-                value='Rice Price', 
+                value='Rice Production', 
                 data=[{'label': option, 'value': option} for option in data["Series Name"].dropna().str.strip().unique() if option],
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
+                checkIconPosition="right",
+                allowDeselect=False,
+            ),
+            dmc.Select(
+                label="Select Type", 
+                id="subsector-2-dropdown", 
+                value='Fragrant Rice', 
+                data=[{'label': option, 'value': option} for option in data["Sub-Sector (2)"].dropna().str.strip().unique() if option],
+                withScrollArea=False,
+                styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
+                mt="md",
                 checkIconPosition="right",
                 allowDeselect=False,
             ),
@@ -133,6 +145,7 @@ agriculture_and_rural_development = dmc.Container([
     ]),
 ], fluid=True, style={'paddingTop': '1rem'})
 
+
 def create_dataview(dff):
     pivoted_data = dff.pivot_table(
         index=[col for col in dff.columns if col not in ['Indicator', 'Indicator Value']],
@@ -169,7 +182,7 @@ def create_map(dff, year):
                     center=[0, 0],
                     zoom=6,
                     children=[
-                        dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                        dl.TileLayer(url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"),
                         html.Div(children=get_info(is_gis=False), className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
                         # geojson,
                         # html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
@@ -251,7 +264,7 @@ def create_map(dff, year):
                         center=[0, 0],
                         zoom=6,
                         children=[
-                            dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                            dl.TileLayer(url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"),
                             geojson,
                             colorbar,
                             html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
@@ -302,7 +315,7 @@ def create_map(dff, year):
                         center=[0, 0],
                         zoom=2,
                         children=[
-                            dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                            dl.TileLayer(url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"),
                             geojson, 
                             colorbar,
                             html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
@@ -339,7 +352,7 @@ def create_map(dff, year):
                         center=[0, 0],
                         zoom=6,
                         children=[
-                            dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                            dl.TileLayer(url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"),
                             geojson,
                             html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
                         ],
@@ -368,6 +381,7 @@ def create_graph(dff):
         )],
         yaxis=dict(
             gridcolor='rgba(169, 169, 169, 0.7)',
+            color='rgba(0, 0, 0, 0.6)',
             showgrid=True,
             gridwidth=0.5,
             griddash='dot',
@@ -389,22 +403,22 @@ def create_graph(dff):
         ),
         xaxis=dict(
             tickmode='auto',
+            color='rgba(0, 0, 0, 0.6)',
             tickvals=dff_filtered['Year'].unique(),
-            title="Produced By: CDRI Data Hub",
+            title=f"<span style='display:block; margin-top:8px; font-size:85%; color:rgba(0, 0, 0, 0.7);'>Source: {dff['Source'].unique()[0]}</span>",
         ),
         margin=dict(t=100, b=80, l=50, r=50, pad=10),
     )
-    
+
     if series_name == "Rice Price":
         graphs = []  # Store multiple figures
-        test = dff[dff['Variety'] == 'Jamine A1 Super']
-        print(">> Yoo", test["Indicator Value"].dropna())
-        for variety in dff['Variety'].unique():  # Iterate through each variety
+        prefixes = [f"({letter})" for letter in string.ascii_lowercase]
+        
+        for idx, variety in enumerate(dff['Variety'].unique()):
             dff_variety = dff[dff['Variety'] == variety]
             dff_variety['Date'] = pd.to_datetime(dff_variety['Date'])
             dff_variety = dff_variety.sort_values(by='Date')
             
-
             # Create figure
             fig = go.Figure(layout=layout)
             fig.add_trace(go.Scatter(
@@ -412,46 +426,128 @@ def create_graph(dff):
                 y=dff_variety['Indicator Value'],
                 mode = 'lines+markers' if len(dff_variety.dropna()) == 1 else 'lines',
                 name=variety,
-                connectgaps=False
+                connectgaps=False,
+                line=dict(color="#156082")
             ))  
+            title_prefix = prefixes[idx] if idx < len(prefixes) else ""  
 
             fig.update_layout(
                 title=dict(
-                    text=f"{dff_variety['Sub-Sector (1)'].unique()[0]} of {variety}<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{dff_variety['Indicator Unit'].unique()[0]}</span>"
+                    text=f"{title_prefix} {dff_variety['Sub-Sector (1)'].unique()[0]} of {variety}<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{dff_variety['Indicator Unit'].unique()[0]}</span>"
+                ),
+                font=dict(size=10),
+                images=[dict(
+                    source="./assets/CDRI Logo.png",
+                    xref="paper", yref="paper",
+                    x=1, y=1.15,
+                    sizex=0.2, sizey=0.2,
+                    xanchor="right", yanchor="bottom"
+                )],
+                xaxis=dict(
+                    tickmode='auto',
+                    color='rgba(0, 0, 0, 0.6)',
+                    tickvals=dff_filtered['Year'].unique(),
+                    title=f"<span style='display:block; margin-top:8px; font-size:85%; color:rgba(0, 0, 0, 0.7);'>Source: {dff_variety['Source'].unique()[0]}</span>",
+                ),
+            )
+            
+            # Add Annotation
+            if dff_variety["Variety"].unique() in ["Sen Kra Ob 01", "Indica - Long B", "Indica (Average)"]:
+                fig.update_layout(
+                    shapes=[
+                        dict(
+                            type="rect",
+                            xref="x", yref="paper",
+                            x0=pd.to_datetime("2023-07-01"), x1=pd.to_datetime("2024-09-09"),
+                            y0=0, y1=1,
+                            fillcolor="#808080",
+                            opacity=0.25,
+                            layer="below",
+                            line=dict(width=0)
+                        )
+                    ]
                 )
+            if dff_variety["Variety"].unique() in ["White Rice (Hard Texture)", "White Rice (Soft Texture)", "OM", "IR"]:
+                fig.update_layout(
+                    shapes=[
+                        dict(
+                            type="rect",
+                            xref="x", yref="paper",
+                            x0=pd.to_datetime("2024-12-01"), x1=pd.to_datetime("2025-02-01"),
+                            y0=0, y1=1,
+                            fillcolor="#808080",
+                            opacity=0.25,
+                            layer="below",
+                            line=dict(width=0)
+                        )
+                    ]
+                )
+
+            # Create individual graph component
+            graph_component = dcc.Graph(
+                id=f"figure-linechart-{variety}", 
+                figure=fig, 
+                style={'height': '400px', 'width': '100%'},
+                config={
+                    'displaylogo': False,
+                    'toImageButtonOptions': {
+                        'format': 'png',
+                        'filename': f'cdri_datahub_viz_{variety}',
+                        'height': 500,
+                        'width': 800,
+                        'scale': 6
+                    },
+                },
+                responsive=True,
+            )
+            graphs.append(graph_component)
+
+            grid = dmc.Grid(
+                gutter="xs",
+                children=[
+                    # Responsive columns: 6/12 (half width) on small screens and up
+                    dmc.GridCol(
+                        children=graphs[0] if len(graphs) > 0 else "",
+                        span={"base": 12, "sm": 6}  # Full width on base, half on small screens+
+                    ),
+                    dmc.GridCol(
+                        children=graphs[1] if len(graphs) > 1 else "",
+                        span={"base": 12, "sm": 6}
+                    ),
+                    dmc.GridCol(
+                        children=graphs[2] if len(graphs) > 2 else "",
+                        span={"base": 12, "sm": 6}
+                    ),
+                    dmc.GridCol(
+                        children=graphs[3] if len(graphs) > 3 else "",
+                        span={"base": 12, "sm": 6}
+                    ),
+                ],
+                style={"width": "100%"}
             )
 
-            # Append graph to the list
-            graphs.append(html.Div([
-                dcc.Graph(
-                    id=f"figure-linechart-{variety}", 
-                    figure=fig, 
-                    style={'minHeight': '450px'},
-                    config={
-                        'displaylogo': False,
-                        'toImageButtonOptions': {
-                            'format': 'png',
-                            'filename': f'cdri_datahub_viz_{variety}',
-                            'height': 500,
-                            'width': 800,
-                            'scale': 6
-                        },
-                    },
-                    responsive=True,
-                ),
-                dmc.Divider(size="sm")
-            ]))
+        # Return the grid layout
+        return html.Div([
+            grid,
+            # Uncomment if you want to keep the alert
+            dmc.Alert(
+                """Figures (a) and (b) illustrate the paddy prices of aromatic Pka Romdoul/Jasmine and Sen Kra Ob, respectively, while Figure (c) shows the European rice price for Indica – Long B, and Figure (d) displays the average European rice price for Indica.
+                
+                It is important to note that Cambodia produces two types of rice: aromatic/fragrant rice and white rice. Aromatic rice varieties, such as Pka Romdoul/Jasmine, are seasonal and harvested only between November and December each year, while another aromatic Sen Kra Ob can be grown year-round. Paddy prices in Cambodia are typically influenced by global markets, as these are premium rice products primarily exported to international markets, such as Europe.
+                
+                For example, when comparing Figure (b) with Figure (c), it is evident that the European rice price for Indica – Long B increased significantly from July 2023 onwards, followed by a rise in the price of Cambodia's aromatic paddy, Sen Kra Ob. This is due to India's rice export ban in July 2023, which disrupted global rice markets and benefitted Cambodia's rice exports, driving up prices.
+                """
+                if dff["Sub-Sector (2)"].unique() == "Fragrant Rice" 
+                else """Figures (a) and (b) illustrate the paddy prices of white rice varieties OM and IR, respectively, while Figures (c) and (d) show the prices of white rice at the Sihanoukville port for both soft and hard textures, respectively.
 
-        # Return all graphs in one Div
-        return html.Div(
-            graphs 
-            # + 
-            # [dmc.Alert(
-            #     "Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
-            #     title="Description",
-            #     color="green"
-            # )]
-        )
+                    It is important to note that, unlike most aromatic rice varieties such as Pka Romdoul and Jasmine, OM and IR are non-photoperiod-sensitive varieties. These varieties have higher yields and can be cultivated year-round. Additionally, they have wide markets in countries such as Vietnam and China, where they are consumed and used in processed foods. While their prices are influenced by global market trends, they are more significantly impacted by purchasing patterns in Vietnam.
+
+                    For example, the paddy prices of OM and IR increased dramatically from July 2023 to the present. This rise can be attributed to India's rice export ban in July 2023, which disrupted global rice markets and benefited Cambodia's rice exports, driving up prices. However, their prices dipped slightly between the end of December and January, likely due to delayed purchases from Vietnam, coinciding with the Chinese and Vietnamese New Year celebrations. After the holiday period, prices returned to normal levels.
+                    """,
+                title="Description",
+                color="green"
+            )
+        ])
     
     else:
         # Create figure
@@ -460,7 +556,8 @@ def create_graph(dff):
             x=dff_filtered['Year'],
             y=dff_filtered['Indicator Value'],
             mode='lines+markers' if len(dff_filtered) == 1 else 'lines',
-            name=indicator
+            name=indicator,
+            line=dict(color="#156082")
         ))  
         fig1.update_layout(
             title=dict(
@@ -490,11 +587,11 @@ def create_graph(dff):
                 responsive=True,
             ),
             dmc.Divider(size="sm"),
-            # dmc.Alert(
-            #     "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-            #     title="Description",
-            #     color="green"
-            # ),
+            dmc.Alert(
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+                title="Description",
+                color="green"
+            ),
         ])
 
 def create_modal(dff, feature):
@@ -513,6 +610,7 @@ def create_modal(dff, feature):
         )],
         yaxis=dict(
             gridcolor='rgba(169, 169, 169, 0.7)',
+            color='rgba(0, 0, 0, 0.6)',
             showgrid=True,
             gridwidth=0.5,
             griddash='dot',
@@ -535,8 +633,9 @@ def create_modal(dff, feature):
         ),
         xaxis=dict(
             tickmode='auto',
+            color='rgba(0, 0, 0, 0.6)',
             tickvals=dff_filtered['Year'].unique(),
-            title="Produced By: CDRI Data Hub",
+            title="<span style='display:block; margin-top:8px; font-size:85%; color:rgba(0, 0, 0, 0.7);'>Produced By: CDRI Data Hub</span>",
         ),
         margin=dict(t=100, b=80, l=50, r=50, pad=10),
     )
@@ -547,7 +646,8 @@ def create_modal(dff, feature):
         x=dff_filtered['Year'],
         y=dff_filtered['Indicator Value'],
         mode='lines+markers' if len(dff_filtered) == 1 else 'lines',
-        name=indicator
+        name=indicator,
+        line=dict(color="#156082")
     ))  
     fig1.update_layout(
         title=dict(
@@ -577,12 +677,13 @@ def create_modal(dff, feature):
 
 # Callbacks
 @callback([Output('graph-id', 'children'), Output('map-id', 'children'), Output('dataview-id', 'children'), Output('metadata-panel', 'children'), Output('indicator-unit', 'data')],
-          [Input("series-name-dropdown", "value"),
+          [Input("series-name-dropdown", "value"), Input("subsector-2-dropdown", "value"), 
            Input("province-dropdown", "value"), Input("indicator-dropdown", "value"), Input("year-dropdown", "value")])
-def update_report(series_name, province, indicator, year):
+def update_report(series_name, subsector_2, province, indicator, year):
     dff = filter_data(
         data=data,
         series_name=series_name,
+        subsector_2=subsector_2,
         province=province if province else None,
         indicator=indicator
     )
@@ -593,10 +694,10 @@ def update_report(series_name, province, indicator, year):
 
 
 @callback(Output("download-data", "data"), Input("download-button", "n_clicks"),
-          State('series-name-dropdown', 'value'), State('province-dropdown', 'value'), State('indicator-dropdown', 'value'))
-def download_data(n_clicks, series_name, province, indicator):
+          State('series-name-dropdown', 'value'), State("series-name-dropdown", "value"), State('province-dropdown', 'value'), State('indicator-dropdown', 'value'))
+def download_data(n_clicks, series_name, subsector_2, province, indicator):
     if n_clicks is None: return dash.no_update
-    dff = filter_data(data=data, series_name=series_name, province=province, indicator=indicator)
+    dff = filter_data(data=data, series_name=series_name, subsector_2=subsector_2, province=province, indicator=indicator)
     dff = dff.loc[:, ~(dff.apply(lambda col: col.eq("").all(), axis=0))]
     return dict(content=dff.to_csv(index=False), filename="data.csv", type="application/csv")
 
@@ -605,6 +706,21 @@ def download_data(n_clicks, series_name, province, indicator):
 @callback(Output("info", "children"), Input('series-name-dropdown', 'value'), Input('year-dropdown', 'value'), Input('indicator-dropdown', 'value'), Input('indicator-unit', 'data'), Input("geojson", "hoverData"))
 def info_hover(series_name, year, indicator, indicator_unit, feature):
     return get_info(series_name=series_name, indicator=indicator, feature=feature, indicator_unit=indicator_unit, year=year)
+
+@callback(
+    Output('subsector-2-dropdown', 'data'),
+    Output('subsector-2-dropdown', 'value'),
+    Output('subsector-2-dropdown', 'style'),
+    Input('series-name-dropdown', 'value')
+)
+def update_subsector_2(series_name):
+    if series_name.lower() != "rice price":
+        return [], None, {'display': 'none'}
+    
+    province_options = data[(data["Series Name"] == series_name)]["Sub-Sector (2)"].dropna().str.strip().unique()
+
+    style = {'display': 'block'} if province_options.size > 0 else {'display': 'none'}
+    return [{'label': option, 'value': option} for option in list(sorted(province_options))], 'Fragrant Rice', style
 
 @callback(
     Output('province-dropdown', 'data'),
