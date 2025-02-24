@@ -182,7 +182,7 @@ def create_map(dff, year):
                     center=[0, 0],
                     zoom=6,
                     children=[
-                        dl.TileLayer(url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"),
+                        dl.TileLayer(url="https://stamen-tiles.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}.png"),
                         html.Div(children=get_info(is_gis=False), className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
                         # geojson,
                         # html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
@@ -264,7 +264,7 @@ def create_map(dff, year):
                         center=[12.5657, 104.9910],
                         zoom=7,
                         children=[
-                            dl.TileLayer(url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"),
+                            dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
                             geojson,
                             colorbar,
                             html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
@@ -315,7 +315,7 @@ def create_map(dff, year):
                         center=[20, 0],
                         zoom=6,
                         children=[
-                            dl.TileLayer(url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"),
+                            dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
                             geojson, 
                             colorbar,
                             html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
@@ -349,10 +349,10 @@ def create_map(dff, year):
             return html.Div([
                 dl.Map(
                         style={'width': '100%', 'height': '450px'},
-                        center=[20, 0],
-                        zoom=6,
+                        center=[12.5657, 104.9910],
+                        zoom=7,
                         children=[
-                            dl.TileLayer(url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"),
+                            dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
                             geojson,
                             html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
                         ],
@@ -402,6 +402,7 @@ def create_graph(dff):
             x=1
         ),
         xaxis=dict(
+            showgrid=False,
             tickmode='auto',
             color='rgba(0, 0, 0, 0.6)',
             tickvals=dff_filtered['Year'].unique(),

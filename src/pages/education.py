@@ -250,10 +250,10 @@ def create_map(dff, year):
             [
                 dl.Map(
                     style={'width': '100%', 'height': '450px'},
-                    center=[0, 0],
-                    zoom=6,
+                    center=[12.5657, 104.9910],
+                    zoom=7,
                     children=[
-                        dl.TileLayer(url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"),
+                        dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
                         geojson,
                         colorbar,
                         html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info-education", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
@@ -290,10 +290,10 @@ def create_map(dff, year):
         return html.Div([
             dl.Map(
                     style={'width': '100%', 'height': '450px'},
-                    center=[0, 0],
-                    zoom=6,
+                    center=[12.5657, 104.9910],
+                    zoom=7,
                     children=[
-                        dl.TileLayer(url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"),
+                        dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
                         geojson,
                         colorbar,
                         html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info-education", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
@@ -312,124 +312,120 @@ def create_graph(dff, year):
     indicator = dff['Indicator'].unique()[0]
 
     if series_name == 'Dropout Rate By Occupation':
-        # dff = dff[dff["Year"] == year]
-        prefixes = [f"({letter})" for letter in string.ascii_lowercase]
+        # Filter the data for the latest year
+        latest_data = dff[dff['Year'] == year]
+
         # Get unique sub-sectors
-        sub_sectors = dff['Sub-Sector (1)'].unique()
-        
-        # Create a list to store all figures
-        all_figures = []
-        
-        # Create separate plot for each sub-sector
+        sub_sectors = latest_data['Sub-Sector (1)'].unique()
+
+        # Create a list to store traces for the grouped bar chart
+        traces = []
+
+        line_color = ["#A80000", "#156082", "#8EA4BC"]
+        # Iterate over each sub-sector and createf a trace for it
         for idx, sub_sector in enumerate(sub_sectors):
-            # Filter data for current sub-sector
-            sub_sector_data = dff[dff['Sub-Sector (1)'] == sub_sector]
-            
-            # Create traces for this sub-sector
-            traces = []
-            for year in sub_sector_data['Year'].unique():
-                year_data = sub_sector_data[sub_sector_data['Year'] == year]
-                traces.append(go.Bar(
-                    y=year_data['Occupation'],
-                    x=year_data['Indicator Value'],
-                    name=str(year),
-                    orientation='h'
-                ))
+            # Filter data for the current sub-sector
+            sub_sector_data = latest_data[latest_data['Sub-Sector (1)'] == sub_sector]
 
-            # Create layout for bar chart
-            layout = go.Layout(
-                images=[dict(
-                    source="./assets/CDRI Logo.png",
-                    xref="paper", yref="paper",
-                    x=1, y=1.1,
-                    sizex=0.2, sizey=0.2,
-                    xanchor="right", yanchor="bottom"
-                )],
-                title=dict(
-                    text=f"Student Occupation After Dropout ({sub_sector})"
-                    + f"<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{sub_sector_data['Indicator Unit'].unique()[0]}</span>"
-                ),
+            # Create a trace for this sub-sector, using its 'Occupation' and 'Indicator Value'
+            traces.append(go.Bar(
+                y=sub_sector_data['Occupation'],
+                x=sub_sector_data['Indicator Value'],
+                name=sub_sector,
+                orientation='h',
+                marker=dict(color=line_color[idx])
+            ))
+
+        # Create the layout for the grouped bar chart
+        layout = go.Layout(
+            images=[dict(
+                source="./assets/CDRI Logo.png",
+                xref="paper", yref="paper",
+                x=1, y=1.1,
+                sizex=0.2, sizey=0.2,
+                xanchor="right", yanchor="bottom"
+            )],
+            title=dict(
+                text=f"Occupations of School Dropouts ({year})"
+                + f"<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{sub_sector_data['Indicator Unit'].unique()[0]}</span>"
+            ),
+            font=dict(
+                family='BlinkMacSystemFont, -apple-system, sans-serif',
+                color='rgb(24, 29, 31)'
+            ),
+            hovermode="y unified",
+            barmode='group',  # Group the bars by sub-sector
+            yaxis=dict(
+                title="Occupation",
+                color='rgba(0, 0, 0, 0.6)',
+                categoryorder='total ascending'
+            ),
+            xaxis=dict(
+                title=f"{indicator}",
+                gridcolor='rgba(169, 169, 169, 0.7)',
+                color='rgba(0, 0, 0, 0.6)',
+                gridwidth=0.5,
+                griddash='dot',
+                range = [0, 5000] if indicator == "Frequency" else [0, 40]
+            ),
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=-0.4,
+                xanchor="center",
+                x=0.5,
                 font=dict(
-                    family='BlinkMacSystemFont, -apple-system, sans-serif',
-                    color='rgb(24, 29, 31)'
-                ),
-                hovermode="y unified",
-                barmode='group',
-                yaxis=dict(
-                    title="Occupation",
-                    color='rgba(0, 0, 0, 0.6)',
-                    categoryorder='total ascending'
-                ),
-                xaxis=dict(
-                    title=f"{indicator} ({sub_sector_data['Indicator Unit'].unique()[0]})",
-                    gridcolor='rgba(169, 169, 169, 0.7)',
-                    color='rgba(0, 0, 0, 0.6)',
-                    showgrid=True,
-                    gridwidth=0.5,
-                    griddash='dot'
-                ),
-                legend=dict(
-                    orientation="h",
-                    yanchor="bottom",
-                    y=-0.4,
-                    xanchor="center",
-                    x=0.5,
-                    font=dict(
-                        color='rgba(0, 0, 0, 0.6)'
-                    )
-                ),
-                annotations=[
-                    dict(
-                        x=0.5,  # Center horizontally (matches legend's x)
-                        y=-0.5,  # Slightly below the legend (adjust as needed)
-                        xref="paper",  # Use "paper" coordinates (0 to 1)
-                        yref="paper",
-                        text="Source:",  # Customize this
-                        showarrow=False,  # No arrow, just text
-                        font=dict(
-                            color='rgba(0, 0, 0, 0.6)',  # Match legend font color
-                            size=12  # Adjust size as needed
-                        )
-                    )
-                ],
-                margin=dict(t=100, b=100, l=50, r=50),
-                plot_bgcolor='white',
-            )
-            
-            # Create figure for this sub-sector
-            fig = go.Figure(data=traces, layout=layout)
-            
-            # Create figure component (without alert)
-            figure_component = html.Div([
-                dcc.Graph(
-                    id=f"figure-barchart-{sub_sector}",
-                    figure=fig,
-                    style={'minHeight': '450px'},
-                    config={
-                        'displaylogo': False,
-                        'toImageButtonOptions': {
-                            'format': 'png',
-                            'filename': f'cdri_datahub_viz_{sub_sector}',
-                            'height': 500,
-                            'width': 800,
-                            'scale': 6
-                        },
-                    },          
-                    responsive=True,
-                ),
-                dmc.Divider(size="sm"),
-            ])
-            
-            all_figures.append(figure_component)
-        
+                    color='rgba(0, 0, 0, 0.6)'
+                )
+            ),
+            annotations=[dict(
+                x=0.5,  # Center horizontally (matches legend's x)
+                y=-0.5,  # Slightly below the legend (adjust as needed)
+                xref="paper",  # Use "paper" coordinates (0 to 1)
+                yref="paper",
+                text="Source:",  # Customize this
+                showarrow=False,  # No arrow, just text
+                font=dict(
+                    color='rgba(0, 0, 0, 0.6)',  # Match legend font color
+                    size=12  # Adjust size as needed
+                )
+            )],
+            margin=dict(t=100, b=100, l=50, r=50),
+            plot_bgcolor='white',
+        )
+
+        # Create the figure for the grouped bar chart
+        fig = go.Figure(data=traces, layout=layout)
+
+        # Create figure component (without alert)
+        figure_component = html.Div([
+            dcc.Graph(
+                id="figure-barchart",
+                figure=fig,
+                style={'minHeight': '450px'},
+                config={
+                    'displaylogo': False,
+                    'toImageButtonOptions': {
+                        'format': 'png',
+                        'filename': f'cdri_datahub_viz_{year}',
+                        'height': 500,
+                        'width': 800,
+                        'scale': 6
+                    },
+                },          
+                responsive=True,
+            ),
+            dmc.Divider(size="sm"),
+        ])
+
         return html.Div([
-            html.Div(all_figures),
+            html.Div([figure_component]),
             dmc.Alert(
-                """Figures (a) and (b) illustrate economic activities after dropping out of school using data from the Cambodia Socio-Economic Survey. Due to data availability, individuals aged 6–19 are assumed to be current students who have dropped out, while those aged 20–40 are considered students who dropped out earlier and have been out of school for a longer period.
+                """Figures illustrate economic activities after dropping out of school using data from the Cambodia Socio-Economic Survey. Due to data availability, individuals aged 6–19 are assumed to be current students who have dropped out, while those aged 20–40 are considered students who dropped out earlier and have been out of school for a longer period.
 
-The figures show that after dropping out, current dropouts are primarily engaged in low-skilled jobs, such as elementary occupations. In contrast, when comparing current dropouts with older dropouts, it is evident that older dropouts are more involved in high-skilled jobs, such as clerks, professionals, technicians and associate professionals, legislators, senior officials, and managers. This is likely because older dropouts have been out of school for a longer period and may have developed skills through work experience and/or further education.
+    The figures show that after dropping out, current dropouts are primarily engaged in low-skilled jobs, such as elementary occupations. In contrast, when comparing current dropouts with older dropouts, it is evident that older dropouts are more involved in high-skilled jobs, such as clerks, professionals, technicians and associate professionals, legislators, senior officials, and managers. This is likely because older dropouts have been out of school for a longer period and may have developed skills through work experience and/or further education.
 
-However, it is important to note that we cannot guarantee that students aged 16–19 who are currently classified as dropouts did so recently; they may have dropped out earlier.""",
+    However, it is important to note that we cannot guarantee that students aged 16–19 who are currently classified as dropouts did so recently; they may have dropped out earlier.""",
                 title="Description",
                 color="green"
             )
@@ -782,7 +778,8 @@ def update_year_dropdown(series_name, indicator, grade, province, active_tab):
     default_value = str(max(year_values))  # Convert to string to match dropdown data format
 
     # Conditionally set style based on active_tab
-    dropdown_style = {'display': 'block'} if active_tab in ['map', 'graph'] else {'display': 'none'}
+    dropdown_style = {'display': 'block'} if (active_tab == 'map' or (active_tab == 'graph' and series_name == 'Dropout Rate By Occupation')) else {'display': 'none'}
+
 
     return year_options, default_value, dropdown_style
 

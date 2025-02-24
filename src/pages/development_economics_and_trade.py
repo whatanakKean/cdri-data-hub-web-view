@@ -305,6 +305,7 @@ def create_graph(dff):
             x=1
         ),
         xaxis=dict(
+            showgrid=False,
             tickmode='auto',
             color='rgba(0, 0, 0, 0.6)',
             tickvals=dff_filtered['Year'].unique(),
