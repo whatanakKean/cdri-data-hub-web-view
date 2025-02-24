@@ -177,7 +177,6 @@ def create_graph(dff, filters):
         graphs = []  # Store multiple figures
         prefixes = [f"({letter})" for letter in string.ascii_lowercase]
         
-        
         for idx, variety in enumerate(dff['Variety'].unique()):
             dff_variety = dff[dff['Variety'] == variety]
             dff_variety['Date'] = pd.to_datetime(dff_variety['Date'])
@@ -214,8 +213,8 @@ def create_graph(dff, filters):
                     title=f"<span style='display:block; margin-top:8px; font-size:85%; color:rgba(0, 0, 0, 0.7);'>Source: {dff_variety['Source'].unique()[0]}</span>",
                 ),
             )
-            # if dff["Variety"] == "Pka Romdoul/Jasmine":
-            #     print()
+            
+            # Add Annotation
             if dff_variety["Variety"].unique() in ["Sen Kra Ob 01", "Indica - Long B", "Indica (Average)"]:
                 fig.update_layout(
                     shapes=[
@@ -226,7 +225,23 @@ def create_graph(dff, filters):
                             y0=0, y1=1,
                             fillcolor="#808080",
                             opacity=0.25,
-                            layer="below"
+                            layer="below",
+                            line=dict(width=0)
+                        )
+                    ]
+                )
+            if dff_variety["Variety"].unique() in ["White Rice (Hard Texture)", "White Rice (Soft Texture)", "OM", "IR"]:
+                fig.update_layout(
+                    shapes=[
+                        dict(
+                            type="rect",
+                            xref="x", yref="paper",
+                            x0=pd.to_datetime("2024-12-01"), x1=pd.to_datetime("2025-02-01"),
+                            y0=0, y1=1,
+                            fillcolor="#808080",
+                            opacity=0.25,
+                            layer="below",
+                            line=dict(width=0)
                         )
                     ]
                 )
@@ -323,7 +338,6 @@ def create_graph(dff, filters):
                     orientation='h'
                 ))
 
-            title_prefix = prefixes[idx] if idx < len(prefixes) else ""  
             # Create layout for bar chart
             layout = go.Layout(
                 images=[dict(
@@ -334,7 +348,7 @@ def create_graph(dff, filters):
                     xanchor="right", yanchor="bottom"
                 )],
                 title=dict(
-                    text=f"{title_prefix} {series_name} {indicator} in {year} ({sub_sector})"
+                    text=f"Student Occupation After Dropout ({sub_sector})"
                     + f"<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{sub_sector_data['Indicator Unit'].unique()[0]}</span>"
                 ),
                 font=dict(
@@ -366,6 +380,20 @@ def create_graph(dff, filters):
                         color='rgba(0, 0, 0, 0.6)'
                     )
                 ),
+                annotations=[
+                    dict(
+                        x=0.5,  # Center horizontally (matches legend's x)
+                        y=-0.5,  # Slightly below the legend (adjust as needed)
+                        xref="paper",  # Use "paper" coordinates (0 to 1)
+                        yref="paper",
+                        text="Source:",  # Customize this
+                        showarrow=False,  # No arrow, just text
+                        font=dict(
+                            color='rgba(0, 0, 0, 0.6)',  # Match legend font color
+                            size=12  # Adjust size as needed
+                        )
+                    )
+                ],
                 margin=dict(t=100, b=100, l=50, r=50),
                 plot_bgcolor='white',
             )

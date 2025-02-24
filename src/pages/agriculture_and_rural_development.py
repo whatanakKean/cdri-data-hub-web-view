@@ -261,8 +261,8 @@ def create_map(dff, year):
                 [
                     dl.Map(
                         style={'width': '100%', 'height': '450px'},
-                        center=[0, 0],
-                        zoom=6,
+                        center=[12.5657, 104.9910],
+                        zoom=7,
                         children=[
                             dl.TileLayer(url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"),
                             geojson,
@@ -312,8 +312,8 @@ def create_map(dff, year):
             return html.Div([
                 dl.Map(
                         style={'width': '100%', 'height': '450px'},
-                        center=[0, 0],
-                        zoom=2,
+                        center=[20, 0],
+                        zoom=6,
                         children=[
                             dl.TileLayer(url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"),
                             geojson, 
@@ -349,7 +349,7 @@ def create_map(dff, year):
             return html.Div([
                 dl.Map(
                         style={'width': '100%', 'height': '450px'},
-                        center=[0, 0],
+                        center=[20, 0],
                         zoom=6,
                         children=[
                             dl.TileLayer(url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"),
@@ -363,7 +363,7 @@ def create_map(dff, year):
                     'zIndex': 0,
                 }
             )
-        
+    
 def create_graph(dff):
     # Aggregate data
     dff_filtered = dff.groupby('Year')['Indicator Value'].sum().reset_index()
