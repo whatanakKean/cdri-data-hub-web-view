@@ -313,6 +313,58 @@ def create_map(dff, year):
 def create_graph(dff, year):
     series_name = dff['Series Name'].unique()[0]
     indicator = dff['Indicator'].unique()[0]
+    
+    # Create line chart layout
+    layout = go.Layout(
+        images=[dict(
+            source="./assets/CDRI Logo.png",
+            xref="paper", yref="paper",
+            x=1, y=1.1,
+            sizex=0.2, sizey=0.2,
+            xanchor="right", yanchor="bottom"
+        )],
+        yaxis=dict(
+            gridcolor='rgba(169, 169, 169, 0.7)',
+            color='rgba(0, 0, 0, 0.6)',
+            showgrid=True,
+            gridwidth=0.5,
+            griddash='dot',
+            tickformat=',',
+            rangemode='tozero',
+        ),
+        font=dict(
+            family='BlinkMacSystemFont, -apple-system, sans-serif',
+            color='rgb(24, 29, 31)'
+        ),
+        hovermode="x unified",
+        plot_bgcolor='white',
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.25,
+            xanchor="center",
+            x=0.5
+        ),
+        annotations=[dict(
+            x=0.5,  # Center horizontally (matches legend's x)
+            y=-0.35,  # Slightly below the legend
+            xref="paper",
+            yref="paper",
+            text=f"Source: {dff['Source'].unique()[0]}",  # Customize this
+            showarrow=False,
+            font=dict(
+                color='rgba(0, 0, 0, 0.6)',
+                size=12
+            )
+        )],
+        xaxis=dict(
+            tickmode='auto',
+            color='rgba(0, 0, 0, 0.6)',
+            tickvals=dff['Year'].unique(),
+        ),
+        margin=dict(t=100, b=80, l=50, r=50, pad=10),
+    )
+
 
     if series_name == 'Occupations of School Dropouts':
         custom_order = [
@@ -377,7 +429,6 @@ def create_graph(dff, year):
                 categoryorder="array", categoryarray=custom_order
             ),
             xaxis=dict(
-                title=f"{indicator}",
                 gridcolor='rgba(169, 169, 169, 0.7)',
                 color='rgba(0, 0, 0, 0.6)',
                 gridwidth=0.5,
@@ -387,7 +438,7 @@ def create_graph(dff, year):
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
-                # y=1,
+                y=-0.25,
                 xanchor="center",
                 x=0.5,
                 font=dict(
@@ -396,14 +447,13 @@ def create_graph(dff, year):
             ),
             annotations=[dict(
                 x=0.5,  # Center horizontally (matches legend's x)
-                y=-0.5,  # Slightly below the legend (adjust as needed)
-                xref="paper",  # Use "paper" coordinates (0 to 1)
-                yref="paper",
-                text="Source:",  # Customize this
-                showarrow=False,  # No arrow, just text
+                y=-0.35,  # Slightly below the legend
+                xref="paper",
+                yref="paper",text=f"Source: {dff['Source'].unique()[0]}",  # Customize this
+                showarrow=False,
                 font=dict(
-                    color='rgba(0, 0, 0, 0.6)',  # Match legend font color
-                    size=12  # Adjust size as needed
+                    color='rgba(0, 0, 0, 0.6)',
+                    size=12
                 )
             )],
             margin=dict(t=100, b=100, l=50, r=50),
@@ -487,46 +537,7 @@ def create_graph(dff, year):
                 name=indicator,
                 line=dict(color="#156082")
             )]
-
-        # Create line chart layout
-        layout = go.Layout(
-            images=[dict(
-                source="./assets/CDRI Logo.png",
-                xref="paper", yref="paper",
-                x=1, y=1.1,
-                sizex=0.2, sizey=0.2,
-                xanchor="right", yanchor="bottom"
-            )],
-            yaxis=dict(
-                gridcolor='rgba(169, 169, 169, 0.7)',
-                color='rgba(0, 0, 0, 0.6)',
-                showgrid=True,
-                gridwidth=0.5,
-                griddash='dot',
-                tickformat=',',
-                rangemode='tozero',
-            ),
-            font=dict(
-                family='BlinkMacSystemFont, -apple-system, sans-serif',
-                color='rgb(24, 29, 31)'
-            ),
-            hovermode="x unified",
-            plot_bgcolor='white',
-            legend=dict(
-                orientation="h",
-                yanchor="bottom",
-                # y=1,
-                xanchor="center",
-                x=0.5
-            ),
-            xaxis=dict(
-                tickmode='auto',
-                color='rgba(0, 0, 0, 0.6)',
-                tickvals=dff['Year'].unique(),
-            ),
-            margin=dict(t=100, b=80, l=50, r=50, pad=10),
-        )
-
+            
         fig = go.Figure(layout=layout)
         for trace in traces:
             fig.add_trace(trace)
@@ -550,7 +561,7 @@ def create_graph(dff, year):
         dcc.Graph(
             id="figure-linechart",
             figure=fig,
-            style={'minHeight': '450px'},
+            style={'minHeight': '500px'},
             config={
                 'displaylogo': False,
                 'toImageButtonOptions': {

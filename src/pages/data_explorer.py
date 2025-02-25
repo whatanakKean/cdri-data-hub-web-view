@@ -9,7 +9,7 @@ import pandas as pd
 from dash_iconify import DashIconify
 import plotly.graph_objects as go
 from fuzzywuzzy import process
-
+import random
 # Sample dataset
 conn = sqlite3.connect("./src/data/data.db")
 
@@ -21,11 +21,8 @@ df2 = pd.read_sql_query(query2, conn)
 data = pd.concat([df1, df2], ignore_index=True)
 
 combined_options = [
-    {
-        "label": f"{row}",
-        "value": f"{row}"
-    }
-    for row in data["Tag"].unique()
+    {"label": f"{item}", "value": f"{item}"}
+    for item in random.sample(list(data["Tag"].unique()), len(data["Tag"].unique()))
 ]
 
 # About page with suggestions autocomplete
@@ -127,7 +124,6 @@ def create_graph(dff, filters):
     dff_filtered = dff[dff['Indicator'] == dff['Indicator'].unique()[0]]
     series_name = dff['Series Name'].unique()[0]
     indicator = dff['Indicator'].unique()[0]
-    indicator_unit = dff['Indicator Unit'].unique()[0]
     
     # Define layout
     layout = go.Layout(
@@ -156,7 +152,7 @@ def create_graph(dff, filters):
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=1,
+            y=-0.25,
             xanchor="right",    
             x=1
         ),
@@ -378,7 +374,6 @@ def create_graph(dff, filters):
                 categoryorder="array", categoryarray=custom_order
             ),
             xaxis=dict(
-                title=f"{indicator}",
                 gridcolor='rgba(169, 169, 169, 0.7)',
                 color='rgba(0, 0, 0, 0.6)',
                 gridwidth=0.5,
@@ -388,7 +383,7 @@ def create_graph(dff, filters):
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
-                # y=1,
+                y=-0.25,
                 xanchor="center",
                 x=0.5,
                 font=dict(
@@ -397,14 +392,13 @@ def create_graph(dff, filters):
             ),
             annotations=[dict(
                 x=0.5,  # Center horizontally (matches legend's x)
-                y=-0.5,  # Slightly below the legend (adjust as needed)
-                xref="paper",  # Use "paper" coordinates (0 to 1)
-                yref="paper",
-                text="Source:",  # Customize this
-                showarrow=False,  # No arrow, just text
+                y=-0.35,  # Slightly below the legend
+                xref="paper",
+                yref="paper",text=f"Source: {dff['Source'].unique()[0]}",  # Customize this
+                showarrow=False,
                 font=dict(
-                    color='rgba(0, 0, 0, 0.6)',  # Match legend font color
-                    size=12  # Adjust size as needed
+                    color='rgba(0, 0, 0, 0.6)',
+                    size=12
                 )
             )],
             margin=dict(t=100, b=100, l=50, r=50),
@@ -449,7 +443,6 @@ def create_graph(dff, filters):
         ])
     
     if any(word in filters['Tag'].lower() for word in ['student flow rates', 'successful student']):
-        print("1. ", filters['Tag'])
         if any(word in filters['Tag'].lower() for word in ['grade', 'level', 'successful student']):
             traces = []
             for idx, grade in enumerate(dff['Grade'].unique()):
@@ -457,7 +450,6 @@ def create_graph(dff, filters):
                 line_color = ["#156082", "#A80000", "#8EA4BC", "#FF5733", "#F4A261", "#E9C46A", "#2A9D8F", "#E76F51", "#457B9D", "#D4A373", "#6A0572", "#264653"]
                 
                 if 'level' in filters['Tag'].lower():
-                    print(dff['Grade'].unique())
                     traces.append(go.Scatter(
                         x=grade_data['Year'],
                         y=grade_data['Indicator Value'],
@@ -517,7 +509,7 @@ def create_graph(dff, filters):
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
-                # y=1,
+                y=-0.25,
                 xanchor="center",
                 x=0.5
             ),
