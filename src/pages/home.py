@@ -14,15 +14,15 @@ sector = [
     {"name": "Development Economics and Trade", 
      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Phnompenhview.jpg/450px-Phnompenhview.jpg", 
      "isEnabled": True, 
-     "href": "/development-economics-and-trade"},
+     "href": "/"},
     {"name": "Natural Resources and Environment", 
      "image": "	https://cdri.org.kh/storage/images/CNRE_1630041306.jpg", 
      "isEnabled": True, 
-     "href": "/national-resources-and-environment"},
+     "href": "/"},
     {"name": "Governance and Inclusive Society", 
      "image": "https://cdri.org.kh/storage/images/cgis_banner_16300551491_1716455322.jpg", 
      "isEnabled": True, 
-     "href": "/governance-and-inclusive-society"},
+     "href": "/"},
 ]
 
 home_page = html.Main([  

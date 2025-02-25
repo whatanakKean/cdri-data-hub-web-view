@@ -58,14 +58,24 @@ def footer():
                                         href="/agriculture-and-rural-development",
                                         style={"color": "white", "display": "block"}
                                     ),
-                                    # dmc.Anchor(
-                                    #     ">     Development Economics and Trade",
-                                    #     href="/development-economics-and-trade",
-                                    #     style={"color": "white", "display": "block"}
-                                    # ),
                                     dmc.Anchor(
                                         ">     Education",
                                         href="/education",
+                                        style={"color": "white", "display": "block"}
+                                    ),
+                                    dmc.Anchor(
+                                        ">     Development Economics and Trade",
+                                        href="/",
+                                        style={"color": "white", "display": "block"}
+                                    ),
+                                    dmc.Anchor(
+                                        ">     Natural Resources and Environment",
+                                        href="/",
+                                        style={"color": "white", "display": "block"}
+                                    ),
+                                    dmc.Anchor(
+                                        ">     Governance and Inclusive Society",
+                                        href="/",
                                         style={"color": "white", "display": "block"}
                                     ),
                                 ]

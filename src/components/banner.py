@@ -23,14 +23,22 @@ buttons = [
                         "Agriculture and Rural Development",
                         href="/agriculture-and-rural-development"
                     ),
-                    # dmc.MenuItem(
-                    #     "Development Economics and Trade",
-                    #     href="/development-economics-and-trade"
-                    # ),
                     dmc.MenuItem(
                         "Education",
                         href="/education"
-                    )
+                    ),
+                    dmc.MenuItem(
+                        "Development Economics and Trade",
+                        href="/"
+                    ),
+                    dmc.MenuItem(
+                        "Natural Resources and Environment",
+                        href="/"
+                    ),
+                    dmc.MenuItem(
+                        "Governance and Inclusive Society",
+                        href="/"
+                    ),
                 ]
             ),
         ],

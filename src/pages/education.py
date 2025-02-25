@@ -187,6 +187,51 @@ def create_map(dff, year):
     min_value = dff['Indicator Value'].min()
     max_value = dff['Indicator Value'].max()
     range_value = max_value - min_value
+    
+    if series_name == "Occupations of School Dropouts":
+        return html.Div([
+            # Blurred Map Container
+            html.Div([
+                dl.Map(
+                    style={
+                        'width': '100%',
+                        'height': '450px',
+                        'filter': 'blur(8px)'  # Apply blur effect to the map
+                    },
+                    center=[0, 0],
+                    zoom=6,
+                    children=[
+                        dl.TileLayer(url="https://stamen-tiles.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}.png"),
+                        html.Div(children=get_info(is_gis=False), className="info", 
+                                style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
+                    ],
+                    attributionControl=False,
+                )
+            ], style={
+                "position": "relative",
+                "overflow": "hidden"  # Prevents overflow from blur effect
+            }),
+
+            # Overlay Message
+            html.Div(
+                "GIS is not available for this dataset",
+                style={
+                    "position": "absolute",
+                    "top": 0,
+                    "left": 0,
+                    "width": "100%",
+                    "height": "100%",
+                    "display": "flex",
+                    "justify-content": "center",
+                    "align-items": "center",
+                    "font-size": "20px",
+                    "font-weight": "bold",
+                    "color": "#333",
+                    "zIndex": 1000,
+                    "background": "rgba(255, 255, 255, 0.3)"
+                }
+            )
+        ], style={'position': 'relative', 'zIndex': 0})
 
     # Handle the case where range_value is 0
     if range_value == 0:

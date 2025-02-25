@@ -51,7 +51,7 @@ def get_info(series_name=None, indicator=None, indicator_unit=None, feature=None
         
         # Return the information with the indicator value and year (if given)
         return header + [html.B(feature_name), html.Br(),
-                         f"{indicator}: {feature['properties'][indicator]} {indicator_unit[0]}", html.Br()]
+                         f"{indicator}: {feature['properties'][indicator]:,.0f} {indicator_unit[0]}", html.Br()]
 
 
 def load_data(file_path="src/data/Datahub_Agri_Latest.xlsx", sheet_name="Database"):
