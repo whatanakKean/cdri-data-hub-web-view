@@ -311,7 +311,7 @@ def create_graph(dff, year):
     series_name = dff['Series Name'].unique()[0]
     indicator = dff['Indicator'].unique()[0]
 
-    if series_name == 'Dropout Rate By Occupation':
+    if series_name == 'Occupations of School Dropouts':
         custom_order = [
             "Elementary occupations",
             "plant and machine operators and assemblers",
@@ -796,7 +796,7 @@ def update_year_dropdown(series_name, indicator, grade, province, active_tab):
     default_value = str(max(year_values))  # Convert to string to match dropdown data format
 
     # Conditionally set style based on active_tab
-    dropdown_style = {'display': 'block'} if (active_tab == 'map' or (active_tab == 'graph' and series_name == 'Dropout Rate By Occupation')) else {'display': 'none'}
+    dropdown_style = {'display': 'block'} if (active_tab == 'map' or (active_tab == 'graph' and series_name == 'Occupations of School Dropouts')) else {'display': 'none'}
 
 
     return year_options, default_value, dropdown_style

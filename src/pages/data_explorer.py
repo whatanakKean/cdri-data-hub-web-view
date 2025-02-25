@@ -16,16 +16,16 @@ conn = sqlite3.connect("./src/data/data.db")
 # Query economic_data table
 query1 = "SELECT * FROM education_data;"
 df1 = pd.read_sql_query(query1, conn)
-# Query agriculture_data table
 query2 = "SELECT * FROM agriculture_data;"
 df2 = pd.read_sql_query(query2, conn)
-# Concatenate both DataFrames
 data = pd.concat([df1, df2], ignore_index=True)
 
-# Predefined suggested questions
-suggested_questions = [
-    "Show rice production yield in Battambang.",
-    "What is the area planted for rice in Kandal?"
+combined_options = [
+    {
+        "label": f"{row}",
+        "value": f"{row}"
+    }
+    for row in data["Tag"].unique()
 ]
 
 # About page with suggestions autocomplete
@@ -51,31 +51,29 @@ data_explorer_page = html.Main(
                         dmc.Title('Data Hub Explorer', order=1, style={'color': 'white', 'fontSize': '2rem'}),
                         dmc.Text("Explore Data and Visualizations with Natural Language", size="xl", style={'color': 'white', 'fontSize': '1rem'}),
                         # Suggestions dropdown
-                        dmc.TextInput(
+                        dmc.Select(
+                            label="Select Dataset", 
                             id="suggestions-autocomplete",
+                            data=combined_options,
+                            withScrollArea=False,
                             placeholder="Ask anything...",
+                            styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
+                            checkIconPosition="right",
+                            searchable=True,
+                            clearable=True,
+                            leftSectionPointerEvents="none",
                             leftSection=DashIconify(icon="mingcute:ai-fill"),
-                            debounce=500,
-                            # data=[{"value": question, "label"   : question} for question in suggested_questions],
-                            style={"width": "100%", "marginBottom": "20px"},
+                            nothingFoundMessage="Nothing found...",
+                            limit=25
                         ),
-                        # dmc.Box(
-                        #     dmc.Button(
-                        #         "Data Catalog",
-                        #         variant="outline",
-                        #         leftSection=DashIconify(icon="tdesign:data"),
-                        #         color="white",
-                        #         id="data-catalog-button",
-                        #     )
+                        # dmc.Autocomplete(
+                        #     id="suggestions-autocomplete",
+                        #     placeholder="Ask anything...",
+                        #     data=combined_options,
+                        #     leftSection=DashIconify(icon="mingcute:ai-fill"),
+                        #     style={"width": "100%", "marginBottom": "20px"},
+                        #     limit=25
                         # ),
-                        dmc.Modal(
-                            id="data-catalog-modal",
-                            title="Data Catalog",
-                            children=[
-                                dmc.Text("data-catalog-modal-body"),
-                            ],
-                            fullScreen=True
-                        ),
                     ],
                     className="animate__animated animate__fadeInUp animate__fast"
                 )
@@ -105,7 +103,7 @@ data_explorer_page = html.Main(
                 ),
                 ], shadow="xs", p="md", radius="md", withBorder=True),
         ], fluid=True),
-        dcc.Store(id='data-explorer-filter-state')
+        dcc.Store(id='data-explorer-filter-state'),
     ],
 )
 
@@ -126,8 +124,6 @@ def create_dataview(dff):
 
         
 def create_graph(dff, filters):
-    # Aggregate data (unchanged)
-    # dff_filtered = dff.groupby('Year')['Indicator Value'].sum().reset_index()
     dff_filtered = dff[dff['Indicator'] == dff['Indicator'].unique()[0]]
     series_name = dff['Series Name'].unique()[0]
     indicator = dff['Indicator'].unique()[0]
@@ -174,7 +170,7 @@ def create_graph(dff, filters):
         margin=dict(t=100, b=80, l=50, r=50, pad=10),
     )
 
-    if series_name == "Rice Price":
+    if 'rice price' in filters['Tag'].lower():
         graphs = []  # Store multiple figures
         prefixes = [f"({letter})" for letter in string.ascii_lowercase]
         
@@ -312,13 +308,26 @@ def create_graph(dff, filters):
                 color="green"
             )
         ])
-    
 
-    if series_name == 'Dropout Rate By Occupation':
-        year = filters.get('Year', 2023)
 
+    if 'occupations of school dropouts' in filters['Tag'].lower():
+        series_name = dff['Series Name'].unique()[0]
+        indicator = dff['Indicator'].unique()[0]
+        custom_order = [
+            "Elementary occupations",
+            "plant and machine operators and assemblers",
+            "Craft and related trades workers",
+            "Skilled agricultural and fishery workers",
+            "Service and shop and market sales workers",
+            "Armed forces",
+            "Clerks",
+            "Technicians and associate professionals",
+            "Professionals",
+            "Legislations, senior officials and managers"
+        ]
+        year = dff['Indicator'].unique()[0]
         # Filter the data for the latest year
-        latest_data = dff[dff['Year'] == year]
+        latest_data = dff[dff['Indicator'] == 'Percent']
 
         # Get unique sub-sectors
         sub_sectors = latest_data['Sub-Sector (1)'].unique()
@@ -340,6 +349,8 @@ def create_graph(dff, filters):
                 orientation='h',
                 marker=dict(color=line_color[idx])
             ))
+            
+        print(filters['Tag'])
 
         # Create the layout for the grouped bar chart
         layout = go.Layout(
@@ -363,7 +374,7 @@ def create_graph(dff, filters):
             yaxis=dict(
                 title="Occupation",
                 color='rgba(0, 0, 0, 0.6)',
-                categoryorder='total ascending'
+                categoryorder="array", categoryarray=custom_order
             ),
             xaxis=dict(
                 title=f"{indicator}",
@@ -371,12 +382,12 @@ def create_graph(dff, filters):
                 color='rgba(0, 0, 0, 0.6)',
                 gridwidth=0.5,
                 griddash='dot',
-                range = [0, 5000] if indicator == "Frequency" else ([0, 40] if indicator == "Percentage" else "auto")
+                range = [0, 5000] if indicator == "Frequency" else [0, 40]
             ),
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
-                y=-0.4,
+                # y=1,
                 xanchor="center",
                 x=0.5,
                 font=dict(
@@ -425,15 +436,15 @@ def create_graph(dff, filters):
 
         return html.Div([
             html.Div([figure_component]),
-    #         dmc.Alert(
-    #             """Figures illustrate economic activities after dropping out of school using data from the Cambodia Socio-Economic Survey. Due to data availability, individuals aged 6–19 are assumed to be current students who have dropped out, while those aged 20–40 are considered students who dropped out earlier and have been out of school for a longer period.
+            dmc.Alert(
+                """Figures illustrate economic activities after dropping out of school using data from the Cambodia Socio-Economic Survey. Due to data availability, individuals aged 6–19 are assumed to be current students who have dropped out, while those aged 20–40 are considered students who dropped out earlier and have been out of school for a longer period.
 
-    # The figures show that after dropping out, current dropouts are primarily engaged in low-skilled jobs, such as elementary occupations. In contrast, when comparing current dropouts with older dropouts, it is evident that older dropouts are more involved in high-skilled jobs, such as clerks, professionals, technicians and associate professionals, legislators, senior officials, and managers. This is likely because older dropouts have been out of school for a longer period and may have developed skills through work experience and/or further education.
+    The figures show that after dropping out, current dropouts are primarily engaged in low-skilled jobs, such as elementary occupations. In contrast, when comparing current dropouts with older dropouts, it is evident that older dropouts are more involved in high-skilled jobs, such as clerks, professionals, technicians and associate professionals, legislators, senior officials, and managers. This is likely because older dropouts have been out of school for a longer period and may have developed skills through work experience and/or further education.
 
-    # However, it is important to note that we cannot guarantee that students aged 16–19 who are currently classified as dropouts did so recently; they may have dropped out earlier.""",
-    #             title="Description",
-    #             color="green"
-    #         )
+    However, it is important to note that we cannot guarantee that students aged 16–19 who are currently classified as dropouts did so recently; they may have dropped out earlier.""",
+                title="Description",
+                color="green"
+            )
         ])
     
     # Define layout (unchanged)
@@ -625,7 +636,7 @@ def update_data(selected_suggestion):
 
     # Extract filters from the selected suggestion
     filters = {}
-    for col in ["Series Name", "Sub-Sector (1)", "Sub-Sector (2)", "Indicator", "Markets", "Province", "Grade", "Year"]:
+    for col in ["Tag"]:
         lower_mapping = {str(name).lower(): name for name in data[col].unique() if pd.notna(name)}
         match = process.extractOne(selected_suggestion.lower(), lower_mapping.keys(), score_cutoff=50)
         if match:
@@ -643,9 +654,9 @@ def update_data(selected_suggestion):
                 # If the filtered data is not empty, apply the filter
                 filtered_df = temp_df
     
-    print(filters)
+    # print(filtered_df)
     
-    if not filters or 'Series Name' not in filters:
+    if not filters or 'Tag' not in filters:
         # Default content when no question is entered
         default_message = dmc.Alert(
             "Please enter a question in the search bar above to explore data visualizations and tables.",
@@ -664,16 +675,3 @@ def download_data(n_clicks, filtered_df):
     if n_clicks is None: return dash.no_update
     filtered_df = pd.DataFrame(filtered_df)
     return dict(content=filtered_df.to_csv(index=False), filename="data.csv", type="application/csv")
-
-
-# Callback to handle opening and closing the modal
-@callback(
-    Output("data-catalog-modal", "opened"),
-    Input("data-catalog-button", "n_clicks"),
-    State("data-catalog-modal", "opened"),
-    prevent_initial_call=True
-)
-def toggle_modal(n_clicks, opened):
-    if n_clicks:
-        return not opened
-    return opened
