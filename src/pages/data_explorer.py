@@ -165,7 +165,7 @@ def create_graph(dff, filters):
             tickmode='auto',
             color='rgba(0, 0, 0, 0.6)',
             tickvals=dff_filtered['Year'].unique(),
-            title="<span style='display:block; margin-top:8px; font-size:85%; color:rgba(0, 0, 0, 0.7);'>Produced By: CDRI Data Hub</span>",
+            title=f"<span style='display:block; margin-top:8px; font-size:85%; color:rgba(0, 0, 0, 0.7);'>Source: {dff['Source'].unique()[0]}</span>",
         ),
         margin=dict(t=100, b=80, l=50, r=50, pad=10),
     )
@@ -308,9 +308,9 @@ def create_graph(dff, filters):
                 color="green"
             )
         ])
-
-
+    
     if 'occupations of school dropouts' in filters['Tag'].lower():
+        dff = dff[dff['Indicator'] == 'Percent']
         series_name = dff['Series Name'].unique()[0]
         indicator = dff['Indicator'].unique()[0]
         custom_order = [
@@ -325,10 +325,11 @@ def create_graph(dff, filters):
             "Professionals",
             "Legislations, senior officials and managers"
         ]
-        year = dff['Indicator'].unique()[0]
+        year = dff['Year'].unique()[0]
+        
         # Filter the data for the latest year
-        latest_data = dff[dff['Indicator'] == 'Percent']
-
+        
+        latest_data = dff
         # Get unique sub-sectors
         sub_sectors = latest_data['Sub-Sector (1)'].unique()
 
@@ -447,45 +448,131 @@ def create_graph(dff, filters):
             )
         ])
     
-    # Define layout (unchanged)
-    layout = go.Layout(
-        images=[dict(
-            source="./assets/CDRI Logo.png",
-            xref="paper", yref="paper",
-            x=1, y=1.1,
-            sizex=0.2, sizey=0.2,
-            xanchor="right", yanchor="bottom"
-        )],
-        yaxis=dict(
-            gridcolor='rgba(169, 169, 169, 0.7)',
-            color='rgba(0, 0, 0, 0.6)',
-            showgrid=True,
-            gridwidth=0.5,
-            griddash='dot',
-            tickformat=',',
-            rangemode='tozero',
-        ),
-        font=dict(
-            family='BlinkMacSystemFont, -apple-system, sans-serif',
-            color='rgb(24, 29, 31)'
-        ),
-        hovermode="x unified",
-        plot_bgcolor='white',
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1,
-            xanchor="right",    
-            x=1
-        ),
-        xaxis=dict(
-            tickmode='auto',
-            color='rgba(0, 0, 0, 0.6)',
-            tickvals=dff_filtered['Year'].unique(),
-            title="<span style='display:block; margin-top:8px; font-size:85%; color:rgba(0, 0, 0, 0.7);'>Produced By: CDRI Data Hub</span>",
-        ),
-        margin=dict(t=100, b=80, l=50, r=50, pad=10),
-    )
+    if any(word in filters['Tag'].lower() for word in ['student flow rates', 'successful student']):
+        print("1. ", filters['Tag'])
+        if any(word in filters['Tag'].lower() for word in ['grade', 'level', 'successful student']):
+            traces = []
+            for idx, grade in enumerate(dff['Grade'].unique()):
+                grade_data = dff[dff['Grade'] == grade]
+                line_color = ["#156082", "#A80000", "#8EA4BC", "#FF5733", "#F4A261", "#E9C46A", "#2A9D8F", "#E76F51", "#457B9D", "#D4A373", "#6A0572", "#264653"]
+                
+                if 'level' in filters['Tag'].lower():
+                    print(dff['Grade'].unique())
+                    traces.append(go.Scatter(
+                        x=grade_data['Year'],
+                        y=grade_data['Indicator Value'],
+                        mode='lines+markers' if len(grade_data) == 1 else 'lines',
+                        name=f"{grade}",
+                        line=dict(color=line_color[idx])
+                    ))
+                elif 'grade' in filters['Tag'].lower():
+                    traces.append(go.Scatter(
+                        x=grade_data['Year'],
+                        y=grade_data['Indicator Value'],
+                        mode='lines+markers' if len(grade_data) == 1 else 'lines',
+                        name=f"{grade}",
+                        line=dict(color=line_color[idx])
+                    ))
+                else:
+                    traces.append(go.Scatter(
+                        x=grade_data['Year'],
+                        y=grade_data['Indicator Value'],
+                        mode='lines+markers' if len(grade_data) == 1 else 'lines',
+                        name=f"{grade}",
+                        line=dict(color=line_color[idx])
+                    ))
+        else:
+            traces = [go.Scatter(
+                x=dff['Year'],
+                y=dff['Indicator Value'],
+                mode='lines+markers' if len(dff) == 1 else 'lines',
+                name=indicator,
+                line=dict(color="#156082")
+            )]
+
+        # Create line chart layout
+        layout = go.Layout(
+            images=[dict(
+                source="./assets/CDRI Logo.png",
+                xref="paper", yref="paper",
+                x=1, y=1.1,
+                sizex=0.2, sizey=0.2,
+                xanchor="right", yanchor="bottom"
+            )],
+            yaxis=dict(
+                gridcolor='rgba(169, 169, 169, 0.7)',
+                color='rgba(0, 0, 0, 0.6)',
+                showgrid=True,
+                gridwidth=0.5,
+                griddash='dot',
+                tickformat=',',
+                rangemode='tozero',
+            ),
+            font=dict(
+                family='BlinkMacSystemFont, -apple-system, sans-serif',
+                color='rgb(24, 29, 31)'
+            ),
+            hovermode="x unified",
+            plot_bgcolor='white',
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                # y=1,
+                xanchor="center",
+                x=0.5
+            ),
+            xaxis=dict(
+                tickmode='auto',
+                color='rgba(0, 0, 0, 0.6)',
+                tickvals=dff['Year'].unique(),
+            ),
+            margin=dict(t=100, b=80, l=50, r=50, pad=10),
+        )
+
+        fig = go.Figure(layout=layout)
+        for trace in traces:
+            fig.add_trace(trace)
+            
+        if 'successful student' in filters['Tag'].lower():
+            fig.update_layout(
+                title=dict(
+                    text=f"{indicator} in {dff['Province'].unique()[0]}"
+                        + f"<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{dff['Indicator Unit'].unique()[0]}</span>"
+                )
+            )
+        else:
+            fig.update_layout(
+                title=dict(
+                    text=f"{series_name}: {indicator} in {dff['Province'].unique()[0]}"
+                        + f"<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{dff['Indicator Unit'].unique()[0]}</span>"
+                )
+            )
+        return html.Div([
+            dcc.Graph(
+                id="figure-linechart",
+                figure=fig,
+                style={'minHeight': '450px'},
+                config={
+                    'displaylogo': False,
+                    'toImageButtonOptions': {
+                        'format': 'png',
+                        'filename': 'cdri_datahub_viz',
+                        'height': 500,
+                        'width': 800,
+                        'scale': 6
+                    },
+                },
+                responsive=True,
+            ),
+            dmc.Divider(size="sm"),
+            dmc.Alert(
+                "The figure illustrates the student dropout rates from 2012 to 2023 across different grade levels: primary school, lower-secondary school, and upper-secondary school in Cambodia. It shows that the overall student dropout rates declined dramatically, a trend that can be attributed to the government’s efforts to improve the education system in Cambodia. Notably, during the 2019-2020 academic year, the overall dropout rate for upper-secondary school reached an unusually low level, primarily due to Grade 12 data. This was followed by a decline in class repetition compared to other years. In other words, most students that year were promoted to the next grade. This was primarily due to the COVID-19 pandemic, during which schools were closed, and the Ministry of Education, Youth, and Sport (MoEYS) announced the automatic promotion of all students. As a result, the dropout rate for that year was exceptionally low."
+                if series_name == "Student Flow Rates" and indicator == "Dropout" 
+                else "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+                title="Description",
+                color="green"
+            )
+        ]) 
     
     # Create traces (unchanged)
     traces = []
@@ -654,7 +741,6 @@ def update_data(selected_suggestion):
                 # If the filtered data is not empty, apply the filter
                 filtered_df = temp_df
     
-    # print(filtered_df)
     
     if not filters or 'Tag' not in filters:
         # Default content when no question is entered

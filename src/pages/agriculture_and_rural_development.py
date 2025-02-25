@@ -3,10 +3,9 @@ import math
 import sqlite3
 import string
 import dash
-from dash import html, dcc, Input, Output, State, callback, ctx
+from dash import html, dcc, Input, Output, State, callback
 import dash_mantine_components as dmc
 import dash_ag_grid as dag
-import numpy as np
 import pandas as pd
 from ..utils.utils import get_info, filter_data, style_handle
 from dash_iconify import DashIconify
@@ -177,23 +176,48 @@ def create_map(dff, year):
     
     if series_name == "Rice Price":
         return html.Div([
-            dl.Map(
-                    style={'width': '100%', 'height': '450px'},
+            # Blurred Map Container
+            html.Div([
+                dl.Map(
+                    style={
+                        'width': '100%',
+                        'height': '450px',
+                        'filter': 'blur(8px)'  # Apply blur effect to the map
+                    },
                     center=[0, 0],
                     zoom=6,
                     children=[
                         dl.TileLayer(url="https://stamen-tiles.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}.png"),
-                        html.Div(children=get_info(is_gis=False), className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
-                        # geojson,
-                        # html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
+                        html.Div(children=get_info(is_gis=False), className="info", 
+                                style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
                     ],
                     attributionControl=False,
-            )],
-            style={
-                'position': 'relative',
-                'zIndex': 0,
-            }
-        )
+                )
+            ], style={
+                "position": "relative",
+                "overflow": "hidden"  # Prevents overflow from blur effect
+            }),
+
+            # Overlay Message
+            html.Div(
+                "GIS is not available for this dataset",
+                style={
+                    "position": "absolute",
+                    "top": 0,
+                    "left": 0,
+                    "width": "100%",
+                    "height": "100%",
+                    "display": "flex",
+                    "justify-content": "center",
+                    "align-items": "center",
+                    "font-size": "20px",
+                    "font-weight": "bold",
+                    "color": "#333",
+                    "zIndex": 1000,
+                    "background": "rgba(255, 255, 255, 0.3)"
+                }
+            )
+        ], style={'position': 'relative', 'zIndex': 0})
     else:
         dff = dff[dff["Year"] == year]
         # Calculate Choropleth Gradient Scale Range
@@ -594,88 +618,7 @@ def create_graph(dff):
                 color="green"
             ),
         ])
-
-def create_modal(dff, feature):
-    indicator = feature['Indicator']
-    dff_filtered = dff[dff['Indicator'] == indicator]
-    series_name = dff_filtered['Series Name'].unique()[0]
-
-    # Define layout
-    layout = go.Layout(
-        images=[dict(
-            source="./assets/CDRI Logo.png",
-            xref="paper", yref="paper",
-            x=1, y=1.1,
-            sizex=0.2, sizey=0.2,
-            xanchor="right", yanchor="bottom"
-        )],
-        yaxis=dict(
-            gridcolor='rgba(169, 169, 169, 0.7)',
-            color='rgba(0, 0, 0, 0.6)',
-            showgrid=True,
-            gridwidth=0.5,
-            griddash='dot',
-            tickformat=',',
-            rangemode='tozero',
-            title=f"{indicator} ({dff_filtered['Indicator Unit'].unique()[0]})",
-        ),
-        font=dict(
-            family='BlinkMacSystemFont, -apple-system, sans-serif',
-            color='rgb(24, 29, 31)'
-        ),
-        hovermode="x unified",
-        plot_bgcolor='white',
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1,
-            xanchor="right",    
-            x=1
-        ),
-        xaxis=dict(
-            tickmode='auto',
-            color='rgba(0, 0, 0, 0.6)',
-            tickvals=dff_filtered['Year'].unique(),
-            title="<span style='display:block; margin-top:8px; font-size:85%; color:rgba(0, 0, 0, 0.7);'>Produced By: CDRI Data Hub</span>",
-        ),
-        margin=dict(t=100, b=80, l=50, r=50, pad=10),
-    )
-
-    # Create figure
-    fig1 = go.Figure(layout=layout)
-    fig1.add_trace(go.Scatter(
-        x=dff_filtered['Year'],
-        y=dff_filtered['Indicator Value'],
-        mode='lines+markers' if len(dff_filtered) == 1 else 'lines',
-        name=indicator,
-        line=dict(color="#156082")
-    ))  
-    fig1.update_layout(
-        title=dict(
-            text= f"{series_name}: {indicator} in {feature['shapeName']}" + f"<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{dff['Indicator Unit'].unique()[0]}</span>",
-        ),
-    )
-    # Return graph with the Pie chart selector and line chart
-    return html.Div([
-        dmc.Divider(size="sm"),
-        dcc.Graph(
-            id="figure-linechart", 
-            figure=fig1, 
-            style={'minHeight': '450px'},
-            config={
-                'displaylogo': False,
-                'toImageButtonOptions': {
-                    'format': 'png',
-                    'filename': 'cdri_datahub_viz',
-                    'height': 500,
-                    'width': 800,
-                    'scale': 6
-                },
-            },
-            responsive=True,
-        ),
-    ])
-
+        
 # Callbacks
 @callback([Output('graph-id', 'children'), Output('map-id', 'children'), Output('dataview-id', 'children'), Output('metadata-panel', 'children'), Output('indicator-unit', 'data')],
           [Input("series-name-dropdown", "value"), Input("subsector-2-dropdown", "value"), 
@@ -802,34 +745,3 @@ def update_year_dropdown(series_name, province, indicator, active_tab):
     dropdown_style = {'display': 'block'} if active_tab == 'map' else {'display': 'none'}
     
     return year_options, default_value, dropdown_style
-
-
-# # Callback to handle map clicks and display modal
-# @callback(
-#     Output("info-modal", "opened"),
-#     Output("modal-body", "children"),
-#     Output("geojson", "clickData"),  # Reset clickData
-#     Input("geojson", "clickData"),
-#     State("info-modal", "opened"),
-#     prevent_initial_call=True
-# )
-# def handle_map_click(click_data, is_modal_open):
-#     if click_data is None:
-#         return dash.no_update, dash.no_update, dash.no_update
-    
-#     # Extract feature properties from the clicked data
-#     feature = click_data.get("properties", {})
-    
-#     dff = filter_data(
-#         data=data,
-#         series_name=feature['Series Name'],
-#         province=feature['shapeName'],
-#     )
-    
-#     # Prepare the content for the modal
-#     modal_content = [
-#         create_modal(dff, feature)
-#     ]
-    
-#     # Open the modal, update its content, and reset clickData
-#     return not is_modal_open, modal_content, None

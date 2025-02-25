@@ -212,7 +212,10 @@ def create_map(dff, year):
     ctg = [f"{int(classes[i])}+" for i in range(len(classes))]
     colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=30, height=300, position="bottomright")
 
-    if 'Province' in dff.columns and dff['Province'].unique() != 'Cambodia':
+    if 'Province' in dff.columns:
+        if dff['Province'].unique() == 'Cambodia':
+            dff = filter_data(data=data, series_name=dff['Series Name'].unique()[0], indicator=dff['Indicator'].unique()[0], grade=dff['Grade'].unique()[0], year=year)
+
         ctg = [f"{int(classes[i])}+" for i in range(len(classes))]
         colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=30, height=300, position="bottomright")
     
@@ -327,10 +330,6 @@ def create_graph(dff, year):
         
         # Filter the data for the latest year
         latest_data = dff[dff['Year'] == year]
-        
-        # Convert 'Occupation' column to categorical type with the custom order
-        # latest_data['Occupation'] = pd.Categorical(latest_data['Occupation'], categories=custom_order, ordered=True)
-        # latest_data = latest_data.sort_values(by='Occupation', key=lambda x: x.cat.codes)
 
         # Get unique sub-sectors
         sub_sectors = latest_data['Sub-Sector (1)'].unique()
@@ -572,98 +571,7 @@ def create_graph(dff, year):
             title="Description",
             color="green"
         )
-    ])
-
-
-def create_modal(dff, feature):
-    indicator = feature['Indicator']
-    dff_filtered = dff[dff['Indicator'] == indicator]
-    series_name = dff_filtered['Series Name'].unique()[0]
-    
-    # # Determine y-axis range if values fall between 0-100
-    # min_value = dff_filtered['Indicator Value'].min()
-    # max_value = dff_filtered['Indicator Value'].max()
-    # yaxis_range = [0, 100] if 0 <= min_value and max_value <= 100 else None
-
-    # Define layout
-    layout = go.Layout(
-        images=[dict(
-            source="./assets/CDRI Logo.png",
-            xref="paper", yref="paper",
-            x=1, y=1.1,
-            sizex=0.2, sizey=0.2,
-            xanchor="right", yanchor="bottom"
-        )],
-        yaxis=dict(
-            gridcolor='rgba(169, 169, 169, 0.7)',
-            color='rgba(0, 0, 0, 0.6)',
-            showgrid=True,
-            gridwidth=0.5,
-            griddash='dot',
-            tickformat=',',
-            rangemode='tozero',
-            title=f"{indicator} ({dff_filtered['Indicator Unit'].unique()[0]})",
-        ),
-        font=dict(
-            family='BlinkMacSystemFont, -apple-system, sans-serif',
-            color='rgb(24, 29, 31)'
-        ),
-        hovermode="x unified",
-        plot_bgcolor='white',
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            # y=1,
-            xanchor="right",    
-            x=1
-        ),
-        xaxis=dict(
-            tickmode='auto',
-            color='rgba(0, 0, 0, 0.6)',
-            tickvals=dff_filtered['Year'].unique(),
-            title=f"<span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.7);'>Source: {dff_filtered['Source'].unique()}</span>",
-        ),
-        margin=dict(t=100, b=80, l=50, r=50, pad=10),
-    )
-
-    # Create figure
-    fig1 = go.Figure(layout=layout)
-    fig1.add_trace(go.Scatter(
-        x=dff_filtered['Year'],
-        y=dff_filtered['Indicator Value'],
-        mode='lines+markers' if len(dff_filtered) == 1 else 'lines',
-        name=indicator,
-        line=dict(color="#156082")
-    ))  
-    fig1.update_layout(
-        title=dict(
-            text=f"{series_name} {dff['Indicator'].unique()[0]}"
-                + (f" in {dff['Province'].unique()[0]}" if 'Province' in dff.columns and dff['Province'].nunique() == 1 else "")
-                + f"<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{dff['Indicator Unit'].unique()[0]}</span>"
-        )
-    )
-
-    # Return graph with the Pie chart selector and line chart
-    return html.Div([
-        dmc.Divider(size="sm"),
-        dcc.Graph(
-            id="figure-linechart", 
-            figure=fig1, 
-            style={'minHeight': '450px'},
-            config={
-                'displaylogo': False,
-                'toImageButtonOptions': {
-                    'format': 'png',
-                    'filename': 'cdri_datahub_viz',
-                    'height': 500,
-                    'width': 800,
-                    'scale': 6
-                },
-            },
-            responsive=True,
-        ),
-    ])
-    
+    ]) 
 
 # Calllback for info on map
 @callback(Output("info-education", "children"), Input('series-name-dropdown-education', 'value'), Input('year-dropdown-education', 'value'), Input('indicator-dropdown-education', 'value'),  Input('indicator-unit-education', 'data'), Input("geojson-education", "hoverData"))
@@ -800,33 +708,3 @@ def update_year_dropdown(series_name, indicator, grade, province, active_tab):
 
 
     return year_options, default_value, dropdown_style
-
-
-# # Callback to handle map clicks and display modal
-# @callback(
-#     Output("info-modal-education", "opened"),
-#     Output("modal-body-education", "children"),
-#     Output("geojson-education", "clickData"),  # Reset clickData
-#     Input("geojson-education", "clickData"),
-#     State("info-modal-education", "opened"),
-#     prevent_initial_call=True
-# )
-# def handle_map_click(click_data, is_modal_open):
-#     if click_data is None:
-#         return dash.no_update, dash.no_update, dash.no_update
-    
-#     # Extract feature properties from the clicked data
-#     feature = click_data.get("properties", {})
-    
-#     dff = filter_data(
-#         data=data,
-#         series_name=feature['Series Name']
-#     )
-    
-#     # Prepare the content for the modal
-#     modal_content = [
-#         create_modal(dff, feature)
-#     ]
-    
-#     # Open the modal, update its content, and reset clickData
-#     return not is_modal_open, modal_content, None
