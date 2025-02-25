@@ -20,10 +20,11 @@ query2 = "SELECT * FROM agriculture_data;"
 df2 = pd.read_sql_query(query2, conn)
 data = pd.concat([df1, df2], ignore_index=True)
 
+
+top_7 = ["Fragrant Rice Price", "White Rice Price", "Rice Production: Area Planted in Battambang", "Rice Export Value to Vietnam", "Student Flow Rates: Dropout by Grade in Cambodia", "Occupations of School Dropouts in 2023", "Successful Student in Cambodia"]
 combined_options = [
-    {"label": f"{item}", "value": f"{item}"}
-    for item in random.sample(list(data["Tag"].unique()), len(data["Tag"].unique()))
-]
+    {"label": f"{row}", "value": f"{row}"} for row in top_7
+] + [{"label": f"{row}", "value": f"{row}"} for row in data["Tag"].unique() if row not in top_7]
 
 # About page with suggestions autocomplete
 data_explorer_page = html.Main(
@@ -243,7 +244,7 @@ def create_graph(dff, filters):
             graph_component = dcc.Graph(
                 id=f"figure-linechart-{variety}", 
                 figure=fig, 
-                style={'height': '400px', 'width': '100%'},
+                style={'height': '450px', 'width': '100%'},
                 config={
                     'displaylogo': False,
                     'toImageButtonOptions': {

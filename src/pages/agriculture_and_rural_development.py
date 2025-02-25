@@ -512,7 +512,7 @@ def create_graph(dff):
             graph_component = dcc.Graph(
                 id=f"figure-linechart-{variety}", 
                 figure=fig, 
-                style={'height': '400px', 'width': '100%'},
+                style={'height': '450px', 'width': '100%'},
                 config={
                     'displaylogo': False,
                     'toImageButtonOptions': {
