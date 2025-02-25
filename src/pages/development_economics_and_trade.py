@@ -450,8 +450,6 @@ def info_hover(series_name, year, indicator, indicator_unit, feature):
            Input("indicator-dropdown-economic", "value"), Input("market-dropdown-economic", "value"), Input("year-dropdown-economic", "value")])
 def update_report(series_name, product, indicator, market, year):
     dff = filter_data(data=data, series_name=series_name, indicator=indicator, product=product, market=market)
-    print(">> Shape: ", series_name, dff.shape)
-    print(dff)
     indicator_unit = dff['Indicator Unit'].unique()
     return create_graph(dff), create_map(dff, year), create_dataview(dff), create_metadata(dff), indicator_unit.tolist()
 

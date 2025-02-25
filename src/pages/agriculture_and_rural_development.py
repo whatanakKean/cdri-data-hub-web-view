@@ -264,7 +264,7 @@ def create_map(dff, year):
                         center=[12.5657, 104.9910],
                         zoom=7,
                         children=[
-                            dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                            dl.TileLayer(url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"),
                             geojson,
                             colorbar,
                             html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
@@ -315,7 +315,7 @@ def create_map(dff, year):
                         center=[20, 0],
                         zoom=6,
                         children=[
-                            dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                            dl.TileLayer(url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"),
                             geojson, 
                             colorbar,
                             html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
@@ -352,7 +352,7 @@ def create_map(dff, year):
                         center=[12.5657, 104.9910],
                         zoom=7,
                         children=[
-                            dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                            dl.TileLayer(url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"),
                             geojson,
                             html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
                         ],

@@ -253,7 +253,7 @@ def create_map(dff, year):
                     center=[12.5657, 104.9910],
                     zoom=7,
                     children=[
-                        dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                        dl.TileLayer(url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"),
                         geojson,
                         colorbar,
                         html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info-education", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
@@ -293,7 +293,7 @@ def create_map(dff, year):
                     center=[12.5657, 104.9910],
                     zoom=7,
                     children=[
-                        dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                        dl.TileLayer(url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"),
                         geojson,
                         colorbar,
                         html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info-education", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
@@ -312,8 +312,25 @@ def create_graph(dff, year):
     indicator = dff['Indicator'].unique()[0]
 
     if series_name == 'Dropout Rate By Occupation':
+        custom_order = [
+            "Elementary occupations",
+            "plant and machine operators and assemblers",
+            "Craft and related trades workers",
+            "Skilled agricultural and fishery workers",
+            "Service and shop and market sales workers",
+            "Armed forces",
+            "Clerks",
+            "Technicians and associate professionals",
+            "Professionals",
+            "Legislations, senior officials and managers"
+        ]
+        
         # Filter the data for the latest year
         latest_data = dff[dff['Year'] == year]
+        
+        # Convert 'Occupation' column to categorical type with the custom order
+        # latest_data['Occupation'] = pd.Categorical(latest_data['Occupation'], categories=custom_order, ordered=True)
+        # latest_data = latest_data.sort_values(by='Occupation', key=lambda x: x.cat.codes)
 
         # Get unique sub-sectors
         sub_sectors = latest_data['Sub-Sector (1)'].unique()
@@ -358,7 +375,7 @@ def create_graph(dff, year):
             yaxis=dict(
                 title="Occupation",
                 color='rgba(0, 0, 0, 0.6)',
-                categoryorder='total ascending'
+                categoryorder="array", categoryarray=custom_order
             ),
             xaxis=dict(
                 title=f"{indicator}",
@@ -371,7 +388,7 @@ def create_graph(dff, year):
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
-                y=-0.4,
+                # y=1,
                 xanchor="center",
                 x=0.5,
                 font=dict(
@@ -436,7 +453,7 @@ def create_graph(dff, year):
             traces = []
             for idx, grade in enumerate(dff['Grade'].unique()):
                 grade_data = dff[dff['Grade'] == grade]
-                line_color = ["#156082", "#A80000", "#8EA4BC", "#156082", "#156082", "#156082", "#156082", "#156082", "#156082", "#156082", "#156082", "#156082", "#156082"]
+                line_color = ["#156082", "#A80000", "#8EA4BC", "#FF5733", "#F4A261", "#E9C46A", "#2A9D8F", "#E76F51", "#457B9D", "#D4A373", "#6A0572", "#264653"]
                 sub_sector = dff["Sub-Sector (1)"].unique()[0]
                 
                 if sub_sector == "Level":
@@ -452,7 +469,8 @@ def create_graph(dff, year):
                         x=grade_data['Year'],
                         y=grade_data['Indicator Value'],
                         mode='lines+markers' if len(grade_data) == 1 else 'lines',
-                        name=f"{grade}"
+                        name=f"{grade}",
+                        line=dict(color=line_color[idx])
                     ))
                 else:
                     traces.append(go.Scatter(
@@ -498,7 +516,7 @@ def create_graph(dff, year):
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
-                y=-0.4,
+                # y=1,
                 xanchor="center",
                 x=0.5
             ),
@@ -595,7 +613,7 @@ def create_modal(dff, feature):
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=5,
+            # y=1,
             xanchor="right",    
             x=1
         ),
