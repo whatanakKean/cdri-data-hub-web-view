@@ -21,7 +21,7 @@ df2 = pd.read_sql_query(query2, conn)
 data = pd.concat([df1, df2], ignore_index=True)
 
 
-top_7 = ["Fragrant Rice Price", "White Rice Price", "Rice Production: Area Planted in Battambang", "Rice Export Value to Vietnam", "Student Flow Rates: Dropout by Grade in Cambodia", "Occupations of School Dropouts in 2023", "Successful Student in Cambodia"]
+top_7 = ["Fragrant Rice Price", "White Rice Price", "Rice Production: Area Planted in Battambang", "Rice Export Value to Vietnam", "Occupations of School Dropouts in 2023", "Student Flow Rates: Dropout by Grade in Cambodia", "Successful Student in Cambodia"]
 combined_options = [
     {"label": f"{row}", "value": f"{row}"} for row in top_7
 ] + [{"label": f"{row}", "value": f"{row}"} for row in data["Tag"].unique() if row not in top_7]
