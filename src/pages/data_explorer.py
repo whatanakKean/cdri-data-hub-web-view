@@ -21,7 +21,7 @@ df2 = pd.read_sql_query(query2, conn)
 data = pd.concat([df1, df2], ignore_index=True)
 
 
-top_7 = ["Fragrant Rice Price", "White Rice Price", "Rice Production: Area Planted in Battambang", "Rice Export Value to Vietnam", "Occupations of School Dropouts in 2023", "Student Flow Rates: Dropout by Grade in Cambodia", "Successful Student in Cambodia"]
+top_7 = ["Fragrant Paddy Rice Price", "White Paddy Rice Price", "Rice Production: Area Planted in Battambang", "Rice Export Value to Vietnam", "Occupations of School Dropouts in 2023", "Student Flow Rates: Dropout by Grade in Cambodia", "Successful Student in Cambodia"]
 combined_options = [
     {"label": f"{row}", "value": f"{row}"} for row in top_7
 ] + [{"label": f"{row}", "value": f"{row}"} for row in data["Tag"].unique() if row not in top_7]
@@ -167,7 +167,7 @@ def create_graph(dff, filters):
         margin=dict(t=100, b=80, l=50, r=50, pad=10),
     )
 
-    if 'rice price' in filters['Tag'].lower():
+    if 'paddy rice price' in filters['Tag'].lower():
         graphs = []  # Store multiple figures
         prefixes = [f"({letter})" for letter in string.ascii_lowercase]
         

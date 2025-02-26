@@ -174,7 +174,7 @@ def create_map(dff, year):
     indicator = dff['Indicator'].unique()[0]
     indicator_unit = dff['Indicator Unit'].unique()[0]
     
-    if series_name == "Rice Price":
+    if series_name == "Paddy Rice Price":
         return html.Div([
             # Blurred Map Container
             html.Div([
@@ -288,7 +288,7 @@ def create_map(dff, year):
                         center=[12.5657, 104.9910],
                         zoom=7,
                         children=[
-                            dl.TileLayer(url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"),
+                            dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
                             geojson,
                             colorbar,
                             html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
@@ -339,7 +339,7 @@ def create_map(dff, year):
                         center=[20, 0],
                         zoom=6,
                         children=[
-                            dl.TileLayer(url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"),
+                            dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
                             geojson, 
                             colorbar,
                             html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
@@ -376,7 +376,7 @@ def create_map(dff, year):
                         center=[12.5657, 104.9910],
                         zoom=7,
                         children=[
-                            dl.TileLayer(url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"),
+                            dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
                             geojson,
                             html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
                         ],
@@ -435,7 +435,7 @@ def create_graph(dff):
         margin=dict(t=100, b=80, l=50, r=50, pad=10),
     )
 
-    if series_name == "Rice Price":
+    if series_name == "Paddy Rice Price":
         graphs = []  # Store multiple figures
         prefixes = [f"({letter})" for letter in string.ascii_lowercase]
         
@@ -658,7 +658,7 @@ def info_hover(series_name, year, indicator, indicator_unit, feature):
     Input('series-name-dropdown', 'value')
 )
 def update_subsector_2(series_name):
-    if series_name.lower() != "rice price":
+    if series_name.lower() != "paddy rice price":
         return [], None, {'display': 'none'}
     
     province_options = data[(data["Series Name"] == series_name)]["Sub-Sector (2)"].dropna().str.strip().unique()
@@ -673,7 +673,7 @@ def update_subsector_2(series_name):
     Input('series-name-dropdown', 'value')
 )
 def update_province(series_name):
-    if series_name.lower() == "rice price":
+    if series_name.lower() == "paddy rice price":
         return [], None, {'display': 'none'}
     
     province_options = data[(data["Series Name"] == series_name)]["Province"].dropna().str.strip().unique()
@@ -718,7 +718,7 @@ def update_indicators(series_name, province):
     Input('active-tab', 'value'),
 )
 def update_year_dropdown(series_name, province, indicator, active_tab):
-    if series_name.lower() == "rice price":
+    if series_name.lower() == "paddy rice price":
         return [], None, {'display': 'none'}
     
     dff = filter_data(
