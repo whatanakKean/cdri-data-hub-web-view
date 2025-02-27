@@ -46,7 +46,7 @@ data_explorer_page = html.Main(
                 dmc.Stack(
                     p="lg",
                     children=[
-                        dmc.Title('Data Hub Explorer', order=1, style={'color': 'white', 'fontSize': '2rem'}),
+                        dmc.Title('CDRI Data Hub Explorer', order=1, style={'color': 'white', 'fontSize': '2rem'}),
                         dmc.Text("Explore Data and Visualizations with Natural Language", size="xl", style={'color': 'white', 'fontSize': '1rem'}),
                         # Suggestions dropdown
                         dmc.Select(
@@ -153,7 +153,7 @@ def create_graph(dff, filters):
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=-0.25,
+            y=-0.23,
             xanchor="right",    
             x=1
         ),
@@ -207,6 +207,13 @@ def create_graph(dff, filters):
                     title=f"<span style='display:block; margin-top:8px; font-size:85%; color:rgba(0, 0, 0, 0.7);'>Source: {dff_variety['Source'].unique()[0]}</span>",
                 ),
             )
+            
+            if dff_variety['Sub-Sector (1)'].unique()[0] == "FOB Price":
+                fig.update_layout(
+                    title=dict(
+                        text=f"{title_prefix} {variety} Price at the Port <br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{dff_variety['Indicator Unit'].unique()[0]}</span>"
+                    )
+                )
             
             # Add Annotation
             if dff_variety["Variety"].unique() in ["Sen Kra Ob 01", "Indica - Long B", "Indica (Average)"]:
@@ -384,7 +391,7 @@ def create_graph(dff, filters):
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
-                y=-0.25,
+                y=-0.23,
                 xanchor="center",
                 x=0.5,
                 font=dict(
@@ -393,7 +400,7 @@ def create_graph(dff, filters):
             ),
             annotations=[dict(
                 x=0.5,  # Center horizontally (matches legend's x)
-                y=-0.35,  # Slightly below the legend
+                y=-0.30,  # Slightly below the legend
                 xref="paper",
                 yref="paper",text=f"Source: {dff['Source'].unique()[0]}",  # Customize this
                 showarrow=False,
@@ -414,7 +421,7 @@ def create_graph(dff, filters):
             dcc.Graph(
                 id="figure-barchart",
                 figure=fig,
-                style={'minHeight': '450px'},
+                style={'minHeight': '460px'},
                 config={
                     'displaylogo': False,
                     'toImageButtonOptions': {
@@ -510,7 +517,7 @@ def create_graph(dff, filters):
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
-                y=-0.25,
+                y=-0.23,
                 xanchor="center",
                 x=0.5
             ),
@@ -520,6 +527,18 @@ def create_graph(dff, filters):
                 tickvals=dff['Year'].unique(),
             ),
             margin=dict(t=100, b=80, l=50, r=50, pad=10),
+            annotations=[dict(
+                x=0.5,
+                y=-0.30,
+                xref="paper",
+                yref="paper",
+                text=f"Source: {dff['Source'].unique()[0]}",
+                showarrow=False,
+                font=dict(
+                    color='rgba(0, 0, 0, 0.6)',
+                    size=12
+                )
+            )],
         )
 
         fig = go.Figure(layout=layout)
@@ -531,7 +550,7 @@ def create_graph(dff, filters):
                 title=dict(
                     text=f"{indicator} in {dff['Province'].unique()[0]}"
                         + f"<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{dff['Indicator Unit'].unique()[0]}</span>"
-                )
+                ),
             )
         else:
             fig.update_layout(
@@ -544,7 +563,7 @@ def create_graph(dff, filters):
             dcc.Graph(
                 id="figure-linechart",
                 figure=fig,
-                style={'minHeight': '450px'},
+                style={'minHeight': '460px'},
                 config={
                     'displaylogo': False,
                     'toImageButtonOptions': {
@@ -672,12 +691,23 @@ def create_graph(dff, filters):
             "minorticklen": 6
         }]
     )
+    
+    if series_name == "Rice Production":
+        print(series_name)
+        fig_line.update_layout(
+            title=dict(
+                text=f"{dff['Sub-Sector (2)'].unique()[0]} {dff['Indicator'].unique()[0]}"
+                    + (f" in {dff['Province'].unique()[0]}" if 'Province' in dff.columns and dff['Province'].nunique() == 1 else "")
+                    + (f" to {dff['Markets'].unique()[0]}" if 'Markets' in dff.columns and dff['Markets'].nunique() == 1 else "")
+                    + f"<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{dff['Indicator Unit'].unique()[0]}</span>"
+            )
+        )
 
     # Return graph components (unchanged)
     return html.Div([ 
         dcc.Graph(
             id="figure-linechart", 
-            style={'minHeight': '450px'},
+            style={'minHeight': '460px'},
             figure=fig_line, 
             config={
                 'displaylogo': False,

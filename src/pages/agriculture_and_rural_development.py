@@ -159,7 +159,7 @@ def create_dataview(dff):
     return html.Div([
         dag.AgGrid(id='ag-grid', defaultColDef={"filter": True}, columnDefs=[{"headerName": col, "field": col} for col in pivoted_data.columns], rowData=pivoted_data.to_dict('records'), style={'height': '400px'}),
         dmc.Button("Download Data", id="download-button", variant="outline", color="#336666", mt="md", style={'marginLeft': 'auto', 'display': 'flex', 'justifyContent': 'flex-end'}),
-        dcc.Download(id="download-data")
+        # dcc.Download(id="download-data")
     ])
     
 def create_metadata(dff):
@@ -247,7 +247,8 @@ def create_map(dff, year):
         # Create a dynamic color scale based on the classes
         colorscale = ['#a1d99b', '#31a354', '#2c8e34', '#196d30', '#134e20', '#0d3b17']
         style = dict(weight=2, opacity=1, color='white', dashArray='3', fillOpacity=0.7)
-        ctg = [f"{int(classes[i])}+" for i in range(len(classes))]
+        # ctg = [f"{int(classes[i])}+" for i in range(len(classes))]
+        ctg = [f"" for i in range(len(classes))]
         colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=30, height=300, position="bottomright")
 
         if 'Province' in dff.columns:
@@ -476,6 +477,13 @@ def create_graph(dff):
                 ),
             )
             
+            if dff_variety['Sub-Sector (1)'].unique()[0] == "FOB Price":
+                fig.update_layout(
+                    title=dict(
+                        text=f"{title_prefix} {variety} Price at the Port <br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{dff_variety['Indicator Unit'].unique()[0]}</span>"
+                    )
+                )
+            
             # Add Annotation
             if dff_variety["Variety"].unique() in ["Sen Kra Ob 01", "Indica - Long B", "Indica (Average)"]:
                 fig.update_layout(
@@ -583,22 +591,32 @@ def create_graph(dff):
             mode='lines+markers' if len(dff_filtered) == 1 else 'lines',
             name=indicator,
             line=dict(color="#156082")
-        ))  
-        fig1.update_layout(
-            title=dict(
-                text=f"{series_name} {dff['Indicator'].unique()[0]}"
-                    + (f" in {dff['Province'].unique()[0]}" if 'Province' in dff.columns and dff['Province'].nunique() == 1 else "")
-                    + (f" to {dff['Markets'].unique()[0]}" if 'Markets' in dff.columns and dff['Markets'].nunique() == 1 else "")
-                    + f"<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{dff['Indicator Unit'].unique()[0]}</span>"
+        ))
+        if series_name == "Rice Production":
+            fig1.update_layout(
+                title=dict(
+                    text=f"{dff['Sub-Sector (2)'].unique()[0]} {dff['Indicator'].unique()[0]}"
+                        + (f" in {dff['Province'].unique()[0]}" if 'Province' in dff.columns and dff['Province'].nunique() == 1 else "")
+                        + (f" to {dff['Markets'].unique()[0]}" if 'Markets' in dff.columns and dff['Markets'].nunique() == 1 else "")
+                        + f"<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{dff['Indicator Unit'].unique()[0]}</span>"
+                )
             )
-        )
+        else:  
+            fig1.update_layout(
+                title=dict(
+                    text=f"{series_name} {dff['Indicator'].unique()[0]}"
+                        + (f" in {dff['Province'].unique()[0]}" if 'Province' in dff.columns and dff['Province'].nunique() == 1 else "")
+                        + (f" to {dff['Markets'].unique()[0]}" if 'Markets' in dff.columns and dff['Markets'].nunique() == 1 else "")
+                        + f"<br><span style='display:block; margin-top:8px; font-size:70%; color:rgba(0, 0, 0, 0.6);'>{dff['Indicator Unit'].unique()[0]}</span>"
+                )
+            )
 
         # Return graph
         return html.Div([ 
             dcc.Graph(
                 id="figure-linechart", 
                 figure=fig1, 
-                style={'minHeight': '450px'},
+                style={'minHeight': '460px'},
                 config={
                     'displaylogo': False,
                     'toImageButtonOptions': {
@@ -612,11 +630,11 @@ def create_graph(dff):
                 responsive=True,
             ),
             dmc.Divider(size="sm"),
-            dmc.Alert(
-                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-                title="Description",
-                color="green"
-            ),
+            # dmc.Alert(
+            #     "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+            #     title="Description",
+            #     color="green"
+            # ),
         ])
         
 # Callbacks
@@ -637,13 +655,13 @@ def update_report(series_name, subsector_2, province, indicator, year):
     return create_graph(dff), create_map(dff, year), create_dataview(dff), create_metadata(dff), indicator_unit.tolist()
 
 
-@callback(Output("download-data", "data"), Input("download-button", "n_clicks"),
-          State('series-name-dropdown', 'value'), State("series-name-dropdown", "value"), State('province-dropdown', 'value'), State('indicator-dropdown', 'value'))
-def download_data(n_clicks, series_name, subsector_2, province, indicator):
-    if n_clicks is None: return dash.no_update
-    dff = filter_data(data=data, series_name=series_name, subsector_2=subsector_2, province=province, indicator=indicator)
-    dff = dff.loc[:, ~(dff.apply(lambda col: col.eq("").all(), axis=0))]
-    return dict(content=dff.to_csv(index=False), filename="data.csv", type="application/csv")
+# @callback(Output("download-data", "data"), Input("download-button", "n_clicks"),
+#           State('series-name-dropdown', 'value'), State("series-name-dropdown", "value"), State('province-dropdown', 'value'), State('indicator-dropdown', 'value'))
+# def download_data(n_clicks, series_name, subsector_2, province, indicator):
+#     if n_clicks is None: return dash.no_update
+#     dff = filter_data(data=data, series_name=series_name, subsector_2=subsector_2, province=province, indicator=indicator)
+#     dff = dff.loc[:, ~(dff.apply(lambda col: col.eq("").all(), axis=0))]
+#     return dict(content=dff.to_csv(index=False), filename="data.csv", type="application/csv")
 
 
 # Calllback for info on map

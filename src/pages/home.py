@@ -60,7 +60,7 @@ home_page = html.Main([
         },
         children=[
             dmc.Text(
-                "CDRI Data Hub is a centralized repository for research data, offering reliable knowledge and insights across various sectors in Cambodia. It supports evidence-based decision-making by providing datasets, visualization tools, and knowledge tailored to researchers, policymakers, and practitioners.",
+                "CDRI Data Hub is a centralized repository for research data, offering reliable knowledge and insights across various sectors in Cambodia. It supports evidence-based decision-making by providing datasets, visualization tools, and knowledge tailored to researchers, policymakers, and private sector.",
                 size="lg",
                 py=3,
                 fw=500,
@@ -138,9 +138,9 @@ home_page = html.Main([
                             "boxShadow": "0px 4px 8px rgba(0, 0, 0, 0.1)",
                         },
                         children=[
-                            DashIconify(icon="fluent-color:building-people-16", width=50),
+                            DashIconify(icon="icon-park:peoples-two", width=50),
                             dmc.Text(
-                                "Foster collaboration among researchers, policymakers, and practitioners.",
+                                "Foster collaboration among researchers, policymakers, and private sector.",
                                 size="md",
                                 style={
                                     "fontSize": "14px",
@@ -178,45 +178,49 @@ home_page = html.Main([
                     "textDecoration": "underline"
                 },
             ),
-            dmc.SimpleGrid(
-                cols={"base": 1, "sm": 2, "lg": 2},
+            dmc.Grid(
+                justify="center",
                 children=[
-                    dmc.Card(
-                        children=[
-                            dmc.CardSection(
-                                dmc.Image(
-                                    src=sector_data["image"],
-                                    h=160,
-                                    alt=sector_data["name"],
-                                    className="image-hover-zoom",
-                                )
-                            ),
-                            dmc.Group(
-                                children=[
-                                    dmc.Text(sector_data["name"], w=500),
-                                ],
-                                justify="space-between",
-                                mt="md",
-                                mb="xs",
-                            ),
-                            # Use dmc.Anchor for links
-                            dmc.Anchor(
-                                children=dmc.Button(
-                                    "Explore Data" if sector_data["isEnabled"] else "Coming Soon",
-                                    color="#336666" if sector_data["isEnabled"] else "gray",
-                                    mt="md",
-                                    radius="md",
-                                    fullWidth=True,
-                                    disabled=not sector_data["isEnabled"],
+                    dmc.GridCol(
+                        dmc.Card(
+                            children=[
+                                dmc.CardSection(
+                                    dmc.Image(
+                                        src=sector_data["image"],
+                                        h=160,
+                                        alt=sector_data["name"],
+                                        className="image-hover-zoom",
+                                    )
                                 ),
-                                href=sector_data["href"] if sector_data["isEnabled"] else "#",
-                                target="_self"
-                            ),
-                        ],
-                        withBorder=True,
-                        shadow="sm",
-                        radius="md",
-                    ) for sector_data in sector
+                                # dmc.Group(
+                                #     children=[
+                                #         dmc.Text(sector_data["name"], w=500),
+                                #     ],
+                                #     justify="space-between",
+                                #     mt="md",
+                                #     mb="xs",
+                                # ),
+                                # Use dmc.Anchor for links
+                                dmc.Anchor(
+                                    children=dmc.Button(
+                                        sector_data["name"] if sector_data["isEnabled"] else "Coming Soon",
+                                        color="#336666" if sector_data["isEnabled"] else "gray",
+                                        mt="md",
+                                        radius="md",
+                                        fullWidth=True,
+                                        disabled=not sector_data["isEnabled"],
+                                    ),
+                                    href=sector_data["href"] if sector_data["isEnabled"] else "#",
+                                    target="_self"
+                                ),
+                            ],
+                            withBorder=True,
+                            shadow="sm",
+                            radius="md",
+                        ),
+                        span={"base": 12, "md": 6, "lg":6}
+                    )
+                    for sector_data in sector
                 ]
             ),
         ]

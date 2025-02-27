@@ -162,7 +162,7 @@ def create_dataview(dff):
     return html.Div([
         dag.AgGrid(id='ag-grid-education', defaultColDef={"filter": True}, columnDefs=[{"headerName": col, "field": col} for col in pivoted_data.columns], rowData=pivoted_data.to_dict('records'), style={'height': '400px'}),
         dmc.Button("Download Data", id="download-button-education", variant="outline", color="#336666", mt="md", style={'marginLeft': 'auto', 'display': 'flex', 'justifyContent': 'flex-end'}),
-        dcc.Download(id="download-data-education")
+        # dcc.Download(id="download-data-education")
     ])
     
     
@@ -254,14 +254,16 @@ def create_map(dff, year):
     # Create a dynamic color scale based on the classes
     colorscale = ['#a1d99b', '#31a354', '#2c8e34', '#196d30', '#134e20', '#0d3b17']
     style = dict(weight=2, opacity=1, color='white', dashArray='3', fillOpacity=0.7)
-    ctg = [f"{int(classes[i])}+" for i in range(len(classes))]
+    # ctg = [f"{int(classes[i])}+" for i in range(len(classes))]
+    ctg = [f"" for i in range(len(classes))]
     colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=30, height=300, position="bottomright")
 
     if 'Province' in dff.columns:
         if dff['Province'].unique() == 'Cambodia':
             dff = filter_data(data=data, series_name=dff['Series Name'].unique()[0], indicator=dff['Indicator'].unique()[0], grade=dff['Grade'].unique()[0], year=year)
 
-        ctg = [f"{int(classes[i])}+" for i in range(len(classes))]
+        # ctg = [f"{int(classes[i])}+" for i in range(len(classes))]
+        ctg = [f"" for i in range(len(classes))]
         colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=30, height=300, position="bottomright")
     
         with open('./assets/geoBoundaries-KHM-ADM1_simplified.json') as f:
@@ -386,16 +388,16 @@ def create_graph(dff, year):
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=-0.25,
+            y=-0.23,
             xanchor="center",
             x=0.5
         ),
         annotations=[dict(
-            x=0.5,  # Center horizontally (matches legend's x)
-            y=-0.35,  # Slightly below the legend
+            x=0.5,
+            y=-0.30,
             xref="paper",
             yref="paper",
-            text=f"Source: {dff['Source'].unique()[0]}",  # Customize this
+            text=f"Source: {dff['Source'].unique()[0]}",
             showarrow=False,
             font=dict(
                 color='rgba(0, 0, 0, 0.6)',
@@ -483,7 +485,7 @@ def create_graph(dff, year):
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
-                y=-0.25,
+                y=-0.23,
                 xanchor="center",
                 x=0.5,
                 font=dict(
@@ -492,7 +494,7 @@ def create_graph(dff, year):
             ),
             annotations=[dict(
                 x=0.5,  # Center horizontally (matches legend's x)
-                y=-0.35,  # Slightly below the legend
+                y=-0.30,
                 xref="paper",
                 yref="paper",text=f"Source: {dff['Source'].unique()[0]}",  # Customize this
                 showarrow=False,
@@ -513,7 +515,7 @@ def create_graph(dff, year):
             dcc.Graph(
                 id="figure-barchart",
                 figure=fig,
-                style={'minHeight': '450px'},
+                style={'minHeight': '460px'},
                 config={
                     'displaylogo': False,
                     'toImageButtonOptions': {
@@ -606,7 +608,7 @@ def create_graph(dff, year):
         dcc.Graph(
             id="figure-linechart",
             figure=fig,
-            style={'minHeight': '500px'},
+            style={'minHeight': '460px'},
             config={
                 'displaylogo': False,
                 'toImageButtonOptions': {
@@ -646,13 +648,13 @@ def update_report(series_name, grade_or_level, indicator, year, grade, province)
     return create_graph(dff, year), create_map(dff, year), create_dataview(dff), create_metadata(dff), indicator_unit.tolist()
 
 
-@callback(Output("download-data-education", "data"), Input("download-button-education", "n_clicks"),
-          State('series-name-dropdown-education', 'value'), State('segmented-grade-level', 'value'), State('indicator-dropdown-education', 'value'), Input('grade-dropdown-education', 'value'), Input('province-dropdown-education', 'value'),)
-def download_data(n_clicks, series_name, grade_or_level, indicator, grade, province):
-    if n_clicks is None: return dash.no_update
-    dff = filter_data(data=data, series_name=series_name, subsector_1=grade_or_level,indicator=indicator, grade=grade, province=province)
-    dff = dff.loc[:, ~(dff.apply(lambda col: col.eq("").all(), axis=0))]
-    return dict(content=dff.to_csv(index=False), filename="data.csv", type="application/csv")
+# @callback(Output("download-data-education", "data"), Input("download-button-education", "n_clicks"),
+#           State('series-name-dropdown-education', 'value'), State('segmented-grade-level', 'value'), State('indicator-dropdown-education', 'value'), Input('grade-dropdown-education', 'value'), Input('province-dropdown-education', 'value'),)
+# def download_data(n_clicks, series_name, grade_or_level, indicator, grade, province):
+#     if n_clicks is None: return dash.no_update
+#     dff = filter_data(data=data, series_name=series_name, subsector_1=grade_or_level,indicator=indicator, grade=grade, province=province)
+#     dff = dff.loc[:, ~(dff.apply(lambda col: col.eq("").all(), axis=0))]
+#     return dict(content=dff.to_csv(index=False), filename="data.csv", type="application/csv")
 
 
 @callback(

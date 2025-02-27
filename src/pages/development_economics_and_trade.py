@@ -153,7 +153,7 @@ def create_dataview(dff):
     return html.Div([
         dag.AgGrid(id='ag-grid-economic', defaultColDef={"filter": True}, columnDefs=[{"headerName": col, "field": col} for col in pivoted_data.columns], rowData=pivoted_data.to_dict('records'), style={'height': '400px'}),
         dmc.Button("Download Data", id="download-button-economic", variant="outline", color="#336666", mt="md", style={'marginLeft': 'auto', 'display': 'flex', 'justifyContent': 'flex-end'}),
-        dcc.Download(id="download-data-economic")
+        # dcc.Download(id="download-data-economic")
     ])
     
     
@@ -199,7 +199,8 @@ def create_map(dff, year):
         # Create a dynamic color scale based on the classes
         colorscale = ['#a1d99b', '#31a354', '#2c8e34', '#196d30', '#134e20', '#0d3b17']
         style = dict(weight=2, opacity=1, color='white', dashArray='3', fillOpacity=0.7)
-        ctg = [f"{int(classes[i])}+" for i in range(len(classes))]
+        # ctg = [f"{int(classes[i])}+" for i in range(len(classes))]
+        ctg = [f"" for i in range(len(classes))]
         colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=30, height=300, position="bottomright")
     
         with open('./assets/countries.json') as f:
@@ -372,12 +373,12 @@ def update_report(series_name, product, indicator, market, year):
     return create_graph(dff), create_map(dff, year), create_dataview(dff), create_metadata(dff), indicator_unit.tolist()
 
 
-@callback(Output("download-data-economic", "data"), Input("download-button-economic", "n_clicks"),
-          State('series-name-dropdown-economic', 'value'), State('indicator-dropdown-economic', 'value'), State("market-dropdown-economic", "value"))
-def download_data(n_clicks, series_name, indicator, market):
-    if n_clicks is None: return dash.no_update
-    dff = filter_data(data=data, series_name=series_name, indicator=indicator, market=market)
-    return dict(content=dff.to_csv(index=False), filename="data.csv", type="application/csv")
+# @callback(Output("download-data-economic", "data"), Input("download-button-economic", "n_clicks"),
+#           State('series-name-dropdown-economic', 'value'), State('indicator-dropdown-economic', 'value'), State("market-dropdown-economic", "value"))
+# def download_data(n_clicks, series_name, indicator, market):
+#     if n_clicks is None: return dash.no_update
+#     dff = filter_data(data=data, series_name=series_name, indicator=indicator, market=market)
+#     return dict(content=dff.to_csv(index=False), filename="data.csv", type="application/csv")
 
 @callback(
     Output('product-dropdown-economic', 'data'),
