@@ -64,3 +64,13 @@
     text-align: right; /* Align numbers to the right for proper positioning */
     margin-right: 5px;
 }
+
+
+/* div.ag-theme-alpine div.ag-row {
+    font-size: 12px !important;
+} */
+
+
+.ag-theme-alpine.compact {
+    --ag-grid-size: 3px;
+}
