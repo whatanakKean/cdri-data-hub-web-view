@@ -1,4 +1,6 @@
 
+import json
+import math
 import sqlite3
 import string
 from dash import html, dcc, Input, Output, State, callback
@@ -10,6 +12,12 @@ from dash_iconify import DashIconify
 import plotly.graph_objects as go
 from fuzzywuzzy import process
 import random
+import dash_leaflet as dl
+import dash_leaflet.express as dlx
+from ..utils.utils import get_info, filter_data, style_handle
+
+
+from src.utils.utils import get_info
 # Sample dataset
 conn = sqlite3.connect("./src/data/data.db")
 
@@ -21,7 +29,7 @@ df2 = pd.read_sql_query(query2, conn)
 data = pd.concat([df1, df2], ignore_index=True)
 
 
-top_7 = ["Fragrant Paddy Rice Price", "White Paddy Rice Price", "Rice Production: Area Planted in Battambang", "Rice Export Value to Vietnam", "Occupations of School Dropouts in 2023", "Student Flow Rates: Dropout by Grade in Cambodia", "Successful Student in Cambodia"]
+top_7 = ["Paddy Rice Price (Fragrant Rice)", "Paddy Rice Price (White Rice)", "Rice Production: Area Planted in Battambang", "Rice Export Value to Vietnam", "Occupations of School Dropouts in 2023", "Student Flow Rates: Dropout by Grade in Cambodia", "Successful Student in Cambodia"]
 combined_options = [
     {"label": f"{row}", "value": f"{row}"} for row in top_7
 ] + [{"label": f"{row}", "value": f"{row}"} for row in data["Tag"].unique() if row not in top_7]
@@ -72,6 +80,14 @@ data_explorer_page = html.Main(
                         #     style={"width": "100%", "marginBottom": "20px"},
                         #     limit=25
                         # ),
+                        dmc.RadioGroup(
+                                id="indicator-radio-group",
+                                label="Select Variable:",
+                                size="sm",
+                                children=[],
+                                mt=10,
+                                mb=10,
+                            ),
                     ],
                     className="animate__animated animate__fadeInUp animate__fast"
                 )
@@ -80,25 +96,29 @@ data_explorer_page = html.Main(
         
         dmc.Container(children=[
             dmc.Paper([
-                dmc.Tabs(
-                    children=[
-                        dmc.TabsList(
-                            [
-                                dmc.TabsTab("Visualization", leftSection=DashIconify(icon="tabler:chart-bar"), value="graph"),
-                                dmc.TabsTab("Data View", leftSection=DashIconify(icon="tabler:database"), value="dataview"),
-                            ], 
-                            grow="True",
-                        ),
-                        dmc.TabsPanel(                               
-                            children=[
-                                html.Div(id='data-explorer-graph-id'),
-                            ], 
-                            value="graph"
-                        ),
-                        dmc.TabsPanel(html.Div(id='data-explorer-dataview-id'), value="dataview"),
-                    ], 
-                    value="graph", color="#336666"
-                ),
+                html.Div(id='data-explorer-map-id'),
+                html.Div(id='data-explorer-graph-id'),
+                html.Div(id='data-explorer-dataview-id', style={'marginTop': '20px'})
+
+                # dmc.Tabs(
+                #     children=[
+                #         dmc.TabsList(
+                #             [
+                #                 dmc.TabsTab("Visualization", leftSection=DashIconify(icon="tabler:chart-bar"), value="graph"),
+                #                 dmc.TabsTab("Data View", leftSection=DashIconify(icon="tabler:database"), value="dataview"),
+                #             ], 
+                #             grow="True",
+                #         ),
+                #         dmc.TabsPanel(                               
+                #             children=[
+                #                 html.Div(id='data-explorer-graph-id'),
+                #             ], 
+                #             value="graph"
+                #         ),
+                #         dmc.TabsPanel(html.Div(id='data-explorer-dataview-id'), value="dataview"),
+                #     ], 
+                #     value="graph", color="#336666"
+                # ),
                 ], shadow="xs", p="md", radius="md", withBorder=True),
         ], fluid=True),
         dcc.Store(id='data-explorer-filter-state'),
@@ -107,6 +127,7 @@ data_explorer_page = html.Main(
 
 def create_dataview(dff):
     dff = dff.dropna(axis=1, how='all')
+    
     pivoted_data = dff.pivot_table(
         index=[col for col in dff.columns if col not in ['Indicator', 'Indicator Value']],
         columns='Indicator',
@@ -114,10 +135,84 @@ def create_dataview(dff):
         aggfunc='first'
     ).reset_index()
     
+    # Remove columns where all values are empty strings
+    pivoted_data = pivoted_data.loc[:, ~(pivoted_data.apply(lambda col: col.eq("").all(), axis=0))]
+    
     return html.Div([
-        dag.AgGrid(id='data-explorer-ag-grid', defaultColDef={"filter": True}, columnDefs=[{"headerName": col, "field": col} for col in pivoted_data.columns], rowData=pivoted_data.to_dict('records'), style={'height': '400px'}),
-        dmc.Button("Download Data", id="data-explorer-download-button", variant="outline", color="#336666", mt="md", style={'marginLeft': 'auto', 'display': 'flex', 'justifyContent': 'flex-end'}),
-        dcc.Download(id="data-explorer-download-data")
+        # dag.AgGrid(id='data-explorer-ag-grid', defaultColDef={"filter": True}, columnDefs=[{"headerName": col, "field": col} for col in pivoted_data.columns], rowData=pivoted_data.to_dict('records'), style={'height': '400px'}),
+        # dmc.Button("Download Data", id="data-explorer-download-button", variant="outline", color="#336666", mt="md", style={'marginLeft': 'auto', 'display': 'flex', 'justifyContent': 'flex-end'}),
+        # dcc.Download(id="data-explorer-download-data")
+        dag.AgGrid(
+            id='ag-grid',
+            defaultColDef={
+                "filter": True,
+                "minWidth": 60,  # Smaller minimum width for compact columns
+                "resizable": True,  # Allow resizing columns
+                "cellStyle": {"fontSize": "10px"},  # Reduce font size for compactness
+                "flex": 1,
+            },
+            className="ag-theme-alpine compact",
+            columnSize="autoSize",
+            columnDefs=[{"headerName": col, "field": col, "width": 100} for col in pivoted_data.columns],
+            rowData=pivoted_data.to_dict('records'),
+            style={'width': '100%', 'fontSize': '10px'},  # Ensure the grid width is 100% of the container
+            dashGridOptions={
+                "domLayout": "normal",  # Standard layout for vertical scrolling
+                "suppressHorizontalScroll": True,  # Disable horizontal scroll
+                "onGridReady": {
+                    "params": {"api": "gridOptions.api.sizeColumnsToFit()"}  # Auto-size columns to fit available width
+                }
+            }
+        ),
+    ])
+
+def create_dataview_cashew_nut(dff, year):
+    dff = dff[dff["Year"] == year]
+    
+    dff = dff[['Province', 'Indicator', 'Indicator Value']]
+    pivoted_data = dff.pivot_table(
+        index=[col for col in dff.columns if col not in ['Indicator', 'Indicator Value']],
+        columns='Indicator',
+        values='Indicator Value',
+        aggfunc='first'
+    ).reset_index()
+    
+    # Remove columns where all values are empty strings
+    pivoted_data = pivoted_data.loc[:, ~(pivoted_data.apply(lambda col: col.eq("").all(), axis=0))]
+    
+    # print(pivoted_data.columns)
+    
+    # Column definitions with compact column width and reduced font size
+    # column_defs = [{"headerName": col, "field": col, "width": 100} for col in pivoted_data.columns]
+    column_defs = [
+        {"headerName": col, "field": col, "width": 100}
+        for col in pivoted_data.columns if col != 'No. Farmers/province'
+    ] + [{"headerName": "No. Farmers/province", "field": "No. Farmers/province", "width": 100}]
+    
+    return html.Div([
+        dag.AgGrid(
+            id='ag-grid',
+            defaultColDef={
+                "filter": True,
+                "minWidth": 60,  # Smaller minimum width for compact columns
+                "resizable": True,  # Allow resizing columns
+                "cellStyle": {"fontSize": "10px"},  # Reduce font size for compactness
+                "flex": 1,
+                "cellDataType": False,
+                "cellDataType": "text"
+            },
+            className="ag-theme-alpine compact",
+            columnSize="autoSize",
+            columnDefs=column_defs,
+            rowData=pivoted_data.to_dict('records'),
+            style={'width': '100%', 'fontSize': '10px'},  # Ensure the grid width is 100% of the container
+            dashGridOptions={
+                "domLayout": "autoHeight",  # Automatically adjust grid height
+                "suppressHorizontalScroll": True,  # Disable horizontal scrolling
+            }
+        ),
+        # dmc.Button("Download Data", id="download-button", variant="outline", color="#336666", mt="md", style={'marginLeft': 'auto', 'display': 'flex', 'justifyContent': 'flex-end'}),
+        # dcc.Download(id="download-data")
     ])
 
         
@@ -251,7 +346,7 @@ def create_graph(dff, filters):
             graph_component = dcc.Graph(
                 id=f"figure-linechart-{variety}", 
                 figure=fig, 
-                style={'height': '450px', 'width': '100%'},
+                style={'height': '400px', 'width': '100%'},
                 config={
                     'displaylogo': False,
                     'toImageButtonOptions': {
@@ -267,7 +362,7 @@ def create_graph(dff, filters):
             graphs.append(graph_component)
 
             grid = dmc.Grid(
-                gutter="xs",
+                gutter="none",
                 children=[
                     # Responsive columns: 6/12 (half width) on small screens and up
                     dmc.GridCol(
@@ -289,9 +384,24 @@ def create_graph(dff, filters):
                 ],
                 style={"width": "100%"}
             )
-
+            
         # Return the grid layout
         return html.Div([
+            dmc.Title(
+                dff["Tag"].unique()[0],
+                order=3,
+                style={
+                    "fontWeight": 600,
+                    "textAlign": "center",
+                    "marginBottom": "20px",
+                    "textTransform": "uppercase",
+                    # "letterSpacing": "1px",
+                    "background": "linear-gradient(90deg, #ECF0F1, #FFFFFF)",
+                    "padding": "10px",
+                    "borderRadius": "8px",
+                    "boxShadow": "0 4px 6px rgba(0, 0, 0, 0.1)",
+                }
+            ),
             grid,
             # Uncomment if you want to keep the alert
             dmc.Alert(
@@ -355,7 +465,6 @@ def create_graph(dff, filters):
                 marker=dict(color=line_color[idx])
             ))
             
-        print(filters['Tag'])
 
         # Create the layout for the grouped bar chart
         layout = go.Layout(
@@ -377,7 +486,7 @@ def create_graph(dff, filters):
             hovermode="y unified",
             barmode='group',  # Group the bars by sub-sector
             yaxis=dict(
-                title="Occupation",
+                # title="Occupation",
                 color='rgba(0, 0, 0, 0.6)',
                 categoryorder="array", categoryarray=custom_order
             ),
@@ -438,13 +547,41 @@ def create_graph(dff, filters):
         ])
 
         return html.Div([
+            dmc.Title(
+                f"Occupations of School Dropouts",
+                order=3,
+                style={
+                    "fontWeight": 600,
+                    "textAlign": "center",
+                    "marginBottom": "20px",
+                    "textTransform": "uppercase",
+                    # "letterSpacing": "1px",
+                    "background": "linear-gradient(90deg, #ECF0F1, #FFFFFF)",
+                    "padding": "10px",
+                    "borderRadius": "8px",
+                    "boxShadow": "0 4px 6px rgba(0, 0, 0, 0.1)",
+                }
+            ),
+                
+            # dmc.Select(
+            #     label="Select Year:", 
+            #     withAsterisk=True,
+            #     id="year-dropdown-data-explorer", 
+            #     value="2023",
+            #     data=[{'label': str(option), 'value': str(option)} for option in ["2023", "2022", "2021"]],
+            #     withScrollArea=False,
+            #     styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},   
+            #     checkIconPosition="right",
+            #     allowDeselect=False,
+            #     w=200,
+            # ),
             html.Div([figure_component]),
             dmc.Alert(
-                """Figures illustrate economic activities after dropping out of school using data from the Cambodia Socio-Economic Survey. Due to data availability, individuals aged 6–19 are assumed to be current students who have dropped out, while those aged 20–40 are considered students who dropped out earlier and have been out of school for a longer period.
+                """The figures illustrate economic activities after dropping out of school, based on data from the Cambodia Socio-Economic Survey. Due to data limitations, individuals aged 6–19 are assumed to be recent dropouts, while those aged 20–40 are considered to have dropped out earlier and been out of school for a longer period.
 
-    The figures show that after dropping out, current dropouts are primarily engaged in low-skilled jobs, such as elementary occupations. In contrast, when comparing current dropouts with older dropouts, it is evident that older dropouts are more involved in high-skilled jobs, such as clerks, professionals, technicians and associate professionals, legislators, senior officials, and managers. This is likely because older dropouts have been out of school for a longer period and may have developed skills through work experience and/or further education.
+The figures show that recent dropouts are primarily engaged in low-skilled jobs, such as elementary occupations, with higher-ranking jobs accounting for less than 5%. Similarly, when comparing recent dropouts with older dropouts, it is evident that older dropouts also remain in low-skilled jobs. However, there is a slight increase in employment in higher-ranking positions—such as clerks, professionals, technicians and associate professionals, legislators, senior officials, and managers—though this remains below 10%.
 
-    However, it is important to note that we cannot guarantee that students aged 16–19 who are currently classified as dropouts did so recently; they may have dropped out earlier.""",
+In other words, despite having worked for up to 20 years, older dropouts are still predominantly in low-skilled jobs, underscoring the crucial role of education in improving employment opportunities. Further, it is important to note that we cannot guarantee that students aged 16–19 who are currently classified as dropouts did so recently; they may have dropped out earlier.""",
                 title="Description",
                 color="green"
             )
@@ -693,7 +830,6 @@ def create_graph(dff, filters):
     )
     
     if series_name == "Rice Production":
-        print(series_name)
         fig_line.update_layout(
             title=dict(
                 text=f"{dff['Sub-Sector (2)'].unique()[0]} {dff['Indicator'].unique()[0]}"
@@ -725,9 +861,165 @@ def create_graph(dff, filters):
     ])
 
 
+def create_map(dff, year, indicator=None):
+    series_name = dff['Series Name'].unique()[0]
+    if indicator is None:
+        indicator = sorted(dff['Indicator'].unique())[0]
+    
+    # Filter data by both year and indicator
+    if indicator is not None:
+        dff = dff[(dff["Year"] == year) & (dff["Indicator"] == indicator)]
+    else:
+        dff = dff[dff["Year"] == year]
+        
+    indicator_unit = dff['Indicator Unit'].unique()[0]
+    # Calculate Choropleth Gradient Scale Range
+    num_classes = 5
+    min_value = dff['Indicator Value'].min()
+    max_value = dff['Indicator Value'].max()
+    range_value = max_value - min_value
+
+    # Handle the case where range_value is 0
+    if range_value == 0:
+        classes = [0] * (num_classes + 1)
+    else:
+        magnitude = 10 ** int(math.log10(range_value))
+        if range_value / magnitude < 3:
+            rounding_base = magnitude // 2
+        else:
+            rounding_base = magnitude
+        width = math.ceil(range_value / num_classes / rounding_base) * rounding_base
+        
+        # Start the classes list from 0 and calculate subsequent classes
+        classes = [0] + [i * width for i in range(1, num_classes)] + [max_value]
+        
+        # Round classes to nearest rounding base and remove duplicates
+        classes = [math.ceil(cls / rounding_base) * rounding_base for cls in classes]
+        classes = sorted(set(classes))
+
+    # Create a dynamic color scale based on the classes
+    colorscale = ['#a1d99b', '#31a354', '#2c8e34', '#196d30', '#134e20', '#0d3b17']
+    style = dict(weight=2, opacity=1, color='white', dashArray='3', fillOpacity=0.7)
+    # ctg = [f"{int(classes[i])}+" for i in range(len(classes))]
+    ctg = [f"" for i in range(len(classes))]
+    colorbar = dlx.categorical_colorbar(categories=ctg, colorscale=colorscale, width=30, height=300, position="bottomright")
+
+    if 'Province' in dff.columns:
+        with open('./assets/geoBoundaries-KHM-ADM1_simplified.json') as f:
+            geojson_data = json.load(f)
+        
+        # Map indicator values to geojson features
+        for feature in geojson_data['features']:
+            province_name = feature['properties']['shapeName']  # Ensure correct property for province name
+            
+            # Find matching row in the filtered data
+            province_data = dff[dff['Province'] == province_name]
+            
+            if not province_data.empty:
+                # Assign the indicator value
+                feature['properties'][indicator] = province_data['Indicator Value'].values[0]
+                feature['properties']['Series Name'] = series_name
+                feature['properties']['Indicator'] = indicator
+                feature['properties']['Year'] = year
+            else:
+                # Assign None for missing data
+                feature['properties'][indicator] = None
+        
+        # Create geojson.
+        geojson = dl.GeoJSON(data=geojson_data,
+                            style=style_handle,
+                            zoomToBounds=True,
+                            zoomToBoundsOnClick=True,
+                            hoverStyle=dict(color='black'),
+                            hideout=dict(colorscale=colorscale, classes=classes, style=style, colorProp=indicator),
+                            id="geojson-data-explorer")
+        
+        # print(data[data["Indicator"] == "No. Farmers/province"]["Indicator Value"])
+
+        return html.Div(
+            [
+                dmc.Title(
+                    "Cashew Nut Crop Profile",
+                    order=3,
+                    style={
+                        "fontWeight": 600,
+                        "textAlign": "center",
+                        "marginBottom": "20px",
+                        "textTransform": "uppercase",
+                        # "letterSpacing": "1px",
+                        "background": "linear-gradient(90deg, #ECF0F1, #FFFFFF)",
+                        "padding": "10px",
+                        "borderRadius": "8px",
+                        "boxShadow": "0 4px 6px rgba(0, 0, 0, 0.1)",
+                    }
+                ),
+                
+                dl.Map(
+                    style={'width': '100%', 'height': '450px', 'zIndex': 0},
+                    center=[12.5657, 104.9910],
+                    zoom=7,
+                    children=[
+                        dl.TileLayer(url="http://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png"),
+                        geojson,
+                        colorbar,
+                        html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info-data-explorer", className="info", style={"position": "absolute", "top": "10px", "right": "10px", "zIndex": "1000"}),
+                    ],
+                    attributionControl=False,
+                ),  
+                dmc.Stack(
+                    children= [
+                        dmc.Select(
+                            label="Select Year:", 
+                            withAsterisk=True,
+                            id="year-dropdown", 
+                            value="2023",
+                            data=[{'label': str(option), 'value': str(option)} for option in ["2023", "2022", "2021"]],
+                            withScrollArea=False,
+                            styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},   
+                            checkIconPosition="right",
+                            allowDeselect=False,
+                        ),
+                        dmc.RadioGroup(
+                            id="indicator-radio-group",
+                            withAsterisk=True,
+                            value=indicator,
+                            label="Select Variable:",
+                            size="sm",
+                            children=[
+                                dmc.Radio(label=option, value=option) 
+                                for option in sorted(
+                                    data[data["Tag"] == "Cashew Nut Crop Profile"]["Indicator"].dropna().str.strip().unique(),
+                                )
+                            ],
+                            # mt=10,
+                            mb=10,
+                        ),
+                    ],
+                    className="info",
+                    style={
+                        "position": "absolute",  # Position it absolutely within the map container
+                        "bottom": "10px",
+                        "left": "10px",  # Adjust the position as needed
+                        "zIndex": 1000,
+                        "display": "flex",
+                        "flex-wrap": "wrap",
+                        "gap": "10px"
+                    }
+                )
+                
+                
+            ],
+            style={
+                'position': 'relative',
+                'zIndex': 0,
+            }
+        )
+   
+        
 # Callback to update data table based on the selected suggestion
 @callback(
-    [Output("data-explorer-dataview-id", "children"),
+    [Output("data-explorer-map-id", "children"),
+    Output("data-explorer-dataview-id", "children"),
     Output("data-explorer-graph-id", "children"),
     Output("data-explorer-filter-state", "data")],
     Input("suggestions-autocomplete", "value")
@@ -742,7 +1034,7 @@ def update_data(selected_suggestion):
             variant="light",
             style={'margin': '20px'}
         )
-        return default_message, default_message, {}
+        return default_message, None, None, {}
 
     # Extract filters from the selected suggestion
     filters = {}
@@ -774,13 +1066,43 @@ def update_data(selected_suggestion):
             variant="light",
             style={'margin': '20px'}
         )
-        return default_message, default_message, {}
+        return default_message, None, None, {}
+
+    if selected_suggestion == "Cashew Nut Crop Profile":
+        return create_map(filtered_df, "2023", None), create_dataview_cashew_nut(filtered_df, "2023"), None, filtered_df.to_dict('records')
+
+    return None, None, create_graph(filtered_df, filters), filtered_df.to_dict('records')
+
+@callback(
+    Output("data-explorer-map-id", "children", allow_duplicate=True),
+    Input("indicator-radio-group", "value"),
+    Input("data-explorer-filter-state", "data"),
+    prevent_initial_call=True
+)
+def update_map(indicator, filtered_df):
+    if indicator is None:
+        return dash.no_update
     
-    # return create_dataview(filtered_df), create_graph(filtered_df), filtered_df.to_dict('records')
-    return create_dataview(filtered_df), create_graph(filtered_df, filters), filtered_df.to_dict('records')
+    # Convert stored data to DataFrame and filter by selected indicator
+    filtered_df = pd.DataFrame(filtered_df)
+    
+    # Generate the map with the filtered data
+    return create_map(filtered_df, "2023", indicator)
+
 
 @callback(Output("data-explorer-download-data", "data"), Input("data-explorer-download-button", "n_clicks"), State('data-explorer-filter-state', 'data'))
 def download_data(n_clicks, filtered_df):
     if n_clicks is None: return dash.no_update
     filtered_df = pd.DataFrame(filtered_df)
     return dict(content=filtered_df.to_csv(index=False), filename="data.csv", type="application/csv")
+
+
+# Calllback for info on map
+@callback(Output("info-data-explorer", "children"), Input("data-explorer-filter-state", "data"), Input("indicator-radio-group", "value"), Input("geojson-data-explorer", "hoverData"))
+def info_hover(filtered_df, indicator, feature):
+    filtered_df = pd.DataFrame(filtered_df)
+    series_name = filtered_df["Series Name"].unique()[0]
+    indicator_unit = filtered_df[filtered_df["Indicator"] == indicator]["Indicator Unit"].unique()[0]
+    year = filtered_df["Year"].unique()[0]
+
+    return get_info(series_name=series_name, indicator=indicator, feature=feature, indicator_unit=[indicator_unit], year=year)

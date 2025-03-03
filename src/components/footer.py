@@ -59,8 +59,8 @@ def footer():
                                         style={"color": "white", "display": "block"}
                                     ),
                                     dmc.Anchor(
-                                        ">     Education",
-                                        href="/education",
+                                        ">     Educational Research and Innovation",
+                                        href="/educational-research-and-innovation",
                                         style={"color": "white", "display": "block"}
                                     ),
                                     dmc.Anchor(

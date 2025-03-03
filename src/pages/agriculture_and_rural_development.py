@@ -25,7 +25,7 @@ def sidebar(data):
                 label="Select Dataset", 
                 id="series-name-dropdown", 
                 value='Rice Production', 
-                data=[{'label': option, 'value': option} for option in data["Series Name"].dropna().str.strip().unique() if option],
+                data=[{'label': option, 'value': option} for option in ["Paddy Rice Price"] + [option for option in data["Series Name"].dropna().str.strip().unique() if option and option != "Paddy Rice Price"]],
                 withScrollArea=False,
                 styles={"marginBottom": "16px", "dropdown": {"maxHeight": 200, "overflowY": "auto"}},
                 checkIconPosition="right",
@@ -54,7 +54,7 @@ def sidebar(data):
                 allowDeselect=False,
             ),
             dmc.Select(
-                label="Select Indicator", 
+                label="Select Variable", 
                 id="indicator-dropdown", 
                 value='Area Planted', 
                 data=[{'label': option, 'value': option} for option in list(sorted(data["Indicator"].dropna().str.strip().unique()))],
@@ -187,9 +187,9 @@ def create_map(dff, year):
                     center=[0, 0],
                     zoom=6,
                     children=[
-                        dl.TileLayer(url="https://stamen-tiles.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}.png"),
+                        dl.TileLayer(url="http://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png"),
                         html.Div(children=get_info(is_gis=False), className="info", 
-                                style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
+                                style={"position": "absolute", "top": "10px", "right": "10px", "zIndex": "1000"}),
                     ],
                     attributionControl=False,
                 )
@@ -289,10 +289,10 @@ def create_map(dff, year):
                         center=[12.5657, 104.9910],
                         zoom=7,
                         children=[
-                            # dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                            dl.TileLayer(url="http://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png"),
                             geojson,
                             colorbar,
-                            html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
+                            html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "10px", "right": "10px", "zIndex": "1000"}),
                         
                         ],
                         attributionControl=False,
@@ -340,10 +340,10 @@ def create_map(dff, year):
                         center=[20, 0],
                         zoom=6,
                         children=[
-                            # dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                            dl.TileLayer(url="http://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png"),
                             geojson, 
                             colorbar,
-                            html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
+                            html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "10px", "right": "10px", "zIndex": "1000"}),
                         ],
                         attributionControl=False,
                 )],
@@ -377,9 +377,9 @@ def create_map(dff, year):
                         center=[12.5657, 104.9910],
                         zoom=7,
                         children=[
-                            # dl.TileLayer(url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+                            dl.TileLayer(url="http://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png"),
                             geojson,
-                            html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "20px", "right": "20px", "zIndex": "1000"}),
+                            html.Div(children=get_info(series_name=series_name, indicator=indicator, indicator_unit=indicator_unit, year=year), id="info", className="info", style={"position": "absolute", "top": "10px", "right": "10px", "zIndex": "1000"}),
                         ],
                         attributionControl=False,
                 )],
@@ -520,7 +520,7 @@ def create_graph(dff):
             graph_component = dcc.Graph(
                 id=f"figure-linechart-{variety}", 
                 figure=fig, 
-                style={'height': '450px', 'width': '100%'},
+                style={'height': '400px', 'width': '100%'},
                 config={
                     'displaylogo': False,
                     'toImageButtonOptions': {
@@ -536,7 +536,7 @@ def create_graph(dff):
             graphs.append(graph_component)
 
             grid = dmc.Grid(
-                gutter="xs",
+                gutter="none",
                 children=[
                     # Responsive columns: 6/12 (half width) on small screens and up
                     dmc.GridCol(

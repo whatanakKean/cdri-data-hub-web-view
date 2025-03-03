@@ -89,7 +89,6 @@ app.clientside_callback(
 )
 
 
-
 # Callback to display the correct page based on the URL
 @app.callback(
     Output("page-content", "children"),
@@ -102,7 +101,7 @@ def display_page(pathname):
         "/data-explorer": data_explorer_page,
         "/agriculture-and-rural-development": agriculture_and_rural_development,
         "/development-economics-and-trade": development_economics_and_trade,
-        "/education": education,
+        "/educational-research-and-innovation": education,
     }
     return page_routes.get(pathname, not_found_page)
 
@@ -110,4 +109,4 @@ server = app.server
 
 # Run the server
 if __name__ == "__main__":
-    app.run_server(debug=True, port=8050, processes=1, threaded=True)
+    app.run_server(debug=False, port=8050, processes=1, threaded=True)

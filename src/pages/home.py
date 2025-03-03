@@ -7,10 +7,10 @@ sector = [
      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Cambodian_farmers_planting_rice.jpg/1200px-Cambodian_farmers_planting_rice.jpg", 
      "isEnabled": True, 
      "href": "/agriculture-and-rural-development"},
-    {"name": "Education", 
+    {"name": "Educational Research and Innovation", 
      "image": "https://cdri.org.kh/storage/images/banner_1630049852.jpg", 
      "isEnabled": True, 
-     "href": "/education"},
+     "href": "/educational-research-and-innovation"},
     {"name": "Development Economics and Trade", 
      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Phnompenhview.jpg/450px-Phnompenhview.jpg", 
      "isEnabled": True, 
@@ -104,7 +104,7 @@ home_page = html.Main([
                         children=[
                             DashIconify(icon="icon-park:data-all", width=50),
                             dmc.Text(
-                                "Provide accessible, high-quality data on various sectors in Cambodia.",
+                                "Provide accessible, high-quality knowledge and insights on various sectors in Cambodia.",
                                 size="md",
                                 style={
                                     "fontSize": "14px",

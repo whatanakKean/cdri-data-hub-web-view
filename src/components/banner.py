@@ -24,8 +24,8 @@ buttons = [
                         href="/agriculture-and-rural-development"
                     ),
                     dmc.MenuItem(
-                        "Education",
-                        href="/education"
+                        "Educational Research and Innovation",
+                        href="/educational-research-and-innovation"
                     ),
                     dmc.MenuItem(
                         "Development Economics and Trade",
