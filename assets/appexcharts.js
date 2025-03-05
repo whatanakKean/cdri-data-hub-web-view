@@ -2,23 +2,31 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
     apexCharts: {
         lineChart: function (inputData) {
             console.log(inputData);
-            
+
             // Clear the chart before redrawing
             document.getElementById("apexLineChart").innerHTML = "";
-            
-            // Group data by year
+
+            // Group data by year and sum indicator values
             let groupedData = {};
             inputData.forEach(item => {
                 let year = item.Year;
+                let indicator = item.Indicator;
+                let value = item["Indicator Value"] || 0;
+
                 if (!groupedData[year]) {
                     groupedData[year] = {};
                 }
-                groupedData[year][item.Indicator] = item["Indicator Value"];
+
+                if (!groupedData[year][indicator]) {
+                    groupedData[year][indicator] = 0;
+                }
+
+                groupedData[year][indicator] += value;
             });
-            
+
             // Extract unique indicators
             let indicators = [...new Set(inputData.map(item => item.Indicator))];
-            
+
             // Format data for ApexCharts
             let seriesData = indicators.map(indicator => {
                 return {
@@ -27,9 +35,9 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
                     data: Object.keys(groupedData).map(year => groupedData[year][indicator] || 0) // Ensure no undefined values
                 };
             });
-            
+
             let years = Object.keys(groupedData).map(year => parseInt(year));
-            
+
             var options = {
                 series: seriesData,
                 labels: years,
@@ -67,11 +75,11 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
                     }
                 },
             };
-            
+
             // Initialize and render the chart
             var chart = new ApexCharts(document.getElementById('apexLineChart'), options);
             chart.render();
-            
+
             return window.dash_clientside.no_update;
         },
     },
