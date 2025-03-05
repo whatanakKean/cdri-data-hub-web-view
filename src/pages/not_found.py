@@ -10,7 +10,6 @@ conn = sqlite3.connect("./src/data/data.db")
 query1 = """SELECT * FROM agriculture_data WHERE "Series Name" = 'Rice Production';"""
 agriculture_data = pd.read_sql_query(query1, conn).to_dict(orient="records")
 
-print(agriculture_data)
 
 not_found_page = dmc.Container(
     [
