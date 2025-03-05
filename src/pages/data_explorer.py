@@ -714,13 +714,13 @@ In other words, despite having worked for up to 20 years, older dropouts are sti
                 responsive=True,
             ),
             dmc.Divider(size="sm"),
-            dmc.Alert(
-                "The figure illustrates the student dropout rates from 2012 to 2023 across different grade levels: primary school, lower-secondary school, and upper-secondary school in Cambodia. It shows that the overall student dropout rates declined dramatically, a trend that can be attributed to the government’s efforts to improve the education system in Cambodia. Notably, during the 2019-2020 academic year, the overall dropout rate for upper-secondary school reached an unusually low level, primarily due to Grade 12 data. This was followed by a decline in class repetition compared to other years. In other words, most students that year were promoted to the next grade. This was primarily due to the COVID-19 pandemic, during which schools were closed, and the Ministry of Education, Youth, and Sport (MoEYS) announced the automatic promotion of all students. As a result, the dropout rate for that year was exceptionally low."
-                if series_name == "Student Flow Rates" and indicator == "Dropout" 
-                else "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-                title="Description",
-                color="green"
-            )
+            # dmc.Alert(
+            #     "The figure illustrates the student dropout rates from 2012 to 2023 across different grade levels: primary school, lower-secondary school, and upper-secondary school in Cambodia. It shows that the overall student dropout rates declined dramatically, a trend that can be attributed to the government’s efforts to improve the education system in Cambodia. Notably, during the 2019-2020 academic year, the overall dropout rate for upper-secondary school reached an unusually low level, primarily due to Grade 12 data. This was followed by a decline in class repetition compared to other years. In other words, most students that year were promoted to the next grade. This was primarily due to the COVID-19 pandemic, during which schools were closed, and the Ministry of Education, Youth, and Sport (MoEYS) announced the automatic promotion of all students. As a result, the dropout rate for that year was exceptionally low."
+            #     if series_name == "Student Flow Rates" and indicator == "Dropout" 
+            #     else "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            #     title="Description",
+            #     color="green"
+            # )
         ]) 
     
     # Create traces (unchanged)

@@ -33,6 +33,7 @@ app = DashProxy(
         dmc.styles.CAROUSEL,
         "https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css",  # Animation CSS
     ],
+    external_scripts=['https://cdn.jsdelivr.net/npm/apexcharts'],
     transforms=[ServersideOutputTransform()],
     suppress_callback_exceptions=True,
 )
@@ -109,4 +110,4 @@ server = app.server
 
 # Run the server
 if __name__ == "__main__":
-    app.run_server(debug=False, port=8050, processes=1, threaded=True)
+    app.run_server(debug=True, port=8050, processes=1, threaded=True)

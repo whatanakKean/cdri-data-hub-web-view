@@ -35,10 +35,11 @@ def footer():
                             dmc.Text("+855 23 881701"),
                             dmc.Text("+855 23 881916"),
                             dmc.Text("+855 23 883603"),
+                            dmc.Text("+855 78 537 070"),
                             dmc.Space(h=10),
                             
                             dmc.Title("Email:", order=4, td="underline"),
-                            dmc.Text("cdri@cdri.org.kh"),
+                            dmc.Text("data.hub@cdri.org.kh"),
                             dmc.Space(h=10),
                             
                             # dmc.Title("Address:", order=4, td="underline"),
@@ -79,7 +80,7 @@ def footer():
                                         style={"color": "white", "display": "block"}
                                     ),
                                 ]
-                            )
+                            ),
                         ],
                         span={"base": 12, "md": 4},
                     )
