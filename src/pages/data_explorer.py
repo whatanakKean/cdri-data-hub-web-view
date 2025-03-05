@@ -11,7 +11,6 @@ import pandas as pd
 from dash_iconify import DashIconify
 import plotly.graph_objects as go
 from fuzzywuzzy import process
-import random
 import dash_leaflet as dl
 import dash_leaflet.express as dlx
 from ..utils.utils import get_info, filter_data, style_handle

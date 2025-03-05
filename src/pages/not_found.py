@@ -1,34 +1,29 @@
+import sqlite3
 import dash_mantine_components as dmc
 from dash import dcc, html, Input, Output, clientside_callback, ClientsideFunction
-from src.pages.data import tradeData
+import pandas as pd
+from src.data.testing_data import tradeData
 
+
+# Sample dataset
+conn = sqlite3.connect("./src/data/data.db")
+query1 = """SELECT * FROM agriculture_data WHERE "Series Name" = 'Rice Production';"""
+agriculture_data = pd.read_sql_query(query1, conn).to_dict(orient="records")
+
+print(agriculture_data)
 
 not_found_page = dmc.Container(
     [
-        html.H1("404: Page Not Found", className="display-3 text-danger text-center"),
-        html.P(
-            "The page you are looking for does not exist.",
-            className="lead text-muted text-center",
-        ),
+        html.H1("Testing Visualization", className="display-3 text-danger text-center"),
         html.Div(
             children=[
-                dcc.Store(id='ApexchartsSampleData', data=tradeData),
-                html.H1("Javascript Charts inside a Dash App"),
+                dcc.Store(id='ApexchartsSampleData', data=agriculture_data),
                 dmc.Center(
                     dmc.Paper(
                         shadow="sm",
-                        style={'height':'600px', 'width':'800px', 'marginTop':'100px'},
+                        style={'height':'600px', 'width':'800px'},
                         children=[
-                            html.Div(id='apexAreaChart'),
-                            dmc.Center(
-                                children=[
-                                    dmc.SegmentedControl(
-                                        id="selectCountryChip",
-                                        value="Canada",
-                                        data=['Canada', 'USA', 'Australia'],
-                                    )
-                                ]
-                            )
+                            html.Div(id='apexAreaChart')
                         ]
                     )
                 )
@@ -45,6 +40,5 @@ clientside_callback(
         function_name='areaChart'
     ),
     Output("apexAreaChart", "children"),
-    Input("ApexchartsSampleData", "data"),
-    Input("selectCountryChip", "value"),
+    Input("ApexchartsSampleData", "data")
 )
