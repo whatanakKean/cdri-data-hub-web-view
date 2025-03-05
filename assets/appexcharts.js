@@ -1,12 +1,10 @@
 window.dash_clientside = Object.assign({}, window.dash_clientside, {
-
     apexCharts: {
-
-        areaChart: function (inputData) {
+        lineChart: function (inputData) {
             console.log(inputData);
             
             // Clear the chart before redrawing
-            document.getElementById("apexAreaChart").innerHTML = "";
+            document.getElementById("apexLineChart").innerHTML = "";
             
             // Group data by year
             let groupedData = {};
@@ -44,10 +42,18 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
                 stroke: { width: 2, curve: 'smooth' },
                 title: {
                     text: "Rice Production Trends",
-                    align: 'center',
+                    align: 'left',
                     style: {
                         fontSize: '22px',
                         fontWeight: 'bold',
+                    },
+                },
+                subtitle: {
+                    text: "A comprehensive view of rice production indicators over the years",
+                    align: 'left',
+                    style: {
+                        fontSize: '16px',
+                        fontWeight: 'normal',
                     },
                 },
                 dataLabels: { enabled: true },
@@ -63,7 +69,7 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
             };
             
             // Initialize and render the chart
-            var chart = new ApexCharts(document.getElementById('apexAreaChart'), options);
+            var chart = new ApexCharts(document.getElementById('apexLineChart'), options);
             chart.render();
             
             return window.dash_clientside.no_update;

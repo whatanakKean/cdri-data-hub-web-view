@@ -8,21 +8,20 @@ from src.data.testing_data import tradeData
 # Sample dataset
 conn = sqlite3.connect("./src/data/data.db")
 query1 = """SELECT * FROM agriculture_data WHERE "Series Name" = 'Rice Production';"""
-agriculture_data = pd.read_sql_query(query1, conn).to_dict(orient="records")
+data1 = pd.read_sql_query(query1, conn).to_dict(orient="records")
 
 
 not_found_page = dmc.Container(
     [
-        html.H1("Testing Visualization", className="display-3 text-danger text-center"),
         html.Div(
             children=[
-                dcc.Store(id='ApexchartsSampleData', data=agriculture_data),
+                dcc.Store(id='ApexchartsSampleData', data=data1),
                 dmc.Center(
                     dmc.Paper(
                         shadow="sm",
                         style={'height':'600px', 'width':'800px'},
                         children=[
-                            html.Div(id='apexAreaChart')
+                            html.Div(id='apexLineChart')
                         ]
                     )
                 )
@@ -36,8 +35,8 @@ not_found_page = dmc.Container(
 clientside_callback(
     ClientsideFunction(
         namespace='apexCharts',
-        function_name='areaChart'
+        function_name='lineChart'
     ),
-    Output("apexAreaChart", "children"),
+    Output("apexLineChart", "children"),
     Input("ApexchartsSampleData", "data")
 )
