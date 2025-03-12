@@ -122,38 +122,3 @@ def filter_data(data, sector=None, subsector_1=None, subsector_2=None, province=
     
 
     return filtered_data
-
-
-
-
-## Display Modal
-# @callback(
-#     [Output("info-modal", "opened"), Output("info-modal", "title"), Output("modal-content", "children")],
-#     [Input("geojson", "clickData")],State('sector-dropdown', 'value'), State('subsector-1-dropdown', 'value'), 
-#           State('subsector-2-dropdown', 'value'), State('province-dropdown', 'value'),
-#     prevent_initial_call=True  # Prevents callback execution on load
-# )
-# def display_modal(feature, sector, subsector_1, subsector_2, province):
-#     dff = filter_data(data, sector, subsector_1, subsector_2, province)
-    
-#     if feature is None:
-#         raise dash.exceptions.PreventUpdate
-    
-#     style = {
-#         "border": f"1px solid {dmc.DEFAULT_THEME['colors']['indigo'][4]}",
-#         "textAlign": "center",
-#     }
-#     # Modal content
-#     content = [
-#         dmc.Grid(
-#             children=[
-#                 dmc.GridCol(html.Div("span=4", style=style), span="auto"),
-#                 dmc.GridCol(html.Div("span=4", style=style), span=4),
-#                 dmc.GridCol(html.Div("span=4", style=style), span="auto"),
-#             ],
-#             gutter="xl",
-#         ),
-#         create_dataview(dff)
-#     ]
-
-#     return True,f"{sector}: {subsector_2} {subsector_1} ", content 

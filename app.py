@@ -5,8 +5,8 @@
 # ********************** #
 
 
-from dash import html, dcc, Dash, _dash_renderer
-from dash.dependencies import Input, Output, State
+from dash import html, dcc, _dash_renderer
+from dash.dependencies import Input, Output
 from dash_extensions.enrich import DashProxy, ServersideOutputTransform
 from dash_iconify import DashIconify
 import dash_mantine_components as dmc
@@ -16,10 +16,8 @@ _dash_renderer._set_react_version("18.2.0")
 
 from src.components.banner import banner
 from src.components.footer import footer
-from src.components.breadcrumb import breadcrumb
 from src.pages.home import home_page
 from src.pages.data_explorer import data_explorer_page
-# from src.pages.sector import sector_page
 from src.pages.agriculture_and_rural_development import agriculture_and_rural_development
 from src.pages.development_economics_and_trade import development_economics_and_trade
 from src.pages.education import education

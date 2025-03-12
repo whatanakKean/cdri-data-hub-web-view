@@ -98,74 +98,13 @@ data_explorer_page = html.Main(
                 html.Div(id='data-explorer-map-id'),
                 html.Div(id='data-explorer-graph-id'),
                 html.Div(id='data-explorer-dataview-id', style={'marginTop': '20px'})
-
-                # dmc.Tabs(
-                #     children=[
-                #         dmc.TabsList(
-                #             [
-                #                 dmc.TabsTab("Visualization", leftSection=DashIconify(icon="tabler:chart-bar"), value="graph"),
-                #                 dmc.TabsTab("Data View", leftSection=DashIconify(icon="tabler:database"), value="dataview"),
-                #             ], 
-                #             grow="True",
-                #         ),
-                #         dmc.TabsPanel(                               
-                #             children=[
-                #                 html.Div(id='data-explorer-graph-id'),
-                #             ], 
-                #             value="graph"
-                #         ),
-                #         dmc.TabsPanel(html.Div(id='data-explorer-dataview-id'), value="dataview"),
-                #     ], 
-                #     value="graph", color="#336666"
-                # ),
                 ], shadow="xs", p="md", radius="md", withBorder=True),
         ], fluid=True),
         dcc.Store(id='data-explorer-filter-state'),
     ],
 )
 
-def create_dataview(dff):
-    dff = dff.dropna(axis=1, how='all')
-    
-    pivoted_data = dff.pivot_table(
-        index=[col for col in dff.columns if col not in ['Indicator', 'Indicator Value']],
-        columns='Indicator',
-        values='Indicator Value',
-        aggfunc='first'
-    ).reset_index()
-    
-    # Remove columns where all values are empty strings
-    pivoted_data = pivoted_data.loc[:, ~(pivoted_data.apply(lambda col: col.eq("").all(), axis=0))]
-    
-    return html.Div([
-        # dag.AgGrid(id='data-explorer-ag-grid', defaultColDef={"filter": True}, columnDefs=[{"headerName": col, "field": col} for col in pivoted_data.columns], rowData=pivoted_data.to_dict('records'), style={'height': '400px'}),
-        # dmc.Button("Download Data", id="data-explorer-download-button", variant="outline", color="#336666", mt="md", style={'marginLeft': 'auto', 'display': 'flex', 'justifyContent': 'flex-end'}),
-        # dcc.Download(id="data-explorer-download-data")
-        dag.AgGrid(
-            id='ag-grid',
-            defaultColDef={
-                "filter": True,
-                "minWidth": 60,  # Smaller minimum width for compact columns
-                "resizable": True,  # Allow resizing columns
-                "cellStyle": {"fontSize": "10px"},  # Reduce font size for compactness
-                "flex": 1,
-            },
-            className="ag-theme-alpine compact",
-            columnSize="autoSize",
-            columnDefs=[{"headerName": col, "field": col, "width": 100} for col in pivoted_data.columns],
-            rowData=pivoted_data.to_dict('records'),
-            style={'width': '100%', 'fontSize': '10px'},  # Ensure the grid width is 100% of the container
-            dashGridOptions={
-                "domLayout": "normal",  # Standard layout for vertical scrolling
-                "suppressHorizontalScroll": True,  # Disable horizontal scroll
-                "onGridReady": {
-                    "params": {"api": "gridOptions.api.sizeColumnsToFit()"}  # Auto-size columns to fit available width
-                }
-            }
-        ),
-    ])
-
-def create_dataview_cashew_nut(dff, year):
+def create_dataview(dff, year):
     dff = dff[dff["Year"] == year]
     
     dff = dff[['Province', 'Indicator', 'Indicator Value']]
@@ -179,10 +118,6 @@ def create_dataview_cashew_nut(dff, year):
     # Remove columns where all values are empty strings
     pivoted_data = pivoted_data.loc[:, ~(pivoted_data.apply(lambda col: col.eq("").all(), axis=0))]
     
-    # print(pivoted_data.columns)
-    
-    # Column definitions with compact column width and reduced font size
-    # column_defs = [{"headerName": col, "field": col, "width": 100} for col in pivoted_data.columns]
     column_defs = [
         {"headerName": col, "field": col, "width": 100}
         for col in pivoted_data.columns if col != 'No. Farmers/province'
@@ -210,8 +145,6 @@ def create_dataview_cashew_nut(dff, year):
                 "suppressHorizontalScroll": True,  # Disable horizontal scrolling
             }
         ),
-        # dmc.Button("Download Data", id="download-button", variant="outline", color="#336666", mt="md", style={'marginLeft': 'auto', 'display': 'flex', 'justifyContent': 'flex-end'}),
-        # dcc.Download(id="download-data")
     ])
 
         
@@ -1068,7 +1001,7 @@ def update_data(selected_suggestion):
         return default_message, None, None, {}
 
     if selected_suggestion == "Cashew Nut Crop Profile":
-        return create_map(filtered_df, "2023", None), create_dataview_cashew_nut(filtered_df, "2023"), None, filtered_df.to_dict('records')
+        return create_map(filtered_df, "2023", None), create_dataview(filtered_df, "2023"), None, filtered_df.to_dict('records')
 
     return None, None, create_graph(filtered_df, filters), filtered_df.to_dict('records')
 
@@ -1087,14 +1020,6 @@ def update_map(indicator, filtered_df):
     
     # Generate the map with the filtered data
     return create_map(filtered_df, "2023", indicator)
-
-
-@callback(Output("data-explorer-download-data", "data"), Input("data-explorer-download-button", "n_clicks"), State('data-explorer-filter-state', 'data'))
-def download_data(n_clicks, filtered_df):
-    if n_clicks is None: return dash.no_update
-    filtered_df = pd.DataFrame(filtered_df)
-    return dict(content=filtered_df.to_csv(index=False), filename="data.csv", type="application/csv")
-
 
 # Calllback for info on map
 @callback(Output("info-data-explorer", "children"), Input("data-explorer-filter-state", "data"), Input("indicator-radio-group", "value"), Input("geojson-data-explorer", "hoverData"))

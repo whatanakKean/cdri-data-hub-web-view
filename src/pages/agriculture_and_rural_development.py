@@ -2,8 +2,7 @@ import json
 import math
 import sqlite3
 import string
-import dash
-from dash import html, dcc, Input, Output, State, callback
+from dash import html, dcc, Input, Output, callback
 import dash_mantine_components as dmc
 import dash_ag_grid as dag
 import pandas as pd
@@ -95,12 +94,6 @@ agriculture_and_rural_development = dmc.Container([
         dmc.GridCol([
             dmc.Stack([
                 dmc.Paper([
-                    # dmc.Autocomplete(
-                    #     id="suggestions-autocomplete",
-                    #     placeholder="Ask anything...",
-                    #     leftSection=DashIconify(icon="mingcute:ai-fill"),
-                    #     style={"width": "100%", "marginBottom": "20px"},
-                    # ),
                     dmc.Tabs(
                         children=[
                             dmc.TabsList(
